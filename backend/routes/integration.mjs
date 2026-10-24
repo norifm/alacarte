@@ -10,6 +10,7 @@ import {
   songById,
 } from '../lib/integrationCatalog.mjs'
 import { readSettings } from '../lib/settingsStore.mjs'
+import { createShareHandler } from './share.mjs'
 
 // Apple Music catalog + library API for the octo-fiesta provider.
 export const integrationRouter = express.Router()
@@ -59,3 +60,6 @@ integrationRouter.post(
     return { status, path, jobId: jobId || null }
   }),
 )
+
+// Apple Music link -> download (used by an iOS Shortcut in the Share Sheet).
+integrationRouter.post('/share', createShareHandler())
