@@ -23,8 +23,8 @@ import { useTranslation } from 'react-i18next'
 
 import {
   api,
+  type AppleStatus,
   type ArtistBackfillStatus,
-  type EffectiveCheckInterval,
   type LyricsBackfillStatus,
   type PublicSettings,
   type TagBackfillStatus,
@@ -284,9 +284,6 @@ export function SettingsPage() {
                 />
                 <div>
                   <div className="text-sm font-medium">{t('settings.askQualityBeforeManual')}</div>
-                  <div className="mt-1 text-sm text-white/55">
-                    {t('settings.askQualityBeforeManualHelp')}
-                  </div>
                 </div>
               </label>
               <label className="flex items-start gap-3">
@@ -298,19 +295,11 @@ export function SettingsPage() {
                 />
                 <div>
                   <div className="text-sm font-medium">{t('settings.stagingInsideLibrary')}</div>
-                  <div className="mt-1 text-sm text-white/55">
-                    {t('settings.stagingHelpOff')} <code>/tmp/alacarte-staging</code>. {t('settings.stagingHelpOn')}
-                    <code> /music/.amdl-tmp</code>.
-                  </div>
                 </div>
               </label>
               <div className="flex items-start gap-3">
                 <div className="flex-1">
                   <div className="text-sm font-medium">{t('settings.namingConvention')}</div>
-                  <div className="mt-1 text-sm text-white/55">
-                    {t('settings.namingConventionHelpPre')} <em>{t('settings.qobuzCompatible')}</em>{' '}
-                    {t('settings.namingConventionHelpPost')}
-                  </div>
                   <select
                     value={settings.namingConvention ?? 'apple'}
                     onChange={(e) => update({ namingConvention: e.target.value as 'apple' | 'qobuz' })}
@@ -356,6 +345,7 @@ export function SettingsPage() {
                   >
                     <option value="lrc" className="bg-zinc-900">{t('settings.lyricsFormatLrc')}</option>
                     <option value="ttml" className="bg-zinc-900">{t('settings.lyricsFormatTtml')}</option>
+                    <option value="both" className="bg-zinc-900">{t('settings.lyricsFormatBoth')}</option>
                   </select>
 
                 </div>
@@ -417,15 +407,16 @@ export function SettingsPage() {
                       </option>
                     ))}
                   </select>
-                  <div className="mt-1.5 text-[13px] text-white/45">
-                    {t(`${NAMING_LANGUAGE_MODE_OPTIONS.find((o) => o.value === settings.namingLanguageMode)?.labelKey ?? 'settings.namingModeDisplay'}Help`)}
-                  </div>
+                  {settings.namingLanguageMode !== 'display' && (
+                    <div className="mt-1.5 text-[13px] text-white/45">
+                      {t(`${NAMING_LANGUAGE_MODE_OPTIONS.find((o) => o.value === settings.namingLanguageMode)?.labelKey}Help`)}
+                    </div>
+                  )}
                 </div>
               </label>
 
               <div className="border-t border-white/[0.06] pt-4">
                 <div className="text-sm text-white/70">{t('settings.acceptedLanguages')}</div>
-                <div className="mt-1 text-[13px] text-white/45">{t('settings.acceptedLanguagesHelp')}</div>
                 <div className="mt-2">
                   <LanguageChipInput
                     value={settings.acceptedLanguages}
@@ -455,9 +446,6 @@ export function SettingsPage() {
                 <div>
                   <div className="text-[13px] font-medium">
                     {t('settings.showOtherVersionOptions')}
-                  </div>
-                  <div className="mt-0.5 text-[13px] text-[var(--text-dim)]">
-                    {t('settings.showOtherVersionOptionsHelp')}
                   </div>
                 </div>
               </label>
@@ -514,9 +502,6 @@ export function SettingsPage() {
                 />
                 <div>
                   <div className="text-sm font-medium">{t('settings.enableAutoDownloads')}</div>
-                  <div className="mt-1 text-sm text-white/55">
-                    {t('settings.enableAutoDownloadsHelp')}
-                  </div>
                 </div>
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
@@ -538,12 +523,15 @@ export function SettingsPage() {
                       </option>
                     ))}
                   </select>
-                  <EffectiveIntervalHint
-                    mode={settings.autoDownloadCheckFrequency}
-                  />
                 </div>
               </label>
             </div>
+          </SettingsCard>
+        </StaggeredItem>
+
+        <StaggeredItem>
+          <SettingsCard icon={<Plug className="h-4 w-4" />} title={t('settings.cardAppleApi')}>
+            <AppleStatusCard flash={flash} />
           </SettingsCard>
         </StaggeredItem>
 
@@ -568,14 +556,18 @@ export function SettingsPage() {
         </StaggeredItem>
 
         <StaggeredItem>
-          <SettingsCard icon={<Globe className="h-4 w-4" />} title={t('settings.cardNavidromeIntegration')}>
-            <NavidromeForm settings={settings} onChange={reload} onFlash={flash} />
-          </SettingsCard>
-        </StaggeredItem>
-
-        <StaggeredItem>
-          <SettingsCard icon={<Plug className="h-4 w-4" />} title={t('settings.cardOctoFiestaIntegration')}>
-            <OctoIntegrationForm settings={settings} onChange={reload} onFlash={flash} />
+          <SettingsCard icon={<Plug className="h-4 w-4" />} title={t('settings.cardIntegrations')}>
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <div className="text-sm font-semibold text-white/80">Navidrome</div>
+                <NavidromeForm settings={settings} onChange={reload} onFlash={flash} />
+              </div>
+              <div className="border-t border-white/[0.06]" />
+              <div className="space-y-3">
+                <div className="text-sm font-semibold text-white/80">octo-fiesta</div>
+                <OctoIntegrationForm settings={settings} onChange={reload} onFlash={flash} />
+              </div>
+            </div>
           </SettingsCard>
         </StaggeredItem>
 
@@ -594,41 +586,6 @@ export function SettingsPage() {
         </StaggeredItem>
       </StaggeredList>
     </>
-  )
-}
-
-function EffectiveIntervalHint({
-  mode,
-}: {
-  mode: PublicSettings['autoDownloadCheckFrequency']
-}) {
-  const { t } = useTranslation()
-  const [data, setData] = useState<EffectiveCheckInterval | null>(null)
-  useEffect(() => {
-    let cancelled = false
-    setData(null)
-    api
-      .effectiveCheckInterval(mode)
-      .then((r) => {
-        if (!cancelled) setData(r)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [mode])
-  if (!data || data.mode !== mode) return null
-  if (mode === 'auto') {
-    return (
-      <p className="mt-2 text-xs text-white/45">
-        {t('settings.autoIntervalAuto', { count: data.followedCount, label: data.label })}
-      </p>
-    )
-  }
-  return (
-    <p className="mt-2 text-xs text-white/45">
-      {t('settings.autoIntervalManual', { label: data.label })}
-    </p>
   )
 }
 
@@ -1102,9 +1059,6 @@ function NavidromeForm({ settings, onChange, onFlash }: { settings: PublicSettin
         />
         <div>
           <div className="text-sm font-medium">{t('settings.enableNavidromeScan')}</div>
-          <div className="text-xs text-white/55 mt-0.5">
-            {t('settings.enableNavidromeScanHelp')}
-          </div>
         </div>
       </label>
 
@@ -1599,11 +1553,32 @@ function HintSlot({ hint }: { hint: { tone: HintTone; text: string } | null }) {
 
 type BackfillStatusBase = {
   running: boolean
+  phase?: 'idle' | 'scanning' | 'matching' | 'waiting' | 'done'
   scanned: number
   total: number
+  albumsDone?: number
+  albumsTotal?: number
+  appleCalls?: number
+  waitingUntil?: number | null
   current: string | null
   finishedAt: number | null
   stopRequested: boolean
+}
+
+// "12 min" / "40 s" for a wait that ends at `until` (epoch ms).
+function useWaitLabel(until: number | null | undefined) {
+  const { t } = useTranslation()
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!until) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [until])
+  if (!until) return null
+  const seconds = Math.max(0, Math.round((until - now) / 1000))
+  return seconds >= 90
+    ? t('settings.timeMinutes', { count: Math.round(seconds / 60) })
+    : t('settings.timeSeconds', { count: seconds })
 }
 
 function BackfillCard<S extends BackfillStatusBase>({
@@ -1676,6 +1651,7 @@ function BackfillCard<S extends BackfillStatusBase>({
   }
 
   const running = Boolean(status?.running)
+  const waitLabel = useWaitLabel(running ? status?.waitingUntil : null)
   const pct =
     status && status.total > 0
       ? Math.min(100, Math.round((status.scanned / status.total) * 100))
@@ -1695,9 +1671,27 @@ function BackfillCard<S extends BackfillStatusBase>({
         {running && (
           <div className="space-y-2">
             <ProgressBar
-              value={pct}
-              label={t('settings.backfillProgress', { pct, scanned: status!.scanned, total: status!.total })}
+              value={status!.phase === 'scanning' ? 0 : pct}
+              label={
+                status!.phase === 'scanning'
+                  ? t('settings.backfillScanning', { count: status!.total })
+                  : t('settings.backfillProgress', { pct, scanned: status!.scanned, total: status!.total })
+              }
             />
+            {status!.waitingUntil && (
+              <div className="text-xs text-amber-200/80">
+                {t('settings.backfillWaitingApple', { time: waitLabel })}
+              </div>
+            )}
+            {!!status!.albumsTotal && (
+              <div className="text-xs text-white/45">
+                {t('settings.backfillAlbums', {
+                  done: status!.albumsDone ?? 0,
+                  total: status!.albumsTotal,
+                  calls: status!.appleCalls ?? 0,
+                })}
+              </div>
+            )}
             <div className="flex flex-wrap gap-1.5">{badges(status!, false)}</div>
             {status!.current && (
               <div
@@ -1779,6 +1773,208 @@ function BackfillCard<S extends BackfillStatusBase>({
   )
 }
 
+function AppleStatusCard({ flash }: { flash: (msg: string, err?: boolean) => void }) {
+  const { t } = useTranslation()
+  const [status, setStatus] = useState<AppleStatus | null>(null)
+  const [form, setForm] = useState<{ interval: string; min: string; adaptive: boolean; pace: boolean; cooldown: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(
+    () =>
+      api
+        .appleStatus()
+        .then((s) => {
+          setStatus(s)
+          setForm(
+            (prev) =>
+              prev ?? {
+                interval: String(s.config.intervalMs / 1000),
+                min: String(s.config.minIntervalMs / 1000),
+                adaptive: s.config.adaptive,
+                pace: s.config.paceIntegration,
+                cooldown: String(s.config.cooldownMinutes),
+              },
+          )
+        })
+        .catch(() => {}),
+    [],
+  )
+
+  useEffect(() => {
+    load()
+    const timer = setInterval(load, 5000)
+    return () => clearInterval(timer)
+  }, [load])
+
+  if (!status || !form) return null
+
+  const minutes = Math.max(1, Math.round(status.cooldownSeconds / 60))
+  const wait =
+    status.cooldownSeconds >= 90
+      ? t('settings.timeMinutes', { count: minutes })
+      : t('settings.timeSeconds', { count: status.cooldownSeconds })
+
+  const save = async (next: typeof form, reread = false) => {
+    setBusy(true)
+    try {
+      await api.saveSettings({
+        appleGatewayIntervalMs: Math.round(Number(next.interval) * 1000) || null,
+        appleGatewayMinIntervalMs: Math.round(Number(next.min) * 1000) || null,
+        appleGatewayAdaptive: next.adaptive,
+        appleGatewayPaceIntegration: next.pace,
+        appleGatewayCooldownMinutes: Math.round(Number(next.cooldown)) || null,
+      })
+      if (reread) setForm(null)
+      await load()
+      flash(t('settings.saved'))
+    } catch (err: any) {
+      flash(t('settings.errorPrefix', { message: err.message }), true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const change = (patch: Partial<typeof form>) => {
+    const next = { ...form, ...patch }
+    setForm(next)
+    save(next)
+  }
+
+  const saveNumbers = () => {
+    const c = status.config
+    const same =
+      Math.round(Number(form.interval) * 1000) === c.intervalMs &&
+      Math.round(Number(form.min) * 1000) === c.minIntervalMs &&
+      Math.round(Number(form.cooldown)) === c.cooldownMinutes
+    if (!same) save(form, true)
+  }
+
+  const numberProps = {
+    onBlur: saveNumbers,
+    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') e.currentTarget.blur()
+    },
+  }
+
+  const toggle = async (on: boolean) => {
+    setBusy(true)
+    try {
+      await api.saveSettings({ appleGatewayEnabled: on })
+      await load()
+      flash(t('settings.saved'))
+    } catch (err: any) {
+      flash(t('settings.errorPrefix', { message: err.message }), true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const reset = async () => {
+    setBusy(true)
+    try {
+      setStatus(await api.resetApplePace())
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={status.config.enabled}
+          disabled={busy}
+          onChange={(e) => toggle(e.target.checked)}
+          className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+        />
+        <div>
+          <div className="text-sm font-medium">{t('settings.appleLimitLabel')}</div>
+        </div>
+      </label>
+      <AnimatePresence initial={false}>
+        {status.config.enabled && (
+          <motion.div
+            key="apple-limit"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="space-y-4 pt-4">
+            <div className="space-y-2.5">
+              <Badge variant={status.state === 'ok' ? 'ok' : status.state === 'cooldown' ? 'bad' : 'warn'}>
+                {status.state === 'cooldown'
+                  ? t('settings.appleStatusCooldown', { time: wait })
+                  : status.state === 'probing'
+                    ? t('settings.appleStatusProbing')
+                    : t('settings.appleStatusOk')}
+              </Badge>
+              <div className="text-[13px] text-white/50">
+                {t('settings.applePace', { seconds: (status.intervalMs / 1000).toFixed(1) })}
+              </div>
+              <div className="text-[13px] text-white/50">{t('settings.appleQueued', status.queued)}</div>
+              {status.rateLimited24h > 0 && (
+                <div className="text-[13px] text-amber-200/80">
+                  {t('settings.appleRateLimited24h', { count: status.rateLimited24h })}
+                </div>
+              )}
+              {status.learnedFloorMs > 0 && (
+                <div className="flex flex-wrap items-center gap-3 text-[13px] text-white/50">
+                  <span>{t('settings.appleLearnedFloor', { seconds: (status.learnedFloorMs / 1000).toFixed(1) })}</span>
+                  <Button type="button" variant="ghost" onClick={reset} disabled={busy}>
+                    {t('settings.appleResetLearned')}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="space-y-1 text-sm text-white/70">
+                  <span>{t('settings.appleIntervalLabel')}</span>
+                  <Input type="number" min="0.1" max="30" step="0.1" value={form.interval}
+                    onChange={(e) => setForm({ ...form, interval: e.target.value })} {...numberProps} />
+                </label>
+                <label className="space-y-1 text-sm text-white/70">
+                  <span>{t('settings.appleMinIntervalLabel')}</span>
+                  <Input type="number" min="0.1" max="30" step="0.1" value={form.min}
+                    onChange={(e) => setForm({ ...form, min: e.target.value })} {...numberProps} />
+                </label>
+                <label className="space-y-1 text-sm text-white/70">
+                  <span>{t('settings.appleCooldownLabel')}</span>
+                  <Input type="number" min="1" max="240" step="1" value={form.cooldown}
+                    onChange={(e) => setForm({ ...form, cooldown: e.target.value })} {...numberProps} />
+                </label>
+              </div>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={form.adaptive}
+                  onChange={(e) => change({ adaptive: e.target.checked })}
+                  className="mt-0.5 shrink-0"
+                />
+                <span className="text-sm text-white/70">{t('settings.appleAdaptiveLabel')}</span>
+              </label>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={form.pace}
+                  onChange={(e) => change({ pace: e.target.checked })}
+                  className="mt-0.5 shrink-0"
+                />
+                <span className="text-sm text-white/70">{t('settings.appleLimitIntegrationLabel')}</span>
+              </label>
+            </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 function TagBackfillCard({ flash }: { flash: (msg: string) => void }) {
   const { t } = useTranslation()
   return (
@@ -1830,6 +2026,7 @@ function LyricsBackfillCard({ flash }: { flash: (msg: string) => void }) {
               ? t('settings.lastRunLyricsAdded', { count: s.added })
               : t('settings.lyricsAddedCount', { count: s.added })}
           </Badge>
+          {!!s.converted && <Badge variant="ok">{t('settings.lyricsConvertedCount', { count: s.converted })}</Badge>}
           <Badge>{t('settings.alreadyHaveLyricsCount', { count: s.skipped })}</Badge>
           <Badge>{t('settings.noAppleLyricsCount', { count: s.noLyrics })}</Badge>
           <Badge variant="warn">{t('settings.unmatchedCount', { count: s.noMatch })}</Badge>

@@ -49,6 +49,15 @@ function migrate(db) {
     );
     CREATE INDEX IF NOT EXISTS idx_history_finished ON download_history(finished_at);
 
+    -- Apple artist IDs resolved for library artist names (artist_id NULL = no match).
+    CREATE TABLE IF NOT EXISTS artist_ids (
+      storefront TEXT NOT NULL,
+      name_key TEXT NOT NULL,
+      artist_id TEXT,
+      resolved_at INTEGER NOT NULL,
+      PRIMARY KEY (storefront, name_key)
+    );
+
     CREATE TABLE IF NOT EXISTS library_dirs (
       path TEXT PRIMARY KEY,
       parent TEXT,
@@ -75,6 +84,14 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_library_files_parent ON library_files(parent);
     CREATE INDEX IF NOT EXISTS idx_library_files_song_key ON library_files(song_key);
     CREATE INDEX IF NOT EXISTS idx_library_files_album_key ON library_files(album_key);
+
+    -- Files the library tag backfill asked Apple about without result; see tagBackfill.mjs.
+    CREATE TABLE IF NOT EXISTS tag_backfill_misses (
+      path TEXT PRIMARY KEY,
+      mtime INTEGER NOT NULL,
+      size INTEGER NOT NULL,
+      checked_at INTEGER NOT NULL
+    );
   `)
   db.prepare(
     `INSERT INTO meta (key, value) VALUES ('schema_version', ?)

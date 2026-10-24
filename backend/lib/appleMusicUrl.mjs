@@ -16,7 +16,6 @@ const UNSUPPORTED_KINDS = new Set([
   'music-video',
   'music-videos',
   'radio',
-  'curator',
   'activity',
   'room',
 ])
@@ -73,7 +72,7 @@ function withStorefront(result, storefront) {
 /**
  * @param {string} input
  * @returns {null | { unsupported: true, message: string } | {
- *   kind: 'album' | 'song' | 'artist' | 'playlist',
+ *   kind: 'album' | 'song' | 'artist' | 'playlist' | 'curator' | 'label',
  *   id: string,
  *   albumId?: string,
  *   storefront?: string,
@@ -179,6 +178,17 @@ export function parseAppleMusicUrl(input) {
       }
     }
     return withStorefront({ kind: 'playlist', id: playlistId }, storefront)
+  }
+
+  if (kind === 'curator' || kind === 'label') {
+    const id = rest.length ? normalizeId(rest[rest.length - 1]) : null
+    if (!id || !NUMERIC_ID_RE.test(id)) {
+      return {
+        unsupported: true,
+        message: `That Apple Music ${kind} link is missing a catalog id.`,
+      }
+    }
+    return withStorefront({ kind, id }, storefront)
   }
 
   return {

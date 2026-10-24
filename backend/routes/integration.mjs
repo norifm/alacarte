@@ -1,5 +1,6 @@
 import express from 'express'
 
+import { sendAppleError } from '../lib/appleErrors.mjs'
 import { hasValidApiToken } from '../lib/apiToken.mjs'
 import {
   albumById,
@@ -33,6 +34,7 @@ function handle(fn) {
       res.json(out)
     } catch (err) {
       console.error(`[integration] ${req.method} ${req.path} failed:`, err.message)
+      if (/^Apple API 429\b/.test(String(err?.message))) return sendAppleError(res, err)
       res.status(err.status || 502).json({ error: err.message })
     }
   }

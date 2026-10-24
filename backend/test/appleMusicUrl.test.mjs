@@ -97,3 +97,15 @@ test('rejects library, station, and music-video links', () => {
     assert.match(parsed.message, /not a catalog/i)
   }
 })
+
+test('parses curator and label urls', () => {
+  assert.deepEqual(
+    parseAppleMusicUrl('https://music.apple.com/us/curator/lost-lands-festival/1607171756'),
+    { kind: 'curator', id: '1607171756', storefront: 'us' },
+  )
+  assert.deepEqual(
+    parseAppleMusicUrl('https://music.apple.com/us/label/never-say-die-records/1571161766'),
+    { kind: 'label', id: '1571161766', storefront: 'us' },
+  )
+  assert.equal(parseAppleMusicUrl('https://music.apple.com/us/label/no-id')?.unsupported, true)
+})

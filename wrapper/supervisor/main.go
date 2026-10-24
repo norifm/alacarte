@@ -71,7 +71,8 @@ type Supervisor struct {
 	wake           chan struct{}
 	// Required in the X-Supervisor-Token header on the control endpoints;
 	// empty disables the check.
-	controlToken string
+	controlToken     string
+	credWatchRunning atomic.Bool
 }
 
 func NewSupervisor(wrapperBin, wrapperDataDir string, normalArgs []string) *Supervisor {
@@ -82,6 +83,46 @@ func NewSupervisor(wrapperBin, wrapperDataDir string, normalArgs []string) *Supe
 		mode:           ModeIdle,
 		wake:           make(chan struct{}, 1),
 	}
+}
+
+func (s *Supervisor) hasCredentials() bool {
+	candidates := []string{
+		filepath.Join(s.wrapperDataDir, "data", "com.apple.android.music", "files", "MUSIC_TOKEN"),
+		filepath.Join(s.wrapperDataDir, "MUSIC_TOKEN"),
+	}
+	for _, p := range candidates {
+		if fi, err := os.Stat(p); err == nil && fi.Size() > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Supervisor) scheduleCredentialWatch() {
+	if !s.credWatchRunning.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		defer s.credWatchRunning.Store(false)
+		for {
+			select {
+			case <-time.After(30 * time.Second):
+			case <-s.wake:
+			}
+			s.mu.Lock()
+			stopping := s.stopping
+			idle := s.mode == ModeIdle && s.restartReason == "unauthenticated"
+			s.mu.Unlock()
+			if stopping || !idle {
+				return
+			}
+			if s.hasCredentials() {
+				log.Printf("[supervisor] credentials detected in %s; starting normal wrapper", s.wrapperDataDir)
+				s.StartNormal()
+				return
+			}
+		}
+	}()
 }
 
 func (s *Supervisor) get2faFilePath() string {
@@ -224,6 +265,15 @@ func (s *Supervisor) StartNormal() {
 		return
 	}
 
+	if !s.hasCredentials() {
+		s.mode = ModeIdle
+		s.restartReason = "unauthenticated"
+		s.restartAt = time.Time{}
+		log.Printf("[supervisor] No cached Apple Music credentials found in %s; paused in idle mode waiting for sign-in", s.wrapperDataDir)
+		s.scheduleCredentialWatch()
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	var leaseLost atomic.Bool
 	exited, err := s.run(ctx, s.normalArgs, func(line string) {
@@ -256,6 +306,16 @@ func (s *Supervisor) StartNormal() {
 		if unexpected {
 			s.normal = nil
 			s.mode = ModeIdle
+			if !s.hasCredentials() {
+				s.restartReason = "unauthenticated"
+				s.restartAt = time.Time{}
+				s.cleanExits = 0
+				log.Printf("[supervisor] wrapper exited and credentials are missing; pausing in idle mode")
+				s.mu.Unlock()
+				s.scheduleCredentialWatch()
+				close(p.done)
+				return
+			}
 			delay = s.restartDelay(err, time.Since(started), leaseLost.Load())
 			s.restartReason = exitReason(err, leaseLost.Load())
 			s.restartAt = time.Now().Add(delay)
@@ -327,10 +387,12 @@ type TwoFaRequest struct {
 }
 
 type HealthResponse struct {
-	Ok      bool   `json:"ok"`
-	Mode    string `json:"mode"`
-	Running bool   `json:"running"`
-	// Set while waiting to restart the wrapper after it exited on its own.
+	Ok            bool   `json:"ok"`
+	Mode          string `json:"mode"`
+	Running       bool   `json:"running"`
+	Authenticated bool   `json:"authenticated"`
+	// Set while waiting to restart the wrapper after it exited on its own,
+	// or "unauthenticated" when waiting for Apple credentials.
 	Reason      string `json:"reason,omitempty"`
 	RestartInMs int64  `json:"restartInMs,omitempty"`
 }
@@ -338,13 +400,16 @@ type HealthResponse struct {
 func (s *Supervisor) handleHealth(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	resp := HealthResponse{
-		Ok:      true,
-		Mode:    string(s.mode),
-		Running: s.normal != nil || s.mode == ModeLoggingIn,
+		Ok:            true,
+		Mode:          string(s.mode),
+		Running:       s.normal != nil || s.mode == ModeLoggingIn,
+		Authenticated: s.hasCredentials(),
 	}
-	if s.mode == ModeIdle && !s.restartAt.IsZero() {
+	if s.mode == ModeIdle {
 		resp.Reason = s.restartReason
-		resp.RestartInMs = max(0, time.Until(s.restartAt).Milliseconds())
+		if !s.restartAt.IsZero() {
+			resp.RestartInMs = max(0, time.Until(s.restartAt).Milliseconds())
+		}
 	}
 	s.mu.Unlock()
 
@@ -371,8 +436,33 @@ func (s *Supervisor) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(r.Context())
+	// The worker runs on its own context, not the request's: once the wrapper
+	// reports a successful sign-in, the web backend aborting the stream (it
+	// reacts to the same line) must not kill the worker before the
+	// credentials are on disk. See awaitPersistedCredentials. #46
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// A disconnect still stops a pre-success worker (e.g. a cancelled
+	// sign-in); after the success line the persistence watcher owns
+	// cancellation.
+	successSeen := make(chan struct{})
+	var disconnectOnce sync.Once
+	authenticated := &atomic.Bool{}
+	go func() {
+		select {
+		case <-successSeen:
+		case <-r.Context().Done():
+			select {
+			case <-successSeen:
+			default:
+				if !authenticated.Load() {
+					cancel()
+				}
+			}
+		case <-ctx.Done():
+		}
+	}()
 
 	s.mu.Lock()
 	if s.stopping || s.mode == ModeLoggingIn {
@@ -404,7 +494,11 @@ func (s *Supervisor) handleLogin(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 		}
 		if strings.Contains(strings.ToLower(line), loginSuccessMsg) {
-			cancel()
+			authenticated.Store(true)
+			disconnectOnce.Do(func() {
+				close(successSeen)
+				go s.awaitPersistedCredentials(cancel, ctx.Done(), lines)
+			})
 		}
 	})
 	if err != nil {
@@ -441,6 +535,41 @@ func (s *Supervisor) handleLogin(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
+		}
+	}
+}
+
+// persistWait bounds how long a freshly authenticated wrapper may take to
+// land its token files on the data volume. The prebuilt worker prints its
+// success line just before writing MUSIC_TOKEN, and under emulation (Docker
+// Desktop on Apple Silicon runs the amd64 worker through Rosetta against a
+// VirtioFS bind mount) those writes are slow — stopping the worker on the
+// line alone loses the sign-in. #46
+var persistWait = 30 * time.Second
+
+// awaitPersistedCredentials stops the sign-in worker only once the
+// credentials are actually readable on disk, and reports the outcome on the
+// login stream either way.
+func (s *Supervisor) awaitPersistedCredentials(cancel context.CancelFunc, done <-chan struct{}, lines chan<- string) {
+	defer cancel()
+	deadline := time.NewTimer(persistWait)
+	defer deadline.Stop()
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		if s.hasCredentials() {
+			log.Printf("[supervisor] credentials persisted to %s; stopping the sign-in worker", s.wrapperDataDir)
+			lines <- "[supervisor] Apple Music credentials persisted to " + s.wrapperDataDir
+			return
+		}
+		select {
+		case <-done: // the worker exited on its own; the handler reports it
+			return
+		case <-deadline.C:
+			log.Printf("[supervisor] sign-in reported success but no credentials appeared in %s after %s; check the data volume mount", s.wrapperDataDir, persistWait)
+			lines <- "[supervisor] the sign-in reported success but no credentials appeared in " + s.wrapperDataDir + "; check the data volume mount"
+			return
+		case <-tick.C:
 		}
 	}
 }

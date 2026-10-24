@@ -9,9 +9,11 @@ import { LibraryPage } from './pages/Library'
 import { AlbumPage } from './pages/Album'
 import { ArtistPage } from './pages/Artist'
 import { PlaylistPage } from './pages/Playlist'
+import { CuratorPage, LabelPage } from './pages/Browse'
 import { StatusPage } from './pages/Status'
 import { SettingsPage } from './pages/Settings'
 import { FollowingPage } from './pages/Following'
+import { ImportsPage } from './pages/Imports'
 import { CloudLibraryPage } from './pages/CloudLibrary'
 import { TopBar } from './components/TopBar'
 import { HealthPill, getHealthPillTarget, getHealthPillAriaLabel } from './components/HealthPill'
@@ -177,9 +179,12 @@ function AuthedApp() {
               <Route path="/search" element={<PageWrapper><SearchPage /></PageWrapper>} />
               <Route path="/library" element={<PageWrapper><LibraryPage /></PageWrapper>} />
               <Route path="/following" element={<PageWrapper><FollowingPage /></PageWrapper>} />
+              <Route path="/imports" element={<PageWrapper><ImportsPage /></PageWrapper>} />
               <Route path="/cloud-library" element={<PageWrapper><CloudLibraryPage /></PageWrapper>} />
               <Route path="/album/:id" element={<PageWrapper><AlbumPage /></PageWrapper>} />
               <Route path="/artist/:id" element={<PageWrapper><ArtistPage /></PageWrapper>} />
+              <Route path="/curator/:id" element={<PageWrapper><CuratorPage /></PageWrapper>} />
+              <Route path="/label/:id" element={<PageWrapper><LabelPage /></PageWrapper>} />
               <Route path="/playlist/library/:libraryId" element={<PageWrapper><PlaylistPage /></PageWrapper>} />
               <Route path="/playlist/:id" element={<PageWrapper><PlaylistPage /></PageWrapper>} />
               <Route path="/status" element={<PageWrapper><StatusPage /></PageWrapper>} />

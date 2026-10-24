@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -38,7 +39,11 @@ func newTestSupervisor(t *testing.T, loginOut string) (*Supervisor, *httptest.Se
 	}
 	t.Setenv("FAKE_LOGIN_OUT", loginOut)
 	t.Setenv("FAKE_PID_DIR", dir)
-	sup := NewSupervisor(bin, filepath.Join(dir, "data"), []string{"-H", "0.0.0.0"})
+	dataDir := filepath.Join(dir, "data")
+	tokenFile := filepath.Join(dataDir, "data", "com.apple.android.music", "files", "MUSIC_TOKEN")
+	_ = os.MkdirAll(filepath.Dir(tokenFile), 0755)
+	_ = os.WriteFile(tokenFile, []byte("fake-token"), 0600)
+	sup := NewSupervisor(bin, dataDir, []string{"-H", "0.0.0.0"})
 	srv := httptest.NewServer(sup.routes())
 	t.Cleanup(func() {
 		sup.Stop()
@@ -272,7 +277,11 @@ func TestLeaseLossWaitsAndWakeRestarts(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("FAKE_PID_DIR", dir)
-	sup := NewSupervisor(bin, filepath.Join(dir, "data"), []string{"-H", "0.0.0.0"})
+	dataDir := filepath.Join(dir, "data")
+	tokenFile := filepath.Join(dataDir, "data", "com.apple.android.music", "files", "MUSIC_TOKEN")
+	_ = os.MkdirAll(filepath.Dir(tokenFile), 0755)
+	_ = os.WriteFile(tokenFile, []byte("fake-token"), 0600)
+	sup := NewSupervisor(bin, dataDir, []string{"-H", "0.0.0.0"})
 	srv := httptest.NewServer(sup.routes())
 	t.Cleanup(func() {
 		sup.Stop()
@@ -362,5 +371,196 @@ func TestLoadControlTokenCreatesThenReuses(t *testing.T) {
 	second, err := loadControlToken(path)
 	if err != nil || second != first {
 		t.Fatalf("token changed on reload: %q -> %q (%v)", first, second, err)
+	}
+}
+
+func TestUnauthenticatedIdleMode(t *testing.T) {
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "wrapper")
+	if err := os.WriteFile(bin, []byte(fakeWrapper), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_PID_DIR", dir)
+	dataDir := filepath.Join(dir, "data")
+	sup := NewSupervisor(bin, dataDir, []string{"-H", "0.0.0.0"})
+	srv := httptest.NewServer(sup.routes())
+	t.Cleanup(func() {
+		sup.Stop()
+		srv.Close()
+	})
+
+	// Start without credentials
+	sup.StartNormal()
+
+	// Should be idle and unauthenticated
+	h := health(t, srv)
+	if h.Mode != "idle" || h.Running {
+		t.Fatalf("expected idle/not running, got mode=%q running=%v", h.Mode, h.Running)
+	}
+	if h.Reason != "unauthenticated" {
+		t.Fatalf("expected reason unauthenticated, got %q", h.Reason)
+	}
+	if h.Authenticated {
+		t.Fatalf("expected Authenticated=false, got true")
+	}
+
+	// Fake wrapper child must NOT have been started
+	if _, err := os.Stat(filepath.Join(dir, "normal.child")); !os.IsNotExist(err) {
+		t.Fatalf("wrapper child was started despite missing credentials")
+	}
+
+	// Simulate credentials being created on disk (e.g. volume restored or sign-in)
+	tokenFile := filepath.Join(dataDir, "data", "com.apple.android.music", "files", "MUSIC_TOKEN")
+	if err := os.MkdirAll(filepath.Dir(tokenFile), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tokenFile, []byte("valid-token"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wake supervisor
+	res, err := http.Post(srv.URL+"/wake", "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+
+	waitForMode(t, srv, ModeNormal)
+	h = health(t, srv)
+	if !h.Running || !h.Authenticated {
+		t.Fatalf("expected running and authenticated after wake, got running=%v auth=%v", h.Running, h.Authenticated)
+	}
+}
+
+// #46: the shipped wrapper prints its success line just before writing the
+// token files, and under Rosetta those writes are slow. The supervisor must
+// keep the worker alive until the credentials are on disk, not stop it on
+// the line alone.
+const slowPersistWrapper = `#!/bin/sh
+mode=normal
+[ "$1" = "-L" ] && mode=login
+if [ $mode = login ]; then
+  printf '%s\n' "[.] logging in..."
+  printf '%s\n' "[+] account info cached successfully"
+  sleep "$PERSIST_DELAY"
+  mkdir -p "$SUPERVISOR_DATA_DIR/data/com.apple.android.music/files"
+  echo fake-token > "$SUPERVISOR_DATA_DIR/data/com.apple.android.music/files/MUSIC_TOKEN"
+fi
+exec sleep 30
+`
+
+// newSlowPersistSupervisor installs a wrapper that authenticates instantly
+// but only writes MUSIC_TOKEN after PERSIST_DELAY seconds. withToken=false
+// starts from the unauthenticated state the reporter of #46 has.
+func newSlowPersistSupervisor(t *testing.T, delay string, withToken bool) (*Supervisor, *httptest.Server, string) {
+	t.Helper()
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "wrapper")
+	if err := os.WriteFile(bin, []byte(slowPersistWrapper), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PERSIST_DELAY", delay)
+	dataDir := filepath.Join(dir, "data")
+	tokenFile := filepath.Join(dataDir, "data", "com.apple.android.music", "files", "MUSIC_TOKEN")
+	if withToken {
+		_ = os.MkdirAll(filepath.Dir(tokenFile), 0755)
+		_ = os.WriteFile(tokenFile, []byte("fake-token"), 0600)
+	}
+	t.Setenv("SUPERVISOR_DATA_DIR", dataDir)
+	sup := NewSupervisor(bin, dataDir, []string{"-H", "0.0.0.0"})
+	srv := httptest.NewServer(sup.routes())
+	t.Cleanup(func() {
+		sup.Stop()
+		srv.Close()
+	})
+	return sup, srv, tokenFile
+}
+
+func TestLoginWaitsForCredentialsBeforeStoppingTheWorker(t *testing.T) {
+	_, srv, tokenFile := newSlowPersistSupervisor(t, "1", false)
+
+	start := time.Now()
+	res, err := postLogin(context.Background(), srv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	took := time.Since(start)
+
+	if !strings.Contains(string(out), "credentials persisted") {
+		t.Fatalf("stream missing persistence confirmation: %q", out)
+	}
+	if took < 900*time.Millisecond {
+		t.Fatalf("worker was stopped %s after the success line, before the credentials were written", took)
+	}
+	if _, err := os.Stat(tokenFile); err != nil {
+		t.Fatalf("credentials missing after sign-in: %v", err)
+	}
+	waitForMode(t, srv, ModeNormal)
+	if h := health(t, srv); !h.Authenticated {
+		t.Errorf("expected Authenticated=true after sign-in, got %+v", h)
+	}
+}
+
+func TestLoginSurvivesDisconnectAfterTheSuccessLine(t *testing.T) {
+	_, srv, tokenFile := newSlowPersistSupervisor(t, "1", false)
+
+	// The web backend aborts the login stream the moment it sees the success
+	// line; that disconnect used to kill the worker mid-write (#46).
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	res, err := postLogin(ctx, srv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sawSuccess := false
+	sc := bufio.NewScanner(res.Body)
+	for sc.Scan() {
+		if strings.Contains(sc.Text(), "account info cached successfully") {
+			sawSuccess = true
+			cancel()
+		}
+	}
+	res.Body.Close()
+	if !sawSuccess {
+		t.Fatalf("never saw the success line (err=%v)", sc.Err())
+	}
+
+	waitForMode(t, srv, ModeNormal)
+	if _, err := os.Stat(tokenFile); err != nil {
+		t.Fatalf("credentials missing despite the mid-sign-in disconnect: %v", err)
+	}
+	if h := health(t, srv); !h.Authenticated {
+		t.Errorf("expected Authenticated=true, got %+v", h)
+	}
+}
+
+func TestLoginReportsWhenCredentialsNeverPersist(t *testing.T) {
+	_, srv, tokenFile := newSlowPersistSupervisor(t, "3600", false)
+	old := persistWait
+	persistWait = 600 * time.Millisecond
+	t.Cleanup(func() { persistWait = old })
+
+	start := time.Now()
+	res, err := postLogin(context.Background(), srv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+
+	if !strings.Contains(string(out), "no credentials appeared") {
+		t.Fatalf("stream missing the persistence warning: %q", out)
+	}
+	if took := time.Since(start); took < 500*time.Millisecond {
+		t.Fatalf("gave up after %s, before the persistence deadline", took)
+	}
+	if _, err := os.Stat(tokenFile); !os.IsNotExist(err) {
+		t.Fatalf("token file unexpectedly exists: %v", err)
+	}
+	waitForMode(t, srv, ModeIdle)
+	if h := health(t, srv); h.Authenticated {
+		t.Errorf("expected Authenticated=false, got %+v", h)
 	}
 }

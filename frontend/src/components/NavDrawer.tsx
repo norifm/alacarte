@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Activity,
   Cloud,
+  FileUp,
   Home as HomeIcon,
   Search as SearchIcon,
   Library as LibraryIcon,
@@ -115,6 +116,7 @@ export function NavDrawer({ open, onClose }: Props) {
             <DrawerRow to="/search" icon={SearchIcon} label={t('nav.search')} />
             <DrawerRow to="/library" icon={LibraryIcon} label={t('nav.downloads')} />
             <DrawerRow to="/cloud-library" icon={Cloud} label={t('nav.appleMusic')} />
+            <DrawerRow to="/imports" icon={FileUp} label={t('nav.imports')} />
             <DrawerRow to="/following" icon={UserRoundCheck} label={t('nav.following')} />
 
             <div className="mb-1 mt-4 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-white/40">

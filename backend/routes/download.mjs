@@ -25,6 +25,32 @@ downloadRouter.post('/', async (req, res) => {
   }
 })
 
+downloadRouter.post('/bulk', async (req, res) => {
+  const rawIds = Array.isArray(req.body?.albumIds) ? req.body.albumIds : []
+  const albumIds = [...new Set(rawIds.map((id) => String(id || '').trim()).filter(Boolean))]
+  if (albumIds.length === 0) return res.status(400).json({ error: 'albumIds required' })
+  const { storefront, quality } = req.body || {}
+
+  let queued = 0
+  let skippedExisting = 0
+  const errors = []
+  for (const albumId of albumIds) {
+    try {
+      const job = await enqueueAlbum({ albumId, storefront, quality })
+      if (job) queued += 1
+    } catch (err) {
+      // cloud-library download-all behavior: an album that is already in the
+      // library is skipped, everything after it still queues.
+      if (err?.code === 'ALREADY_IN_LIBRARY') {
+        skippedExisting += 1
+        continue
+      }
+      errors.push({ albumId, code: err?.code || null, error: err?.message || 'Failed' })
+    }
+  }
+  res.json({ requested: albumIds.length, queued, skippedExisting, errors })
+})
+
 downloadRouter.post('/song', async (req, res) => {
   try {
     const { songId, albumId, storefront, quality } = req.body || {}

@@ -272,14 +272,62 @@ test('isWrapperReachable is false for an unhealthy, failing or garbled superviso
 
 test('startWrapperLogin resolves on success and closes the login stream', async () => {
   let closed = false
-  const login = openLoginStream(['[+] logging in...', '[.] account info cached successfully'], (req) => {
-    req.socket.on('close', () => { closed = true })
-  })
-  await withSupervisor(login, async () => {
-    assert.deepEqual(await startWrapperLogin({ email: 'test@example.com', password: 'pass' }), { ok: true })
-    assert.equal(getLoginStatus().inProgress, false)
-    await waitFor(() => closed)
-  })
+  await withSupervisor(
+    (req, res) => {
+      openLoginStream(
+        [
+          '[+] logging in...',
+          '[.] account info cached successfully',
+          '[supervisor] Apple Music credentials persisted to /app/rootfs/data',
+        ],
+        (_req, res2) => {
+          // The stream is closed by the supervisor after the persistence
+          // confirmation; res close fires on completion even though the
+          // socket returns to the keep-alive pool.
+          res2.on('close', () => { closed = true })
+        },
+      )(req, res)
+      res.end()
+    },
+    async () => {
+      assert.deepEqual(await startWrapperLogin({ email: 'test@example.com', password: 'pass' }), { ok: true })
+      assert.equal(getLoginStatus().inProgress, false)
+      await waitFor(() => closed)
+    },
+  )
+})
+
+test('a success line alone still resolves for an older supervisor', async () => {
+  await withSupervisor(
+    (req, res) => {
+      openLoginStream(['[+] logging in...', '[.] account info cached successfully'])(req, res)
+      res.end()
+    },
+    async () => {
+      assert.deepEqual(await startWrapperLogin({ email: 'test@example.com', password: 'pass' }), { ok: true })
+      assert.equal(getLoginStatus().inProgress, false)
+    },
+  )
+})
+
+test('startWrapperLogin fails honestly when the credentials never reached disk', async () => {
+  await withSupervisor(
+    (req, res) => {
+      openLoginStream([
+        '[+] logging in...',
+        '[.] account info cached successfully',
+        '[supervisor] the sign-in reported success but no credentials appeared in /app/rootfs/data; check the data volume mount',
+      ])(req, res)
+      res.end()
+    },
+    async () => {
+      await assert.rejects(
+        startWrapperLogin({ email: 'test@example.com', password: 'pass' }),
+        /never appeared on disk/,
+      )
+      assert.equal(getLoginStatus().inProgress, false)
+    },
+  )
 })
 
 test('startWrapperLogin rejects with the wrapper diagnostic when the stream ends', async () => {
@@ -318,6 +366,7 @@ test('submit2FA forwards the code to the supervisor', async () => {
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ ok: true }))
         loginRes.write('[.] account info cached successfully\n')
+        loginRes.end()
       })
     },
     async () => {

@@ -39,6 +39,12 @@ export async function convertToFlac(inputPath, { deleteOriginal = true, signal, 
   const dir = path.dirname(inputPath)
   const base = path.basename(inputPath, path.extname(inputPath))
   const outPath = path.join(dir, `${base}.flac`)
+  const lrcPath = path.join(dir, `${base}.lrc`)
+  const ttmlPath = path.join(dir, `${base}.ttml`)
+  // With both sidecars present (lyrics format "both") the m4a carries TTML, so embed the LRC.
+  const hasTtml = await fsp.stat(ttmlPath).then(() => true, () => false)
+  const lrc = hasTtml ? await fsp.readFile(lrcPath, 'utf8').catch(() => '') : ''
+  const lrcArgs = lrc.trim() ? ['-metadata', `lyrics=${lrc}`] : []
   // ffmpeg writes to a hidden temp file that only becomes the .flac once it
   // finished, so a failed or killed conversion leaves no partial track to be
   // moved into the library next to the original.
@@ -52,6 +58,7 @@ export async function convertToFlac(inputPath, { deleteOriginal = true, signal, 
       '0',
       '-map_metadata',
       '0',
+      ...lrcArgs,
       '-c:a',
       'flac',
       '-compression_level',

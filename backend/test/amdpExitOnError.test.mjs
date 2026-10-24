@@ -29,6 +29,11 @@ test('playlist tracks keep their album metadata instead of the playlist', async 
   assert.match(await fsp.readFile(cfgPath, 'utf8'), /^use-songinfo-for-playlist: true$/m)
 })
 
+test('amdp patches alac frames ffmpeg would drop', async () => {
+  const cfgPath = await writeAmdpConfig({ settings: {}, mediaUserToken: 't', stagingRoot: tmpConfig })
+  assert.match(await fsp.readFile(cfgPath, 'utf8'), /^alac-fix: true$/m)
+})
+
 test('playlist files are renumbered from the album track tag', () => {
   assert.equal(renumberFromTrackTag('08. Double Trio 2.m4a', '7/9'), '07. Double Trio 2.m4a')
   assert.equal(renumberFromTrackTag('05. And I Dance.flac', '1'), '01. And I Dance.flac')

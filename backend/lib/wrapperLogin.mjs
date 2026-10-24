@@ -265,14 +265,25 @@ function checkCollected(current) {
   if (!current.twoFaDetected && logsIndicateTwoFa(s)) {
     markTwoFaDetected()
   }
-
-  if (/account info cached successfully/i.test(s)) {
-    finalizeSuccess(current)
-  }
 }
 
 function handleStreamFinished(current) {
   if (current.terminated) return
+
+  // The wrapper prints its success line just before writing the token files
+  // (#46), so the supervisor confirms on the stream once the credentials are
+  // really on disk; only then is the sign-in a success.
+  if (/account info cached successfully/i.test(current.collected)) {
+    if (/no credentials appeared/i.test(current.collected)) {
+      finalizeFailure(
+        'The wrapper authenticated with Apple but the credentials never appeared on disk. Check the data volume mount and the wrapper container logs.',
+        current,
+      )
+    } else {
+      finalizeSuccess(current)
+    }
+    return
+  }
 
   let reason = extractWrapperFailureReason(current.collected)
   if (!reason) {

@@ -29,7 +29,7 @@ type Props = {
   artistName: string
   albums: Album[]
   inLibraryMap?: Record<string, boolean>
-  onQueued?: (count: number) => void
+  onQueued?: (queued: number, skippedExisting: number) => void
 }
 
 export function SelectDownloadsModal({
@@ -138,11 +138,15 @@ export function SelectDownloadsModal({
         .filter((a) => selected.has(a.id) && !inLibraryMap[a.id])
         .map((a) => a.id)
       const quality = appSettings?.promptForDownloadQuality ? selectedQuality : undefined
-      for (const id of ids) {
-        await api.enqueue(id, quality)
+      // one request for the whole selection: the backend skips albums that
+      // are already in the library instead of aborting the queue on them
+      const res = await api.enqueueBulk(ids, quality)
+      if (res.queued > 0 || res.skippedExisting > 0) {
+        onQueued?.(res.queued, res.skippedExisting)
+        onClose()
+      } else {
+        setError(res.errors[0]?.error || t('selectDownloadsModal.failedToQueueDownloads'))
       }
-      onQueued?.(ids.length)
-      onClose()
     } catch (err: any) {
       setError(err?.message || t('selectDownloadsModal.failedToQueueDownloads'))
     } finally {

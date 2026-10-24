@@ -44,6 +44,7 @@ export function ArtistPage() {
     const [following, setFollowing] = useState(false);
     const [followSubmitting, setFollowSubmitting] = useState(false);
     const [queuedCount, setQueuedCount] = useState(0);
+    const [queuedSkipped, setQueuedSkipped] = useState(0);
     const [followBanner, setFollowBanner] = useState<
         null | "followed" | "unfollowed"
     >(null);
@@ -65,10 +66,13 @@ export function ArtistPage() {
     }, [id, followingState]);
 
     useEffect(() => {
-        if (!queuedCount) return;
-        const timer = setTimeout(() => setQueuedCount(0), 6000);
+        if (!queuedCount && !queuedSkipped) return;
+        const timer = setTimeout(() => {
+            setQueuedCount(0);
+            setQueuedSkipped(0);
+        }, 6000);
         return () => clearTimeout(timer);
-    }, [queuedCount]);
+    }, [queuedCount, queuedSkipped]);
 
     useEffect(() => {
         if (!followBanner) return;
@@ -167,7 +171,7 @@ export function ArtistPage() {
     return (
         <div className="mx-auto w-full max-w-7xl pt-4 md:pt-6 space-y-4">
             <AnimatePresence>
-                {queuedCount > 0 && (
+                {(queuedCount > 0 || queuedSkipped > 0) && (
                     <motion.div
                         key="queued-banner"
                         initial={{ opacity: 0, y: -8, scale: 0.98 }}
@@ -181,17 +185,35 @@ export function ArtistPage() {
                         className="flex items-center justify-between gap-3 rounded-app border border-[rgba(var(--accent),0.35)] bg-[rgba(var(--accent),0.10)] px-4 py-2.5 text-sm text-white/90 backdrop-blur-[10px]"
                     >
                         <div>
-                            {t("artist.queuedAlbums", { count: queuedCount })}{" "}
-                            <Link
-                                to="/"
-                                className="font-medium text-[rgb(var(--accent))] underline underline-offset-2 transition-colors hover:text-white"
-                            >
-                                {t("artist.openActivity")}
-                            </Link>
+                            {queuedCount > 0 && (
+                                <>
+                                    {t("artist.queuedAlbums", { count: queuedCount })}
+                                    {queuedSkipped > 0 && <span className="text-white/60"> · </span>}
+                                </>
+                            )}
+                            {queuedSkipped > 0 && (
+                                <span className="text-white/60">
+                                    {t("cloudLibrary.alreadyInLibrary", { count: queuedSkipped })}
+                                </span>
+                            )}
+                            {queuedCount > 0 && (
+                                <>
+                                    {" "}
+                                    <Link
+                                        to="/"
+                                        className="font-medium text-[rgb(var(--accent))] underline underline-offset-2 transition-colors hover:text-white"
+                                    >
+                                        {t("artist.openActivity")}
+                                    </Link>
+                                </>
+                            )}
                         </div>
                         <button
                             type="button"
-                            onClick={() => setQueuedCount(0)}
+                            onClick={() => {
+                                setQueuedCount(0);
+                                setQueuedSkipped(0);
+                            }}
                             aria-label={t("artist.dismiss")}
                             className="shrink-0 inline-flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.08)] text-white/75 transition-[background,border-color,color] duration-[250ms] ease-smooth hover:border-[rgba(var(--accent),0.45)] hover:bg-[rgba(var(--accent),0.18)] hover:text-white"
                         >
@@ -316,7 +338,10 @@ export function ArtistPage() {
                 artistName={artist?.name || t("artist.artistLabel")}
                 albums={albums}
                 inLibraryMap={inLibraryAlbums}
-                onQueued={(n) => setQueuedCount(n)}
+                onQueued={(n, skipped) => {
+                    setQueuedCount(n);
+                    setQueuedSkipped(skipped);
+                }}
             />
             <Modal
                 open={followModalOpen}
