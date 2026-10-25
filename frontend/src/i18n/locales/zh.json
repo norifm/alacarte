@@ -50,6 +50,7 @@
     "cardAutoDownloads": "自动下载",
     "cardAccount": "账号",
     "storefront": "商店",
+    "autoStorefront": "自动检测商店",
     "contentRating": "内容分级",
     "preferExplicit": "优先选择显式版本",
     "preferClean": "优先选择纯净版",

@@ -51,7 +51,6 @@
     "cardAccount": "Account",
     "storefront": "Storefront",
     "autoStorefront": "Auto-detect storefront",
-    "autoStorefrontHelp": "Match the Apple ID's account region after saving a media-user-token or restarting. Picking a storefront by hand turns this off.",
     "contentRating": "Content rating",
     "preferExplicit": "Prefer explicit",
     "preferClean": "Prefer clean",

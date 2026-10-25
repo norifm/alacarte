@@ -163,6 +163,7 @@ settingsRouter.put('/', async (req, res) => {
       if (patch.storefront !== current.storefront) patch.autoStorefront = false
     }
     const saved = await writeSettings(patch)
+    if (patch.autoStorefront === true) await detectAndApplyStorefront()
     if (Object.keys(patch).some((k) => k.startsWith('appleGateway'))) await applyAppleGatewaySettings()
     if (saved.octoIntegrationEnabled && !saved.octoIntegrationToken) {
       await writeSettings({ octoIntegrationToken: encryptSecret(generateIntegrationToken()) })
@@ -279,16 +280,6 @@ settingsRouter.delete('/apple-credentials', async (_req, res) => {
     res.json({ ok: true })
   } catch (err) {
     res.status(500).json({ error: err.message })
-  }
-})
-
-settingsRouter.post('/storefront/detect', async (_req, res) => {
-  try {
-    const result = await detectAndApplyStorefront()
-    if (!result.ok) return res.status(412).json(result)
-    res.json(result)
-  } catch (err) {
-    res.status(502).json({ error: err.message })
   }
 })
 

@@ -50,6 +50,7 @@
     "cardAutoDownloads": "Téléchargements automatiques",
     "cardAccount": "Compte",
     "storefront": "Boutique",
+    "autoStorefront": "Détecter la boutique automatiquement",
     "contentRating": "Classification du contenu",
     "preferExplicit": "Préférer la version explicite",
     "preferClean": "Préférer la version non explicite",

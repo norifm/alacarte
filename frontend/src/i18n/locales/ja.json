@@ -50,6 +50,7 @@
     "cardAutoDownloads": "自動ダウンロード",
     "cardAccount": "アカウント",
     "storefront": "ストアフロント",
+    "autoStorefront": "ストアフロントを自動検出",
     "contentRating": "コンテンツレーティング",
     "preferExplicit": "露骨な表現を優先",
     "preferClean": "クリーン版を優先",

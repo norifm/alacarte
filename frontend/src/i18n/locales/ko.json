@@ -50,6 +50,7 @@
     "cardAutoDownloads": "자동 다운로드",
     "cardAccount": "계정",
     "storefront": "스토어프론트",
+    "autoStorefront": "스토어프론트 자동 감지",
     "contentRating": "콘텐츠 등급",
     "preferExplicit": "선정성 버전 선호",
     "preferClean": "클린 버전 선호",

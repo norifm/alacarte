@@ -297,7 +297,9 @@ function normalizeSettings(input) {
     appleGatewayPaceIntegration: toBool(parsed?.appleGatewayPaceIntegration, DEFAULTS.appleGatewayPaceIntegration),
     appleGatewayAdaptive: toBool(parsed?.appleGatewayAdaptive, DEFAULTS.appleGatewayAdaptive),
     appleGatewayCooldownMinutes: clampSetting(parsed?.appleGatewayCooldownMinutes, ...APPLE_GATEWAY_LIMITS.appleGatewayCooldownMinutes),
-    autoStorefront: toBool(parsed?.autoStorefront, DEFAULTS.autoStorefront),
+    // Fresh installs get DEFAULTS written to disk; a settings file from before
+    // auto-detect existed has no key and keeps the storefront it was given.
+    autoStorefront: toBool(parsed?.autoStorefront, false),
   }
 }
 

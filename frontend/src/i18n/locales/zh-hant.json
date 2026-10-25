@@ -50,6 +50,7 @@
     "cardAutoDownloads": "自動下載",
     "cardAccount": "帳號",
     "storefront": "商店地區",
+    "autoStorefront": "自動偵測商店地區",
     "contentRating": "內容分級",
     "preferExplicit": "偏好完整版",
     "preferClean": "偏好淨化版",

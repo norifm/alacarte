@@ -231,7 +231,6 @@ export function SettingsPage() {
                 />
                 <div>
                   <div className="text-sm font-medium">{t('settings.autoStorefront')}</div>
-                  <div className="text-xs text-white/50">{t('settings.autoStorefrontHelp')}</div>
                 </div>
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
