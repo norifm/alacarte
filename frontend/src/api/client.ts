@@ -218,6 +218,7 @@ export type HealthReport = {
 
 export type PublicSettings = {
   storefront: string
+  autoStorefront: boolean
   language: string
   quality: QualityPreference
   convertToFlac: boolean

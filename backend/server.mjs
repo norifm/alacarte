@@ -31,6 +31,7 @@ import { generateSetupToken } from './lib/setupToken.mjs'
 import { isAuthDisabled, requireAuth } from './lib/requireAuth.mjs'
 import { runInLane } from './lib/appleGateway.mjs'
 import { applyAppleGatewaySettings } from './lib/appleGatewaySettings.mjs'
+import { detectAndApplyStorefront } from './lib/storefrontAuto.mjs'
 import { startAutoDownloadScheduler } from './lib/autoDownloads.mjs'
 import { startPlaylistSyncScheduler } from './lib/playlistSync.mjs'
 import { initQueue } from './lib/queue.mjs'
@@ -135,6 +136,10 @@ app.use('/api/cloud-library', cloudLibraryRouter)
 app.use('/api/integration/v1', integrationRouter)
 
 applyAppleGatewaySettings({ resetPace: false }).catch(() => {})
+// Keep the catalog storefront aligned with the Apple ID's real region; a stale
+// "us" default makes region-locked albums fail with "error getting album
+// response". Needs a media-user-token, so it silently no-ops without one.
+detectAndApplyStorefront().catch(() => {})
 startAutoDownloadScheduler()
 startPlaylistSyncScheduler()
 

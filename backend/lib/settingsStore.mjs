@@ -25,6 +25,7 @@ const SETTINGS_FILE = path.join(CONFIG_DIR, 'settings.json')
 
 const DEFAULTS = {
   storefront: 'us',
+  autoStorefront: true,
   language: 'en-US',
   quality: 'flac',
   convertToFlac: true,
@@ -296,6 +297,7 @@ function normalizeSettings(input) {
     appleGatewayPaceIntegration: toBool(parsed?.appleGatewayPaceIntegration, DEFAULTS.appleGatewayPaceIntegration),
     appleGatewayAdaptive: toBool(parsed?.appleGatewayAdaptive, DEFAULTS.appleGatewayAdaptive),
     appleGatewayCooldownMinutes: clampSetting(parsed?.appleGatewayCooldownMinutes, ...APPLE_GATEWAY_LIMITS.appleGatewayCooldownMinutes),
+    autoStorefront: toBool(parsed?.autoStorefront, DEFAULTS.autoStorefront),
   }
 }
 
@@ -310,6 +312,7 @@ export async function readPublicSettings() {
   const s = await readSettings()
   return {
     storefront: s.storefront,
+    autoStorefront: Boolean(s.autoStorefront),
     language: s.language,
     quality: s.quality,
     convertToFlac: s.quality === 'flac',

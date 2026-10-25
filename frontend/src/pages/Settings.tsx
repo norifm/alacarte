@@ -222,6 +222,18 @@ export function SettingsPage() {
                   ))}
                 </select>
               </label>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={settings.autoStorefront}
+                  onChange={(e) => update({ autoStorefront: e.target.checked })}
+                  className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                />
+                <div>
+                  <div className="text-sm font-medium">{t('settings.autoStorefront')}</div>
+                  <div className="text-xs text-white/50">{t('settings.autoStorefrontHelp')}</div>
+                </div>
+              </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
                 <span className="text-sm text-white/70 md:w-32 md:pt-2">
                   {t('settings.contentRating')}
