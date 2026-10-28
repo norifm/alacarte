@@ -273,7 +273,28 @@ export function FollowingPage() {
             </div>
 
             <PageTitle
-                sub={t("following.subtitle")}
+                sub={
+                    <div
+                        className="flex flex-wrap gap-1"
+                        role="group"
+                        aria-label={t("following.sectionAriaLabel")}
+                    >
+                        <FollowTabPill
+                            label={t("following.tabArtists")}
+                            icon={UserRoundCheck}
+                            active={activeTab === "artists"}
+                            onClick={() => setActiveTab("artists")}
+                            count={artists.length}
+                        />
+                        <FollowTabPill
+                            label={t("following.tabPlaylists")}
+                            icon={ListMusic}
+                            active={activeTab === "playlists"}
+                            onClick={() => setActiveTab("playlists")}
+                            count={playlists.length}
+                        />
+                    </div>
+                }
                 aside={
                     <>
                     <Button
@@ -331,26 +352,6 @@ export function FollowingPage() {
             >
                 {t("following.title")}
             </PageTitle>
-                    <div
-                        className="-mt-3.5 flex flex-wrap gap-1"
-                        role="group"
-                        aria-label={t("following.sectionAriaLabel")}
-                    >
-                        <FollowTabPill
-                            label={t("following.tabArtists")}
-                            icon={UserRoundCheck}
-                            active={activeTab === "artists"}
-                            onClick={() => setActiveTab("artists")}
-                            count={artists.length}
-                        />
-                        <FollowTabPill
-                            label={t("following.tabPlaylists")}
-                            icon={ListMusic}
-                            active={activeTab === "playlists"}
-                            onClick={() => setActiveTab("playlists")}
-                            count={playlists.length}
-                        />
-                    </div>
 
             {error && <Badge variant="bad">{error}</Badge>}
 

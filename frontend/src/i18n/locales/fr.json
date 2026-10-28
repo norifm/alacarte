@@ -617,7 +617,6 @@
     "openActivity": "Ouvrir l'activité",
     "dismiss": "Ignorer",
     "title": "Abonnements",
-    "subtitle": "Suivez des artistes pour surveiller les nouvelles sorties, et des playlists pour télécharger automatiquement les pistes que vous y ajoutez.",
     "sectionAriaLabel": "Section abonnements",
     "tabArtists": "Artistes",
     "tabPlaylists": "Playlists",
@@ -724,7 +723,6 @@
   },
   "imports": {
     "title": "Imports",
-    "subtitle": "Ajoutez un fichier avec des liens Apple Music, un par ligne. alacarte conserve une copie : la resynchronisation rejoue les liens enregistrés, les modifications du fichier nécessitent un nouvel ajout.",
     "add": "Ajouter des fichiers",
     "adding": "Ajout…",
     "resync": "Resynchroniser",

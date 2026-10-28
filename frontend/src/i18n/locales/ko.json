@@ -616,7 +616,6 @@
     "openActivity": "활동 열기",
     "dismiss": "닫기",
     "title": "팔로잉",
-    "subtitle": "아티스트를 팔로우하면 새 발매작을 지켜보고, 플레이리스트를 팔로우하면 추가하는 트랙을 자동으로 다운로드합니다.",
     "sectionAriaLabel": "팔로잉 섹션",
     "tabArtists": "아티스트",
     "tabPlaylists": "플레이리스트",
@@ -723,7 +722,6 @@
   },
   "imports": {
     "title": "가져오기",
-    "subtitle": "Apple Music 링크를 한 줄에 하나씩 담은 파일을 추가하세요. alacarte는 사본을 저장하므로 다시 동기화는 저장된 링크를 다시 실행합니다. 이후의 수정은 다시 추가해야 합니다.",
     "add": "파일 추가",
     "adding": "추가 중…",
     "resync": "다시 동기화",

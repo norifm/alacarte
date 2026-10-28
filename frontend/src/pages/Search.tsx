@@ -161,7 +161,7 @@ export function SearchPage() {
   return (
     <div className="flex w-full flex-col gap-[26px]">
       <PageTitle>{t('nav.search')}</PageTitle>
-      <label className="field -mt-1.5 flex items-center gap-2 !px-3.5 text-quiet md:hidden">
+      <label className="field flex items-center gap-2 !px-3.5 text-quiet md:hidden">
         <SearchIcon className="h-[19px] w-[19px] shrink-0" />
         <input
           ref={inputRef}
@@ -197,7 +197,7 @@ export function SearchPage() {
 
       {trimmed && (
         <>
-          <div className="-mt-3.5 flex flex-wrap gap-1" role="group" aria-label={t('search.filterResultsAriaLabel')}>
+          <div className="flex flex-wrap gap-1" role="group" aria-label={t('search.filterResultsAriaLabel')}>
             <CatPill label={t('search.showAll')} icon={ListChecks} active={allCatsSelected} onClick={selectAllCats} />
             <CatPill label={t('search.albums')} icon={Disc3} active={!allCatsSelected && catSet.has('albums')} onClick={() => toggleCat('albums')} count={results.albums.length} />
             <CatPill label={t('search.artists')} icon={UserRound} active={!allCatsSelected && catSet.has('artists')} onClick={() => toggleCat('artists')} count={results.artists.length} />

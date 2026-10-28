@@ -616,7 +616,6 @@
     "openActivity": "開啟活動記錄",
     "dismiss": "關閉",
     "title": "關注",
-    "subtitle": "關注藝人以追蹤新發行內容，關注播放清單則會在你新增曲目時自動下載。",
     "sectionAriaLabel": "關注區段",
     "tabArtists": "藝人",
     "tabPlaylists": "播放清單",
@@ -723,7 +722,6 @@
   },
   "imports": {
     "title": "匯入",
-    "subtitle": "加入含 Apple Music 連結的檔案，每行一個連結。alacarte 會保存檔案副本，重新同步時會重放已儲存的連結，之後對原檔的修改需要重新加入。",
     "add": "加入檔案",
     "adding": "正在加入…",
     "resync": "重新同步",

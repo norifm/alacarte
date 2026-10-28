@@ -616,7 +616,6 @@
     "openActivity": "打开活动记录",
     "dismiss": "关闭",
     "title": "关注",
-    "subtitle": "关注艺人以监视其新发行内容，关注播放列表以自动下载你添加到其中的曲目。",
     "sectionAriaLabel": "关注分区",
     "tabArtists": "艺人",
     "tabPlaylists": "播放列表",
@@ -723,7 +722,6 @@
   },
   "imports": {
     "title": "导入",
-    "subtitle": "添加含 Apple Music 链接的文件，每行一个链接。alacarte 会保存文件副本，重新同步时重放已保存的链接，之后对原文件的修改需要重新添加。",
     "add": "添加文件",
     "adding": "正在添加…",
     "resync": "重新同步",

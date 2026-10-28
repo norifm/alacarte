@@ -617,7 +617,6 @@
     "openActivity": "Open activity",
     "dismiss": "Dismiss",
     "title": "Following",
-    "subtitle": "Follow artists to watch for new releases and playlists to auto-download tracks you add to them.",
     "sectionAriaLabel": "Following section",
     "tabArtists": "Artists",
     "tabPlaylists": "Playlists",
@@ -724,7 +723,6 @@
   },
   "imports": {
     "title": "Imports",
-    "subtitle": "Add a file with Apple Music links, one link per line. alacarte stores a copy, so resync replays the saved links, not later edits to the file.",
     "add": "Add files",
     "adding": "Adding…",
     "resync": "Resync",

@@ -111,7 +111,6 @@ export function ImportsPage() {
             {error && <Badge variant="bad">{error}</Badge>}
 
             <PageTitle
-                sub={t("imports.subtitle")}
                 aside={
                     <>
                     <Button

@@ -359,6 +359,31 @@ export function CloudLibraryPage() {
       </div>
 
       <PageTitle
+        sub={
+          <div className="flex flex-wrap gap-1" role="group" aria-label={t('cloudLibrary.librarySectionAriaLabel')}>
+            <CatPill
+              label={t('cloudLibrary.albumsLabel')}
+              icon={Disc3}
+              active={activeTab === 'albums'}
+              onClick={() => setActiveTab('albums')}
+              count={tabs.albums.total ?? tabs.albums.items.length}
+            />
+            <CatPill
+              label={t('cloudLibrary.playlistsLabel')}
+              icon={ListMusic}
+              active={activeTab === 'playlists'}
+              onClick={() => setActiveTab('playlists')}
+              count={tabs.playlists.total ?? tabs.playlists.items.length}
+            />
+            <CatPill
+              label={t('cloudLibrary.songsLabel')}
+              icon={Music2}
+              active={activeTab === 'songs'}
+              onClick={() => setActiveTab('songs')}
+              count={tabs.songs.total ?? tabs.songs.items.length}
+            />
+          </div>
+        }
         aside={
           <>
           <Button onClick={refresh} disabled={activeState.loading} className="whitespace-nowrap">
@@ -392,30 +417,6 @@ export function CloudLibraryPage() {
       >
         {t('cloudLibrary.pageTitle')}
       </PageTitle>
-
-      <div className="-mt-3.5 flex flex-wrap gap-1" role="group" aria-label={t('cloudLibrary.librarySectionAriaLabel')}>
-        <CatPill
-          label={t('cloudLibrary.albumsLabel')}
-          icon={Disc3}
-          active={activeTab === 'albums'}
-          onClick={() => setActiveTab('albums')}
-          count={tabs.albums.total ?? tabs.albums.items.length}
-        />
-        <CatPill
-          label={t('cloudLibrary.playlistsLabel')}
-          icon={ListMusic}
-          active={activeTab === 'playlists'}
-          onClick={() => setActiveTab('playlists')}
-          count={tabs.playlists.total ?? tabs.playlists.items.length}
-        />
-        <CatPill
-          label={t('cloudLibrary.songsLabel')}
-          icon={Music2}
-          active={activeTab === 'songs'}
-          onClick={() => setActiveTab('songs')}
-          count={tabs.songs.total ?? tabs.songs.items.length}
-        />
-      </div>
 
       {activeState.error && <Badge variant="bad">{activeState.error}</Badge>}
 

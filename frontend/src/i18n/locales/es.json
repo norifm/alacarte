@@ -617,7 +617,6 @@
     "openActivity": "Abrir actividad",
     "dismiss": "Descartar",
     "title": "Siguiendo",
-    "subtitle": "Sigue artistas para vigilar sus nuevos lanzamientos y listas de reproducción para descargar automáticamente las pistas que les añadas.",
     "sectionAriaLabel": "Sección Siguiendo",
     "tabArtists": "Artistas",
     "tabPlaylists": "Listas de reproducción",
@@ -724,7 +723,6 @@
   },
   "imports": {
     "title": "Importar",
-    "subtitle": "Añade un archivo con enlaces de Apple Music, uno por línea. alacarte guarda una copia, así que la resincronización repite los enlaces guardados, no las ediciones posteriores del archivo.",
     "add": "Añadir archivos",
     "adding": "Añadiendo…",
     "resync": "Resincronizar",
