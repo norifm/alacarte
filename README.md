@@ -1,6 +1,6 @@
 # alacarte
 
-Self-hosted Apple Music downloader with a web UI that wears [nori](https://github.com/norifm/nori)'s seasons.
+Self-hosted Apple Music downloader with a web UI.
 
 <div align="center">
   <img src="./assets/hero-album.png" alt="alacarte Album Detail View" width="100%" />
@@ -167,8 +167,6 @@ alacarte runs on a shared Docker network with three primary components:
 Built upon:
 - [zhaarey/apple-music-downloader](https://github.com/zhaarey/apple-music-downloader)
 - [WorldObservationLog/wrapper](https://github.com/WorldObservationLog/wrapper)
-
-The UI wears Nori Seasons, the look of [nori](https://github.com/norifm/nori), alacarte's sibling under norifm.
 
 ## License
 
