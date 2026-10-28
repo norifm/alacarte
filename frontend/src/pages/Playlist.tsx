@@ -30,7 +30,6 @@ import { Badge } from '../components/Badge'
 import { ResolvedMediaLink } from '../components/ResolvedMediaLink'
 import { formatPercent } from '../lib/format'
 import { CoverWash } from '../components/CoverWash'
-import { useCoverTint } from '../hooks/useSeasons'
 import { ProgressBar } from '../components/ProgressBar'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
@@ -135,7 +134,6 @@ export function PlaylistPage() {
   }, [catalogId, libraryId])
 
   const coverBig = artworkUrl(playlist?.artworkTemplate, 600)
-  useCoverTint(playlist?.artworkColor)
 
   const activePlaylistTrackJobs = useMemo(
     () =>
@@ -233,7 +231,7 @@ export function PlaylistPage() {
 
   return (
     <div className="w-full">
-      <CoverWash template={playlist?.artworkTemplate} color={playlist?.artworkColor} />
+      <CoverWash template={playlist?.artworkTemplate} />
       {error && <Badge variant="bad">{error}</Badge>}
 
       <div className="messages">

@@ -331,30 +331,70 @@ export function setCoverTint(color: string | null | undefined) {
   apply(true)
 }
 
-/** A cover's own wash, as nori's page wears it over its head (cover.rs's `wash_of`): the cover (`rgba`, a
- *  32 x 32 copy) blurred, its lightness held near its page's and its saturation capped so text reads on it,
- *  then mostly mixed back into that page so its hues read as a glow. Its page is Apple's `bgColor` for the
- *  cover. Null in Midnight, which wears no cover colors. */
-export function coverWash(rgba: Uint8ClampedArray, side: number, cover: string): Uint8ClampedArray | null {
-  if (look.appearance === 'midnight' || !/^[0-9a-f]{6}$/i.test(cover)) return null
-  const bg = hex(cover)
-  const [bgLight, bgChroma] = oklab(bg)
-  const paper = bgChroma < 0.045 && bgLight >= 0.79
-  const ink = bgChroma < 0.015 && bgLight < 0.21
-  const on = contrast(WHITE, bg) >= contrast(hex('0d0d0d'), bg) ? WHITE : hex('0d0d0d')
-  const dark = on === WHITE
+const near = (a: Rgb, b: Rgb) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2 < 48 * 48
+const mean = (px: Rgb[]): Rgb => {
+  const sum = px.reduce((t, p) => [t[0] + p[0], t[1] + p[1], t[2] + p[2]], [0, 0, 0])
+  return sum.map((v) => Math.floor(v / Math.max(1, px.length))) as Rgb
+}
+const ink = hex('0d0d0d')
+const textOn = (c: Rgb) => (contrast(WHITE, c) >= contrast(ink, c) ? WHITE : ink)
+
+/** `c` as a page: itself when white or near-black text reads on it, else the least lightness step that lets one. */
+function pageOf(c: Rgb): Rgb {
+  if (contrast(textOn(c), c) >= 4.5) return c
+  const [h, sat, l] = toHsl(c)
+  const reads = (v: number) => contrast(textOn(fromHsl([h, sat, v])), fromHsl([h, sat, v])) >= 4.5
+  let down = l
+  while (down > 0 && !reads(down)) down = Math.max(0, down - 0.01)
+  let up = l
+  while (up < 1 && !reads(up)) up = Math.min(1, up + 0.01)
+  return fromHsl([h, sat, l - down <= up - l ? down : up])
+}
+
+/** A cover's colors, as nori works them out from its pixels (cover.rs's `derive`, at a cover `side` px
+ *  square): the page it sits on (its frame, else the color its lower half and border hold most of, with no
+ *  tint from noise), the edge the page is dyed with (the frame, else its bottom band mostly toward that
+ *  page), and its wash (`wash_of`): the cover blurred, its lightness held near its page's and its
+ *  saturation capped so text reads on it, then mostly mixed back into the page so its hues read as a glow. */
+export function coverColors(rgba: Uint8ClampedArray, side: number): { edge: string; wash: Uint8ClampedArray } {
   let px: Rgb[] = []
   for (let i = 0; i < side * side; i++) px.push([rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2]])
+  const ring: Rgb[] = []
+  for (let i = 0; i < side; i++) ring.push(px[i], px[(side - 1) * side + i], px[i * side], px[i * side + side - 1])
+  const ringMean = mean(ring)
+  const ringNear = ring.filter((p) => near(p, ringMean))
+  const frame = ringNear.length >= ring.length * 0.85 ? mean(ringNear) : null
+  const band = px.slice(Math.floor(side * 0.696) * side, Math.floor(side * 0.8955) * side)
+  const seam = mean(band)
+  const lower = [...px.slice((side / 2) * side), ...ring]
+  let best = lower[0]
+  let weight = -1
+  for (const c of lower) {
+    const w = lower.reduce((n, p) => n + (near(p, c) ? 1 : 0), 0)
+    if (w > weight) [best, weight] = [c, w]
+  }
+  const source = frame ?? mean(lower.filter((p) => near(p, best)))
+  const [sourceLight, sourceChroma] = oklab(source)
+  const paper = sourceChroma < 0.045 && sourceLight >= 0.79
+  const inky = sourceChroma < 0.015 && sourceLight < 0.21
+  const sh = toHsl(source)
+  sh[1] *= Math.min(1, Math.max(0, (sourceChroma - 0.006) / 0.01))
+  const bg = pageOf(fromHsl(sh))
+  const edge = frame ?? blend(seam, bg, 0.75)
+
+  const on = textOn(bg)
+  const dark = on === WHITE
   // Five passes of a 3-tap blur: at three, strong central shapes still showed.
   const at = (v: number) => Math.min(side - 1, Math.max(0, v))
   for (let pass = 0; pass < 5; pass++) {
     for (const across of [true, false]) {
-      px = px.map((_, i) => {
+      const from = px
+      px = from.map((_, i) => {
         const x = i % side
         const y = Math.floor(i / side)
         const sum = [0, 0, 0]
         for (let d = -1; d <= 1; d++) {
-          const q = px[across ? y * side + at(x + d) : at(y + d) * side + x]
+          const q = from[across ? y * side + at(x + d) : at(y + d) * side + x]
           for (let k = 0; k < 3; k++) sum[k] += q[k]
         }
         return sum.map((v) => Math.floor(v / 3)) as Rgb
@@ -362,25 +402,25 @@ export function coverWash(rgba: Uint8ClampedArray, side: number, cover: string):
     }
   }
   const page = toHsl(bg)
-  const mean = px.reduce((a, p) => a + toHsl(p)[2], 0) / px.length
+  const meanL = px.reduce((t, p) => t + toHsl(p)[2], 0) / px.length
   const spread = paper ? 0.04 : dark ? 0.11 : 0.055
   const pull = dark && !paper ? 1 : 0.85
-  const maxSat = paper || ink ? 0.04 : dark ? 0.62 : 0.4
-  const mute = paper || ink ? 0.78 : 0.38
-  const out = new Uint8ClampedArray(side * side * 4)
+  const maxSat = paper || inky ? 0.04 : dark ? 0.62 : 0.4
+  const mute = paper || inky ? 0.78 : 0.38
+  const wash = new Uint8ClampedArray(side * side * 4)
   px.forEach((p, i) => {
     const hsl = toHsl(p)
-    if (paper || ink) {
+    if (paper || inky) {
       hsl[0] = page[0]
       hsl[1] = page[1]
     } else hsl[1] = Math.min(hsl[1] * pull, maxSat)
-    const floor = ink ? page[2] : page[2] - spread
-    hsl[2] = Math.min(1, Math.max(0, Math.min(page[2] + spread, Math.max(floor, page[2] + (hsl[2] - mean) * spread * 2.5))))
+    const floor = inky ? page[2] : page[2] - spread
+    hsl[2] = Math.min(1, Math.max(0, Math.min(page[2] + spread, Math.max(floor, page[2] + (hsl[2] - meanL) * spread * 2.5))))
     let c = blend(fromHsl(hsl), bg, mute)
     if (contrast(on, c) < 4.5) c = bg
-    out.set([c[0], c[1], c[2], 255], i * 4)
+    wash.set([c[0], c[1], c[2], 255], i * 4)
   })
-  return out
+  return { edge: css(edge).slice(1), wash }
 }
 
 /** The page about a cover closed: the season's paper comes back unless the next page brings a cover of

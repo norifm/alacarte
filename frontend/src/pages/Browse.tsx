@@ -17,7 +17,6 @@ import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { StaggeredList, StaggeredItem } from "../components/StaggeredList";
 import { useLibraryPresence } from "../hooks/useLibraryPresence";
-import { useCoverTint } from "../hooks/useSeasons";
 import { CoverWash } from "../components/CoverWash";
 
 const GRID =
@@ -53,10 +52,9 @@ function useBrowse<T>(
 
 // A curator's or label's head: a page about one image, so the page wears its colors and its wash.
 function Header({ kind, item, children }: { kind: string; item: BrowseHeader; children?: React.ReactNode }) {
-    useCoverTint(item.artworkColor);
     return (
         <header className="pb-1 pt-6">
-            <CoverWash template={item.artworkTemplate} color={item.artworkColor} />
+            <CoverWash template={item.artworkTemplate} />
             <div className="caption mb-1">{kind}</div>
             <h1 className="text-[31px] leading-10 md:text-[34px] md:leading-[42px]">
                 {item.name}

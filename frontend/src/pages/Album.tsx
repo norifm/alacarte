@@ -25,7 +25,6 @@ import { DownloadButton } from '../components/DownloadButton'
 import { ResolvedMediaLink } from '../components/ResolvedMediaLink'
 import { stripYear, formatPercent } from '../lib/format'
 import { CoverWash } from '../components/CoverWash'
-import { useCoverTint } from '../hooks/useSeasons'
 import { cx } from '../lib/cx'
 
 function formatDur(ms: number | undefined) {
@@ -154,7 +153,6 @@ export function AlbumPage() {
   }
 
   const coverBig = artworkUrl(album?.artworkTemplate, 600)
-  useCoverTint(album?.artworkColor)
   const primaryArtistId = album?.artistId || album?.artists?.[0]?.id || null
   const alreadyInLibrary = allPresent || (!trackPresence && album ? isAlbumInLibrary(album) : false)
   const presentGroups = useMemo(
@@ -226,7 +224,7 @@ export function AlbumPage() {
 
   return (
     <div className="w-full">
-      <CoverWash template={album?.artworkTemplate} color={album?.artworkColor} />
+      <CoverWash template={album?.artworkTemplate} />
       {error && <Badge variant="bad">{error}</Badge>}
 
       {album && (

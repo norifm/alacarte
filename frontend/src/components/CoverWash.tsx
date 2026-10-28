@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 
 import { artworkUrl } from '../api/client'
 import { useLook } from '../hooks/useSeasons'
-import { coverWash } from '../lib/seasons'
+import { coverColors, releaseCoverTint, setCoverTint } from '../lib/seasons'
 
 const SIDE = 32
 
-// Across the top of a page about one cover, behind its head, as nori's desktop draws it: the cover's own
-// wash in its own colors, stretched so it is soft, under the page's dyed paper growing from 15 % to whole,
-// so the head wears the cover and the foot the season's paper blended with it. Not in Midnight.
-export function CoverWash({ template, color, height = 440 }: { template?: string | null; color?: string | null; height?: number }) {
+// A page about one cover, as nori's desktop draws it: the page and the chrome wear the season's paper dyed
+// with the cover's own edge (worked out from its pixels), and across the top, behind the head, lies the
+// cover's own wash in its own colors, stretched so it is soft, under the dyed paper growing from 15 % to
+// whole. Midnight wears no cover colors.
+export function CoverWash({ template, height = 440 }: { template?: string | null; height?: number }) {
   const look = useLook()
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const [shown, setShown] = useState(false)
@@ -17,7 +18,7 @@ export function CoverWash({ template, color, height = 440 }: { template?: string
 
   useEffect(() => {
     setShown(false)
-    if (!src || !color) return
+    if (!src) return
     let gone = false
     const img = new Image()
     img.crossOrigin = 'anonymous'
@@ -26,23 +27,24 @@ export function CoverWash({ template, color, height = 440 }: { template?: string
       const g = c?.getContext('2d', { willReadFrequently: true })
       if (gone || !c || !g) return
       g.drawImage(img, 0, 0, SIDE, SIDE)
-      let washed: Uint8ClampedArray | null = null
       try {
-        washed = coverWash(g.getImageData(0, 0, SIDE, SIDE).data, SIDE, color)
+        const { edge, wash } = coverColors(g.getImageData(0, 0, SIDE, SIDE).data, SIDE)
+        setCoverTint(edge)
+        g.putImageData(new ImageData(new Uint8ClampedArray(wash), SIDE, SIDE), 0, 0)
+        setShown(true)
       } catch {
-        /* a cover that cannot be read: no wash */
+        /* a cover that cannot be read: the season's paper */
       }
-      if (!washed) return
-      g.putImageData(new ImageData(new Uint8ClampedArray(washed), SIDE, SIDE), 0, 0)
-      setShown(true)
     }
     img.src = src
     return () => {
       gone = true
     }
-  }, [src, color, look])
+  }, [src])
 
-  if (!src || !color || look.appearance === 'midnight') return null
+  useEffect(() => () => releaseCoverTint(), [])
+
+  if (!src || look.appearance === 'midnight') return null
   return (
     <div
       aria-hidden

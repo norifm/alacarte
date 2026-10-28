@@ -28,7 +28,6 @@ import {
     ReleaseScopePicker,
     releaseScopeLabel,
 } from "../components/ReleaseScopePicker";
-import { useCoverTint } from "../hooks/useSeasons";
 import { CoverWash } from "../components/CoverWash";
 import { useLibraryPresence } from "../hooks/useLibraryPresence";
 import { useActivityFeed } from "../hooks/useActivityFeed";
@@ -57,7 +56,6 @@ export function ArtistPage() {
     const { isAlbumInLibrary } = useLibraryPresence();
     const { followingState } = useActivityFeed();
     const appSettings = useAppSettings();
-    useCoverTint(artist?.artworkColor);
 
     useEffect(() => {
         if (!id) return;
@@ -265,7 +263,7 @@ export function ArtistPage() {
             {error && <Badge variant="bad">{error}</Badge>}
             {artist && (
                 <>
-                    <CoverWash template={artist.artworkTemplate} color={artist.artworkColor} />
+                    <CoverWash template={artist.artworkTemplate} />
                     <ArtistBanner template={artist.artworkTemplate} />
                     <header className="flex min-h-[calc(max(340px,52vh)-110px)] flex-col items-center justify-end gap-4 pb-2 text-center md:min-h-[calc(max(420px,64vh)-110px)]">
                         <div>
