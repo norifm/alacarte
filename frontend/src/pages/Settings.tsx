@@ -1326,6 +1326,19 @@ function AccountSection({ onFlash }: { onFlash: (msg: string, err?: boolean) => 
   const [revokePassword, setRevokePassword] = useState('')
   const [revoking, setRevoking] = useState(false)
   const [revokeError, setRevokeError] = useState<string | null>(null)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+
+  const signOut = async () => {
+    if (signingOut) return
+    setSigningOut(true)
+    try {
+      await api.authLogout()
+    } catch {
+      // ignore — reload regardless so the auth gate shows
+    }
+    window.location.reload()
+  }
 
   useEffect(() => {
     api
@@ -1367,15 +1380,17 @@ function AccountSection({ onFlash }: { onFlash: (msg: string, err?: boolean) => 
       <div className="border-t border-[var(--line)]" />
 
       <div className="space-y-3">
-        <Button
-          onClick={() => {
-            setShowRevoke((v) => !v)
-            setRevokeError(null)
-          }}
-          className="bg-white/[0.02]"
-        >
-          {t('settings.signOutOnAllDevices')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setConfirmSignOut(true)}>{t('nav.signOut')}</Button>
+          <Button
+            onClick={() => {
+              setShowRevoke((v) => !v)
+              setRevokeError(null)
+            }}
+          >
+            {t('settings.signOutOnAllDevices')}
+          </Button>
+        </div>
         {showRevoke && (
           <form
             onSubmit={async (e) => {
@@ -1426,6 +1441,25 @@ function AccountSection({ onFlash }: { onFlash: (msg: string, err?: boolean) => 
           </form>
         )}
       </div>
+      <Modal
+        open={confirmSignOut}
+        onClose={() => !signingOut && setConfirmSignOut(false)}
+        placement="center"
+        label="Confirm sign out"
+        className="!max-w-[24rem]"
+      >
+        <div className="p-6">
+          <h2 className="text-base font-semibold text-white">{t('nav.confirmSignOut')}</h2>
+          <div className="mt-6 flex justify-end gap-1">
+            <Button onClick={() => setConfirmSignOut(false)} disabled={signingOut} variant="ghost">
+              {t('nav.cancel')}
+            </Button>
+            <Button onClick={signOut} disabled={signingOut} variant="ghost" className="!text-rose-500">
+              {signingOut ? 'Signing out…' : t('nav.signOut')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </motion.div>
   )
 }

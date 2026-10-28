@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Activity,
   Cloud,
   FileUp,
   Home as HomeIcon,
   Library as LibraryIcon,
-  LogOut,
   Search as SearchIcon,
   Settings2,
   UserRoundCheck,
@@ -15,9 +13,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { HealthGlyph, HealthRow } from './HealthPill'
-import { Button } from './Button'
-import { Modal } from './Modal'
-import { api, type HealthReport } from '../api/client'
+import type { HealthReport } from '../api/client'
 import { cx } from '../lib/cx'
 
 type Props = {
@@ -29,16 +25,12 @@ type Tab = { to: string; end?: boolean; icon: React.ComponentType<{ className?: 
 
 // The chrome, as nori's: one outlined pill floating over the page, which scrolls under it and shows
 // blurred inside. On a wide window it runs along the top (the sections, the current one in the accent,
-// then search, the status and the menu); on a phone it sits at the bottom, the status over the tabs in
+// then search, the status and Settings); on a phone it sits at the bottom, the status over the tabs in
 // the same outline.
 export function TopBar({ health, loading }: Props) {
   const { t } = useTranslation()
   const location = useLocation()
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [confirmSignOut, setConfirmSignOut] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
 
-  const wide = useWide()
   const showHealth = location.pathname !== '/settings' && location.pathname !== '/status'
 
   const tabs: Tab[] = [
@@ -49,29 +41,11 @@ export function TopBar({ health, loading }: Props) {
     { to: '/following', icon: UserRoundCheck, label: t('nav.following') },
   ]
 
-  useEffect(() => setMenuOpen(false), [location.pathname])
-
-  const confirmAndSignOut = async () => {
-    if (signingOut) return
-    setSigningOut(true)
-    try {
-      await api.authLogout()
-    } catch {
-      // ignore — reload regardless so the auth gate shows
-    }
-    window.location.reload()
-  }
-
-
-  const menu = (
-    <NavMenu
-      open={menuOpen}
-      onOpenChange={setMenuOpen}
-      onSignOut={() => {
-        setMenuOpen(false)
-        setConfirmSignOut(true)
-      }}
-    />
+  // The very right of the bar opens Settings, lit while it is open.
+  const settings = (
+    <NavLink to="/settings" className={({ isActive }) => cx('glyph quiet h-9 w-9', isActive && 'on')} aria-label={t('nav.settings')}>
+      <Settings2 className="h-5 w-5" />
+    </NavLink>
   )
 
   return (
@@ -106,7 +80,7 @@ export function TopBar({ health, loading }: Props) {
         </nav>
         <SearchPill />
         <HealthGlyph health={health} loading={loading} />
-        <div className="relative">{wide && menu}</div>
+        {settings}
       </header>
 
       {/* A phone: the dock at the bottom. */}
@@ -131,29 +105,18 @@ export function TopBar({ health, loading }: Props) {
               <tab.icon className="h-[21px] w-[21px]" />
             </NavLink>
           ))}
-          <div className="relative grid h-full flex-1 place-items-center">{!wide && menu}</div>
+          <NavLink
+            to="/settings"
+            aria-label={t('nav.settings')}
+            className={({ isActive }) =>
+              cx('grid h-full flex-1 place-items-center text-quiet transition-colors duration-200', isActive && '!text-accent')
+            }
+          >
+            <Settings2 className="h-[21px] w-[21px]" />
+          </NavLink>
         </nav>
       </div>
 
-      <Modal
-        open={confirmSignOut}
-        onClose={() => !signingOut && setConfirmSignOut(false)}
-        placement="center"
-        label="Confirm sign out"
-        className="!max-w-[24rem]"
-      >
-        <div className="p-6">
-          <h2 className="text-base font-semibold text-white">{t('nav.confirmSignOut')}</h2>
-          <div className="mt-6 flex justify-end gap-1">
-            <Button onClick={() => setConfirmSignOut(false)} disabled={signingOut} variant="ghost">
-              {t('nav.cancel')}
-            </Button>
-            <Button onClick={confirmAndSignOut} disabled={signingOut} variant="ghost" className="!text-rose-500">
-              {signingOut ? 'Signing out…' : t('nav.signOut')}
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </>
   )
 }
@@ -210,77 +173,5 @@ function SearchPill() {
         </button>
       )}
     </label>
-  )
-}
-
-function useWide() {
-  const query = '(min-width: 768px)'
-  const [wide, setWide] = useState(() => matchMedia(query).matches)
-  useEffect(() => {
-    const m = matchMedia(query)
-    const changed = () => setWide(m.matches)
-    m.addEventListener('change', changed)
-    return () => m.removeEventListener('change', changed)
-  }, [])
-  return wide
-}
-
-// The menu behind the settings glyph: Status, Settings and Sign out, a popover on the surface.
-function NavMenu({
-  open,
-  onOpenChange,
-  onSignOut,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSignOut: () => void
-}) {
-  const { t } = useTranslation()
-  const location = useLocation()
-  const ref = useRef<HTMLDivElement | null>(null)
-  const lit = open || location.pathname === '/settings'
-
-  useEffect(() => {
-    if (!open) return
-    const away = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onOpenChange(false)
-    }
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onOpenChange(false)
-    window.addEventListener('pointerdown', away)
-    window.addEventListener('keydown', esc)
-    return () => {
-      window.removeEventListener('pointerdown', away)
-      window.removeEventListener('keydown', esc)
-    }
-  }, [open, onOpenChange])
-
-  return (
-    <div ref={ref} className="contents">
-      <button
-        type="button"
-        className={cx('glyph quiet h-9 w-9', lit && 'on')}
-        aria-label={t('nav.settings')}
-        aria-expanded={open}
-        onClick={() => onOpenChange(!open)}
-      >
-        <Settings2 className="h-5 w-5" />
-      </button>
-      {open && (
-        <div className="popover absolute bottom-[calc(100%+14px)] right-0 z-40 w-60 md:bottom-auto md:top-[calc(100%+12px)]" role="menu">
-          <Link to="/status" className="popover-item" role="menuitem">
-            <Activity />
-            <span className="flex-1 truncate">{t('nav.status')}</span>
-          </Link>
-          <Link to="/settings" className="popover-item" role="menuitem">
-            <Settings2 />
-            <span className="flex-1 truncate">{t('nav.settings')}</span>
-          </Link>
-          <button type="button" className="popover-item" role="menuitem" onClick={onSignOut}>
-            <LogOut />
-            <span className="flex-1 truncate">{t('nav.signOut')}</span>
-          </button>
-        </div>
-      )}
-    </div>
   )
 }
