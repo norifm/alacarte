@@ -7,6 +7,7 @@ import { api, type ImportedFile } from "../api/client";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { Dots } from "../components/Dots";
 import { StaggeredItem, StaggeredList } from "../components/StaggeredList";
 import i18n from "../i18n";
 
@@ -99,15 +100,15 @@ export function ImportsPage() {
     };
 
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-6 pt-4 md:pt-6">
+        <div className="mx-auto w-full max-w-7xl space-y-5">
             {error && <Badge variant="bad">{error}</Badge>}
 
             <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div className="space-y-2">
-                    <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
+                    <h1 className="text-[31px] leading-10 md:text-[34px] md:leading-[42px]">
                         {t("imports.title")}
                     </h1>
-                    <p className="max-w-2xl text-sm text-white/60 md:text-base">
+                    <p className="max-w-2xl text-[15px] text-quiet">
                         {t("imports.subtitle")}
                     </p>
                 </div>
@@ -139,12 +140,11 @@ export function ImportsPage() {
             />
 
             {loading ? (
-                <Card className="flex items-center gap-3 p-8 text-sm text-white/60">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t("imports.loading")}
-                </Card>
+                <div className="flex justify-center py-16" aria-label={t("imports.loading")}>
+                    <Dots />
+                </div>
             ) : files.length === 0 ? (
-                <Card className="p-8 text-center text-sm text-white/55">
+                <Card className="px-4 py-8 text-center text-[15px] text-quiet">
                     {t("imports.empty")}
                 </Card>
             ) : (
@@ -194,20 +194,19 @@ function ImportedFileCard({
                 hover
                 className="group relative flex h-full flex-col gap-4 overflow-hidden p-4"
             >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent),0.12),transparent_42%)] opacity-80" />
-                <div className="relative flex flex-1 flex-col gap-3">
+                <div className="flex flex-1 flex-col gap-3">
                     <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-black/45 text-white/60">
-                            <FileUp className="h-4.5 w-4.5" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center plate rounded-cover">
+                            <FileUp className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
                             <div
-                                className="truncate text-sm font-semibold text-white"
+                                className="truncate text-base font-semibold text-white"
                                 title={file.name}
                             >
                                 {file.name}
                             </div>
-                            <div className="mt-0.5 truncate text-xs text-white/50">
+                            <div className="mt-0.5 truncate text-[13px] text-quiet">
                                 {t("imports.linkCount", {
                                     count: counts.links,
                                 })}
@@ -252,13 +251,13 @@ function ImportedFileCard({
                         )}
                     </div>
                 </div>
-                <div className="relative mt-auto flex flex-col gap-3">
+                <div className="mt-auto flex flex-col gap-3">
                     {(counts.queued > 0 ||
                         counts.skippedExisting > 0 ||
                         failedCount > 0) && (
                         <div className="flex flex-wrap gap-1.5 text-xs">
                             {counts.queued > 0 && (
-                                <span className="text-[rgb(var(--accent))]">
+                                <span className="text-white">
                                     {t("imports.queued", {
                                         count: counts.queued,
                                     })}
@@ -266,10 +265,10 @@ function ImportedFileCard({
                             )}
                             {counts.queued > 0 &&
                                 counts.skippedExisting > 0 && (
-                                    <span className="text-white/40">·</span>
+                                    <span className="text-quiet">·</span>
                                 )}
                             {counts.skippedExisting > 0 && (
-                                <span className="text-white/45">
+                                <span className="text-quiet">
                                     {t("cloudLibrary.alreadyInLibrary", {
                                         count: counts.skippedExisting,
                                     })}
@@ -278,7 +277,7 @@ function ImportedFileCard({
                             {counts.queued > 0 &&
                                 counts.skippedExisting > 0 &&
                                 failedCount > 0 && (
-                                    <span className="text-white/40">·</span>
+                                    <span className="text-quiet">·</span>
                                 )}
                             {failedCount > 0 && (
                                 <span className="text-amber-300/90">
@@ -290,7 +289,7 @@ function ImportedFileCard({
                         </div>
                     )}
                     <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-1.5 text-xs text-white/45">
+                        <div className="flex min-w-0 items-center gap-1.5 text-xs text-quiet">
                             <Clock className="h-3.5 w-3.5 shrink-0" />
                             <span className="truncate">
                                 {file.lastRunAt
@@ -307,7 +306,7 @@ function ImportedFileCard({
                                 type="button"
                                 onClick={onRerun}
                                 disabled={running || removing}
-                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 text-xs font-medium text-white/65 transition-colors hover:border-[rgba(var(--accent),0.3)] hover:bg-[rgba(var(--accent),0.12)] hover:text-white disabled:opacity-50"
+                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--veil)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.1] disabled:opacity-40"
                             >
                                 <RefreshCw
                                     className={
@@ -325,7 +324,7 @@ function ImportedFileCard({
                                 onClick={onRemove}
                                 disabled={running || removing}
                                 aria-label={t("imports.remove")}
-                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 text-xs font-medium text-white/65 transition-colors hover:border-rose-300/30 hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-50"
+                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-quiet transition-colors hover:bg-[var(--hover)] hover:text-rose-500 disabled:opacity-40"
                             >
                                 <X className="h-3.5 w-3.5" />
                             </button>

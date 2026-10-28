@@ -11,6 +11,8 @@ import {
   decryptSecret,
   APPLE_GATEWAY_LIMITS,
   clampSetting,
+  SEASON_VALUES,
+  APPEARANCE_VALUES,
 } from '../lib/settingsStore.mjs'
 import {
   UI_LANGUAGE_VALUES,
@@ -74,6 +76,8 @@ export const WRITABLE_KEYS = new Set([
   'versionOptionsEnabled',
   'versionOptions',
   'uiLanguage',
+  'season',
+  'appearance',
   'acceptedLanguages',
   'namingLanguageMode',
   'appleGatewayIntervalMs',
@@ -129,6 +133,8 @@ settingsRouter.put('/', async (req, res) => {
       if (k === 'versionOptions' && !Array.isArray(v)) continue
       if (k === 'autoDownloadCheckFrequency' && !AUTO_DOWNLOAD_FREQUENCY_VALUES.has(v)) continue
       if (k === 'uiLanguage' && !UI_LANGUAGE_VALUES.has(v)) continue
+      if (k === 'season' && !SEASON_VALUES.has(v)) continue
+      if (k === 'appearance' && !APPEARANCE_VALUES.has(v)) continue
       if (k === 'namingLanguageMode' && !NAMING_LANGUAGE_MODE_VALUES.has(v)) continue
       if (k === 'acceptedLanguages') {
         if (!Array.isArray(v)) continue

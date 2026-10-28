@@ -235,7 +235,24 @@
     "timeSeconds": "{{count}}초",
     "appleLimitLabel": "Apple Music 요청 제한",
     "cardIntegrations": "연동",
-    "appleLimitIntegrationLabel": "octo-fiesta 조회도 제한"
+    "appleLimitIntegrationLabel": "octo-fiesta 조회도 제한",
+    "appearance": "모양",
+    "season": "계절",
+    "seasonFollow": "달력 따르기",
+    "seasonNext": "지금은 {{season}} · {{date}}부터 {{next}}",
+    "theme": "테마",
+    "seasons": {
+      "spring": "봄",
+      "summer": "여름",
+      "autumn": "가을",
+      "winter": "겨울"
+    },
+    "appearances": {
+      "system": "시스템",
+      "day": "낮",
+      "night": "밤",
+      "midnight": "한밤"
+    }
   },
   "album": {
     "loadError": "불러오지 못했습니다",

@@ -32,6 +32,7 @@ import { PlaylistCard } from '../components/PlaylistCard'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import { Dots } from '../components/Dots'
 import { DownloadButton } from '../components/DownloadButton'
 import { Modal } from '../components/Modal'
 import { QualityPicker } from '../components/QualityPicker'
@@ -300,8 +301,8 @@ export function CloudLibraryPage() {
 
   if (healthLoading) {
     return (
-      <div className="mx-auto w-full max-w-7xl pt-6">
-        <Card className="p-6 text-sm text-white/55">{t('cloudLibrary.checkingAccess')}</Card>
+      <div className="mx-auto flex w-full max-w-7xl justify-center py-16">
+        <Dots />
       </div>
     )
   }
@@ -318,28 +319,28 @@ export function CloudLibraryPage() {
   const totalLabel = activeState.total !== null ? activeState.total : activeState.items.length
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 pt-4 md:pt-6">
+    <div className="mx-auto w-full max-w-7xl space-y-5">
+      <div className="messages">
       <AnimatePresence>
         {bulkBanner && (
           <motion.div
             key="bulk-banner"
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-            className="flex items-center justify-between gap-3 rounded-app border border-[rgba(var(--accent),0.35)] bg-[rgba(var(--accent),0.10)] px-4 py-2.5 text-sm text-white/90 backdrop-blur-[10px]"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="message"
           >
             <div>
               {t('cloudLibrary.queuedPrefix')} <b>{bulkBanner.queued}</b> {kindLowerLabel(t, bulkBanner.kind)}.
               {bulkBanner.skippedExisting > 0 && (
-                <span className="text-white/60"> · {t('cloudLibrary.alreadyInLibrary', { count: bulkBanner.skippedExisting })}</span>
+                <span className="text-quiet"> · {t('cloudLibrary.alreadyInLibrary', { count: bulkBanner.skippedExisting })}</span>
               )}
               {bulkBanner.unsupported > 0 && (
-                <span className="text-white/60"> · {t('cloudLibrary.notDownloadable', { count: bulkBanner.unsupported })}</span>
+                <span className="text-quiet"> · {t('cloudLibrary.notDownloadable', { count: bulkBanner.unsupported })}</span>
               )}{' '}
               <Link
                 to="/"
-                className="font-medium text-[rgb(var(--accent))] underline underline-offset-2 transition-colors hover:text-white"
               >
                 {t('cloudLibrary.openActivity')}
               </Link>
@@ -348,17 +349,18 @@ export function CloudLibraryPage() {
               type="button"
               onClick={() => setBulkBanner(null)}
               aria-label={t('cloudLibrary.dismissAriaLabel')}
-              className="shrink-0 inline-flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.08)] text-white/75 transition-[background,border-color,color] duration-[250ms] ease-smooth hover:border-[rgba(var(--accent),0.45)] hover:bg-[rgba(var(--accent),0.18)] hover:text-white"
+              className="glyph h-9 w-9"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
+          <h1 className="text-[31px] leading-10 md:text-[34px] md:leading-[42px]">
             {t('cloudLibrary.pageTitle')}
           </h1>
         </div>
@@ -421,14 +423,13 @@ export function CloudLibraryPage() {
       {showSkeleton ? (
         activeTab === 'songs' ? <SongSkeletonList /> : <SkeletonGrid />
       ) : !hasItems ? (
-        <Card className="relative overflow-hidden p-8 md:p-10">
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[rgba(var(--accent),0.12)] blur-3xl" />
-          <div className="relative max-w-xl space-y-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.10)] text-[rgb(var(--accent))]">
+        <Card className="p-8 md:p-10">
+          <div className="max-w-xl space-y-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
               <Cloud className="h-5 w-5" />
             </div>
-            <h2 className="text-xl font-semibold text-white">{t('cloudLibrary.emptyTitle')}</h2>
-            <p className="text-sm text-white/60">
+            <h2 className="text-xl font-semibold tracking-[-0.4px] text-white">{t('cloudLibrary.emptyTitle')}</h2>
+            <p className="text-sm text-quiet">
               {t('cloudLibrary.emptyBody', { kind: kindLowerLabel(t, activeTab) })}
             </p>
           </div>
@@ -443,7 +444,7 @@ export function CloudLibraryPage() {
 
       <div ref={sentinelRef} className="h-8 w-full" aria-hidden />
       {activeState.loadingMore && (
-        <div className="flex justify-center py-4 text-xs text-white/50">
+        <div className="flex justify-center py-4 text-xs text-quiet">
           <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
           {t('cloudLibrary.loadingMore')}
         </div>
@@ -459,16 +460,16 @@ export function CloudLibraryPage() {
         <div className="p-6">
           <div className="flex items-start gap-4">
             <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[rgba(var(--accent),0.12)] border border-[rgba(var(--accent),0.25)] text-[rgb(var(--accent))]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet"
               aria-hidden
             >
               <CloudDownload className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base font-semibold text-white">
+              <h2 className="text-lg font-semibold text-white">
                 {confirmKind ? t('cloudLibrary.downloadAllHeading', { kind: kindLowerLabel(t, confirmKind) }) : ''}
               </h2>
-              <p className="mt-1 text-sm text-white/60">
+              <p className="mt-1 text-sm text-quiet">
                 {t('cloudLibrary.confirmDescription', {
                   kind: confirmKind ? kindSingularLabel(t, confirmKind) : '',
                   itemsNote: totalLabel ? t('cloudLibrary.confirmItemsNote', { count: totalLabel }) : '',
@@ -479,8 +480,8 @@ export function CloudLibraryPage() {
           {appSettings?.promptForDownloadQuality && (
             <div className="mt-5">
               <div className="mb-3">
-                <div className="text-xs uppercase tracking-wider text-white/55">{t('cloudLibrary.downloadQualityLabel')}</div>
-                <div className="mt-1 text-sm text-white/60">
+                <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">{t('cloudLibrary.downloadQualityLabel')}</div>
+                <div className="mt-1 text-sm text-quiet">
                   {t('cloudLibrary.downloadQualityHint')}
                 </div>
               </div>
@@ -493,7 +494,7 @@ export function CloudLibraryPage() {
             </Button>
             <Button
               onClick={startDownloadAll}
-              className="bg-[rgba(var(--accent),0.18)] border-[rgba(var(--accent),0.4)] text-white hover:bg-[rgba(var(--accent),0.28)] hover:text-white"
+              variant="primary"
             >
               <Download className="h-4 w-4" />
               {totalLabel ? t('cloudLibrary.queueCount', { count: totalLabel }) : t('cloudLibrary.queueAll')}
@@ -528,19 +529,18 @@ function NotConnectedScreen({
         ? error || t('cloudLibrary.probeFailedBody')
         : t('cloudLibrary.connectAccountBody')
   return (
-    <div className="mx-auto w-full max-w-3xl pt-6">
-      <Card className="relative overflow-hidden p-8 md:p-10">
-        <div className="absolute -right-20 -top-20 h-52 w-52 rounded-full bg-[rgba(var(--accent),0.14)] blur-3xl" />
-        <div className="relative space-y-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.10)] text-[rgb(var(--accent))]">
+    <div className="mx-auto w-full max-w-3xl pt-2">
+      <Card className="p-8 md:p-10">
+        <div className="space-y-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
             <Cloud className="h-5 w-5" />
           </div>
-          <h2 className="text-xl font-semibold text-white">{headline}</h2>
-          <p className="text-sm text-white/65">{body}</p>
+          <h2 className="text-xl font-semibold tracking-[-0.4px] text-white">{headline}</h2>
+          <p className="text-sm text-quiet">{body}</p>
           <div className="flex flex-wrap gap-2 pt-2">
             <Link
               to="/settings"
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-white/80 transition-all hover:border-[rgba(var(--accent),0.3)] hover:bg-[rgba(var(--accent),0.12)] hover:text-[rgb(var(--accent))]"
+              className="pill small quiet"
             >
               {t('cloudLibrary.openSettings')}
             </Link>
@@ -574,30 +574,25 @@ function CatPill({
       aria-pressed={active}
       onClick={onClick}
       className={cx(
-        'inline-flex select-none items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[0.8125rem] font-medium text-white/70 transition-[background,border-color,color,transform] duration-[160ms] ease-smooth hover:bg-white/[0.08] hover:text-white active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.30)]',
-        active && '!border-accent/50 !bg-accent/22 !text-white',
+        'chip select-none',
+        active && 'on',
       )}
     >
       <Icon className="h-3.5 w-3.5" />
       {label}
       {typeof count === 'number' && count > 0 && (
-        <span className="text-white/50 text-[11px] font-normal">{count}</span>
+        <span className="text-quiet text-[11px] font-normal">{count}</span>
       )}
     </button>
   )
 }
 
+// While the first page loads: still plates where the covers and rows will be; nothing pulses.
 function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-3 gap-y-5 md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
       {Array.from({ length: 12 }).map((_, i) => (
-        <Card key={i} className="aspect-square">
-          <motion.div
-            className="h-full w-full bg-white/[0.04]"
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.05 }}
-          />
-        </Card>
+        <div key={i} className="plate aspect-square rounded-card" />
       ))}
     </div>
   )
@@ -605,32 +600,15 @@ function SkeletonGrid() {
 
 function SongSkeletonList() {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="grouped rows [--row-text:66px]">
       {Array.from({ length: 12 }).map((_, i) => (
-        <Card key={i} className="flex items-center gap-3 p-2">
-          <motion.div
-            className="h-10 w-10 shrink-0 rounded-lg bg-white/[0.04]"
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.05 }}
-          />
+        <div key={i} className="flex min-h-[60px] items-center gap-3 py-2 pl-3.5 pr-2">
+          <div className="plate h-10 w-10 shrink-0 rounded-cover" />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <motion.div
-              className="h-3.5 w-[55%] rounded-full bg-white/[0.06]"
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.05 }}
-            />
-            <motion.div
-              className="h-3 w-[35%] rounded-full bg-white/[0.04]"
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.05 + 0.1 }}
-            />
+            <div className="h-3.5 w-[55%] rounded-full bg-[var(--veil)]" />
+            <div className="h-3 w-[35%] rounded-full bg-[var(--veil)]" />
           </div>
-          <motion.div
-            className="h-7 w-16 shrink-0 rounded-full bg-white/[0.04]"
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.05 + 0.05 }}
-          />
-        </Card>
+        </div>
       ))}
     </div>
   )
@@ -638,7 +616,7 @@ function SongSkeletonList() {
 
 function AlbumGrid({ items }: { items: CloudLibraryAlbum[] }) {
   return (
-    <StaggeredList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+    <StaggeredList className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-3 gap-y-5 md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
       {items.map((it) => (
         <StaggeredItem key={it.libraryId}>
           <CloudAlbumTile item={it} />
@@ -680,7 +658,7 @@ function CloudAlbumTile({ item }: { item: CloudLibraryAlbum }) {
 
 function PlaylistGrid({ items }: { items: CloudLibraryPlaylist[] }) {
   return (
-    <StaggeredList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+    <StaggeredList className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-3 gap-y-5 md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
       {items.map((it) => {
         const playlist: Playlist = {
           id: it.catalogId || it.libraryId,
@@ -710,7 +688,7 @@ function PlaylistGrid({ items }: { items: CloudLibraryPlaylist[] }) {
 
 function SongList({ items }: { items: CloudLibrarySong[] }) {
   return (
-    <StaggeredList className="flex flex-col gap-1">
+    <StaggeredList className="grouped rows [--row-text:66px]">
       {items.map((it) => (
         <StaggeredItem key={it.libraryId}>
           <CloudSongRow song={it} />
@@ -764,23 +742,23 @@ function CloudSongRow({ song }: { song: CloudLibrarySong }) {
     isSongInLibrary(songLookup) || (albumLookup ? isAlbumInLibrary(albumLookup) : false)
 
   return (
-    <Card hover className="group relative flex items-center gap-3 p-2">
-      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-black/50">
+    <div className="group relative flex min-h-[60px] items-center gap-3 py-2 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)]">
+      <div className="plate relative h-10 w-10 shrink-0 overflow-hidden rounded-cover">
         {thumb && (
           <img src={thumb} alt="" className="h-full w-full object-cover" />
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-white">
+        <div className="truncate text-base leading-[21px]">
           {albumCatalog ? (
-            <Link to={`/album/${albumCatalog}`} className="hover:text-accent transition-colors">
+            <Link to={`/album/${albumCatalog}`} className="hover:text-white transition-colors">
               {songForLink.name}
             </Link>
           ) : (
             songForLink.name
           )}
         </div>
-        <div className="truncate text-xs text-white/55">
+        <div className="truncate text-[13px] text-quiet">
           {song.artistName}
           {song.albumName ? ` · ${song.albumName}` : ''}
         </div>
@@ -818,7 +796,7 @@ function CloudSongRow({ song }: { song: CloudLibrarySong }) {
         </div>
       )}
       {qualityPrompt}
-    </Card>
+    </div>
   )
 }
 
@@ -837,33 +815,28 @@ function UnsupportedTile({
 }) {
   const thumb = artworkUrl(artworkTemplate, 600)
   return (
-    <Card
-      className={cx('group relative block', variant === 'ok' ? '' : 'opacity-70')}
-      style={{ backgroundColor: '#1a1a1a' }}
-    >
-      <div className="relative aspect-square w-full overflow-hidden bg-black/50">
+    <div className={cx('group relative flex min-w-0 flex-col', variant === 'ok' ? '' : 'opacity-60')}>
+      <div className="plate relative aspect-square w-full overflow-hidden rounded-card">
         {thumb ? (
           <img src={thumb} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-white/30 text-3xl">
+          <div className="flex h-full w-full items-center justify-center text-3xl">
             ♪
           </div>
         )}
         <div
           className={cx(
-            'absolute top-2 left-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white ring-1',
-            variant === 'ok'
-              ? 'bg-emerald-500/90 ring-white/20'
-              : 'bg-black/80 text-white/80 ring-white/15',
+            'absolute left-2 top-2 rounded-full border-hair border-[var(--hair)] bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]',
+            variant === 'ok' ? 'text-on' : 'text-white',
           )}
         >
           {kind}
         </div>
       </div>
-      <div className="p-3 backdrop-blur-md bg-black/30">
-        <div className="truncate text-sm font-medium text-white">{title}</div>
-        <div className="truncate text-xs text-white/55">{subtitle}</div>
+      <div className="pt-2">
+        <div className="truncate text-sm font-medium leading-[19px] text-white">{title}</div>
+        <div className="truncate text-[12.5px] leading-4 text-quiet">{subtitle}</div>
       </div>
-    </Card>
+    </div>
   )
 }

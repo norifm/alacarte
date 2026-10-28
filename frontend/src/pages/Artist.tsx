@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
     ListChecks,
@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import {
     api,
+    artworkUrl,
     type Album,
     type Artist as ArtistT,
     type QualityPreference,
@@ -19,7 +20,6 @@ import {
 } from "../api/client";
 import { AlbumCard } from "../components/AlbumCard";
 import { SelectDownloadsModal } from "../components/SelectDownloadsModal";
-import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
@@ -28,7 +28,7 @@ import {
     ReleaseScopePicker,
     releaseScopeLabel,
 } from "../components/ReleaseScopePicker";
-import { StaggeredList, StaggeredItem } from "../components/StaggeredList";
+import { useCoverTint, useLook } from "../hooks/useSeasons";
 import { useLibraryPresence } from "../hooks/useLibraryPresence";
 import { useActivityFeed } from "../hooks/useActivityFeed";
 import { useAppSettings } from "../hooks/useAppSettings";
@@ -56,6 +56,7 @@ export function ArtistPage() {
     const { isAlbumInLibrary } = useLibraryPresence();
     const { followingState } = useActivityFeed();
     const appSettings = useAppSettings();
+    useCoverTint(artist?.artworkColor);
 
     useEffect(() => {
         if (!id) return;
@@ -169,30 +170,27 @@ export function ArtistPage() {
     };
 
     return (
-        <div className="mx-auto w-full max-w-7xl pt-4 md:pt-6 space-y-4">
+        <div className="mx-auto w-full max-w-7xl">
+            <div className="messages">
             <AnimatePresence>
                 {(queuedCount > 0 || queuedSkipped > 0) && (
                     <motion.div
                         key="queued-banner"
-                        initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                        transition={{
-                            type: "spring",
-                            stiffness: 420,
-                            damping: 28,
-                        }}
-                        className="flex items-center justify-between gap-3 rounded-app border border-[rgba(var(--accent),0.35)] bg-[rgba(var(--accent),0.10)] px-4 py-2.5 text-sm text-white/90 backdrop-blur-[10px]"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        className="message"
                     >
                         <div>
                             {queuedCount > 0 && (
                                 <>
                                     {t("artist.queuedAlbums", { count: queuedCount })}
-                                    {queuedSkipped > 0 && <span className="text-white/60"> · </span>}
+                                    {queuedSkipped > 0 && <span className="text-quiet"> · </span>}
                                 </>
                             )}
                             {queuedSkipped > 0 && (
-                                <span className="text-white/60">
+                                <span className="text-quiet">
                                     {t("cloudLibrary.alreadyInLibrary", { count: queuedSkipped })}
                                 </span>
                             )}
@@ -201,7 +199,6 @@ export function ArtistPage() {
                                     {" "}
                                     <Link
                                         to="/"
-                                        className="font-medium text-[rgb(var(--accent))] underline underline-offset-2 transition-colors hover:text-white"
                                     >
                                         {t("artist.openActivity")}
                                     </Link>
@@ -215,7 +212,7 @@ export function ArtistPage() {
                                 setQueuedSkipped(0);
                             }}
                             aria-label={t("artist.dismiss")}
-                            className="shrink-0 inline-flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.08)] text-white/75 transition-[background,border-color,color] duration-[250ms] ease-smooth hover:border-[rgba(var(--accent),0.45)] hover:bg-[rgba(var(--accent),0.18)] hover:text-white"
+                            className="glyph h-9 w-9"
                         >
                             <X className="h-3.5 w-3.5" />
                         </button>
@@ -224,18 +221,14 @@ export function ArtistPage() {
                 {followBanner && (
                     <motion.div
                         key="follow-banner"
-                        initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                        transition={{
-                            type: "spring",
-                            stiffness: 420,
-                            damping: 28,
-                        }}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                         className={
                             followBanner === "unfollowed"
-                                ? "flex items-center justify-between gap-3 rounded-app border border-rose-300/30 bg-rose-500/10 px-4 py-2.5 text-sm text-white/90 backdrop-blur-[10px]"
-                                : "flex items-center justify-between gap-3 rounded-app border border-[rgba(var(--accent),0.35)] bg-[rgba(var(--accent),0.10)] px-4 py-2.5 text-sm text-white/90 backdrop-blur-[10px]"
+                                ? "message"
+                                : "message"
                         }
                     >
                         <div>
@@ -250,7 +243,6 @@ export function ArtistPage() {
                                     {t("artist.isNowFollowed")}{" "}
                                     <Link
                                         to="/following"
-                                        className="font-medium text-[rgb(var(--accent))] underline underline-offset-2 transition-colors hover:text-white"
                                     >
                                         {t("artist.openFollowing")}
                                     </Link>
@@ -261,73 +253,73 @@ export function ArtistPage() {
                             type="button"
                             onClick={() => setFollowBanner(null)}
                             aria-label={t("artist.dismiss")}
-                            className="shrink-0 inline-flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.08)] text-white/75 transition-[background,border-color,color] duration-[250ms] ease-smooth hover:border-[rgba(var(--accent),0.45)] hover:bg-[rgba(var(--accent),0.18)] hover:text-white"
+                            className="glyph h-9 w-9"
                         >
                             <X className="h-3.5 w-3.5" />
                         </button>
                     </motion.div>
                 )}
             </AnimatePresence>
+            </div>
             {error && <Badge variant="bad">{error}</Badge>}
             {artist && (
                 <>
-                    <header>
-                        <div className="text-xs uppercase tracking-wider text-white/55 mb-1">
-                            {t("artist.artistLabel")}
+                    <ArtistBanner template={artist.artworkTemplate} />
+                    <header className="flex min-h-[calc(max(340px,52vh)-110px)] flex-col items-center justify-end gap-4 pb-2 text-center md:min-h-[calc(max(420px,64vh)-110px)]">
+                        <div>
+                            <h1 className="text-[34px] font-extrabold leading-[1.1] tracking-[-1px] md:text-[44px]">
+                                {artist.name}
+                            </h1>
+                            {artist.genreNames && artist.genreNames.length > 0 && (
+                                <div className="caption mt-2">
+                                    {artist.genreNames.slice(0, 4).join(" · ")}
+                                </div>
+                            )}
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                            {artist.name}
-                        </h1>
-                        {artist.genreNames && artist.genreNames.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                                {artist.genreNames.slice(0, 4).map((g) => (
-                                    <Badge key={g}>{g}</Badge>
-                                ))}
-                            </div>
-                        )}
-                        <div className="mt-4 flex flex-wrap gap-2">
+                        <div className="flex w-full flex-wrap items-center justify-center gap-2.5 md:w-auto">
                             {following ? (
                                 <Button
                                     onClick={() => setUnfollowModalOpen(true)}
                                     disabled={followSubmitting}
-                                    className="border-rose-300/30 bg-rose-500/10 text-rose-200 hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
+                                    className="min-h-[46px] px-5 text-[15px]"
                                 >
-                                    <UserRoundMinus className="h-4 w-4" />
+                                    <UserRoundMinus className="text-accent" />
                                     {t("artist.unfollow")}
                                 </Button>
                             ) : (
                                 <Button
                                     onClick={() => setFollowModalOpen(true)}
                                     disabled={followSubmitting}
+                                    className="min-h-[46px] px-5 text-[15px]"
                                 >
-                                    <UserRoundCheck className="h-4 w-4" />
+                                    <UserRoundCheck />
                                     {t("artist.follow")}
                                 </Button>
                             )}
                             {albums.length > 0 && (
-                                <Button onClick={() => setModalOpen(true)}>
-                                    <ListChecks className="h-4 w-4" />
+                                <Button
+                                    variant="primary"
+                                    onClick={() => setModalOpen(true)}
+                                    className="min-h-[46px] min-w-[180px] px-5 text-[15px]"
+                                >
+                                    <ListChecks />
                                     {t("artist.downloadMultiple")}
                                 </Button>
                             )}
                         </div>
                     </header>
-                    <section>
-                        <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-3">
-                            {t("artist.albums")}
-                        </h2>
+                    <section className="mt-[26px]">
+                        <h2 className="section-title">{t("artist.albums")}</h2>
                         {albums.length === 0 ? (
-                            <Card className="p-6 text-sm text-white/55">
+                            <p className="py-10 text-center font-medium text-quiet">
                                 {t("artist.noAlbumsFound")}
-                            </Card>
+                            </p>
                         ) : (
-                            <StaggeredList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-3 gap-y-5 md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
                                 {albums.map((a) => (
-                                    <StaggeredItem key={a.id}>
-                                        <AlbumCard album={a} />
-                                    </StaggeredItem>
+                                    <AlbumCard key={a.id} album={a} />
                                 ))}
-                            </StaggeredList>
+                            </div>
                         )}
                     </section>
                 </>
@@ -352,17 +344,17 @@ export function ArtistPage() {
             >
                 <div className="p-6">
                     <div className="flex items-start gap-4">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.12)] text-[rgb(var(--accent))]">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
                             <Radar className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
-                            <div className="text-xs uppercase tracking-wider text-white/55">
+                            <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                                 {t("artist.followArtist")}
                             </div>
                             <h2 className="mt-1 text-lg font-semibold text-white">
                                 {artist?.name || t("artist.artistLabel")}
                             </h2>
-                            <p className="mt-2 text-sm text-white/60">
+                            <p className="mt-2 text-sm text-quiet">
                                 {t("artist.trackScopeForFutureReleases", {
                                     scope: releaseScopeLabel(followReleaseScope).toLowerCase(),
                                 })}
@@ -371,10 +363,10 @@ export function ArtistPage() {
                     </div>
                     <div className="mt-5">
                         <div className="mb-3">
-                            <div className="text-xs uppercase tracking-wider text-white/55">
+                            <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                                 {t("artist.releaseScope")}
                             </div>
-                            <div className="mt-1 text-sm text-white/60">
+                            <div className="mt-1 text-sm text-quiet">
                                 {t("artist.chooseWhatToWatch")}
                             </div>
                         </div>
@@ -386,10 +378,10 @@ export function ArtistPage() {
                     {appSettings?.promptForDownloadQuality && (
                         <div className="mt-5">
                             <div className="mb-3">
-                                <div className="text-xs uppercase tracking-wider text-white/55">
+                                <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                                     {t("artist.downloadQuality")}
                                 </div>
-                                <div className="mt-1 text-sm text-white/60">
+                                <div className="mt-1 text-sm text-quiet">
                                     {t("artist.appliesIfDownloadDiscographyNow")}
                                 </div>
                             </div>
@@ -414,6 +406,7 @@ export function ArtistPage() {
                             {t("artist.futureReleasesOnly")}
                         </Button>
                         <Button
+                            variant="primary"
                             onClick={() => followArtist(true)}
                             disabled={followSubmitting}
                         >
@@ -431,17 +424,17 @@ export function ArtistPage() {
             >
                 <div className="p-6">
                     <div className="flex items-start gap-4">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-rose-300/30 bg-rose-500/10 text-rose-200">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
                             <UserRoundMinus className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
-                            <div className="text-xs uppercase tracking-wider text-white/55">
+                            <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                                 {t("artist.unfollowArtist")}
                             </div>
                             <h2 className="mt-1 text-lg font-semibold text-white">
                                 {artist?.name || t("artist.artistLabel")}
                             </h2>
-                            <p className="mt-2 text-sm text-white/60">
+                            <p className="mt-2 text-sm text-quiet">
                                 {t("artist.stopWatchingConfirm")}
                             </p>
                         </div>
@@ -457,7 +450,8 @@ export function ArtistPage() {
                         <Button
                             onClick={unfollowArtist}
                             disabled={followSubmitting}
-                            className="border-rose-300/30 bg-rose-500/10 text-rose-200 hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
+                            variant="ghost"
+                            className="!text-rose-500"
                         >
                             <UserRoundMinus className="h-4 w-4" />
                             {t("artist.unfollow")}
@@ -465,6 +459,54 @@ export function ArtistPage() {
                     </div>
                 </div>
             </Modal>
+        </div>
+    );
+}
+
+// The artist's picture across the page's whole width, dissolving into the page's paper; it drifts up slower
+// than the page as the page scrolls and fades as it goes.
+function ArtistBanner({ template }: { template?: string | null }) {
+    const { appearance } = useLook();
+    const [loaded, setLoaded] = useState(false);
+    const ref = useRef<HTMLDivElement | null>(null);
+    const wash = artworkUrl(template, 32);
+    const src = artworkUrl(template, 1400);
+    useEffect(() => {
+        const b = ref.current;
+        if (!b) return;
+        const moved = () => {
+            const top = window.scrollY;
+            b.style.transform = `translateY(${(top * 0.55).toFixed(1)}px)`;
+            b.style.opacity = String(1 + Math.max(-0.8, -top / b.offsetHeight));
+        };
+        moved();
+        window.addEventListener("scroll", moved, { passive: true });
+        return () => window.removeEventListener("scroll", moved);
+    }, []);
+    return (
+        <div
+            ref={ref}
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[max(340px,52vh)] overflow-hidden will-change-transform md:h-[max(420px,64vh)]"
+        >
+            {wash && appearance !== "midnight" && (
+                <img src={wash} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl" />
+            )}
+            {src && (
+                <img
+                    src={src}
+                    alt=""
+                    onLoad={() => setLoaded(true)}
+                    className={`absolute inset-0 h-full w-full object-cover object-[50%_30%] transition-opacity duration-[400ms] ease-out ${loaded ? "opacity-100" : "opacity-0"}`}
+                />
+            )}
+            <div
+                className="absolute inset-0"
+                style={{
+                    background:
+                        "linear-gradient(transparent 45%, color-mix(in srgb, var(--page) 70%, transparent) 78%, var(--page))",
+                }}
+            />
         </div>
     );
 }

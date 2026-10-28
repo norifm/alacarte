@@ -23,7 +23,7 @@ export function ReleaseScopePicker({ value, onChange, compact = false, disabled 
   return (
     <div
       className={cx(
-        compact ? 'inline-flex flex-wrap gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] p-1' : 'grid gap-2',
+        compact ? 'inline-flex flex-wrap gap-0.5' : 'grid gap-1',
         className,
       )}
       role="radiogroup"
@@ -41,15 +41,15 @@ export function ReleaseScopePicker({ value, onChange, compact = false, disabled 
             onClick={() => onChange(option.value)}
             className={cx(
               compact
-                ? 'h-7 rounded-full px-2.5 text-[11px] font-medium transition-colors disabled:opacity-60'
-                : 'flex w-full items-start gap-3 rounded-app border px-3 py-2.5 text-left transition-colors disabled:opacity-60',
+                ? 'h-7 rounded-full px-2.5 text-xs font-medium transition-colors disabled:opacity-60'
+                : 'flex w-full items-start gap-3 rounded-card border-hair px-3 py-2.5 text-left transition-colors disabled:opacity-60',
               selected
                 ? compact
-                  ? 'bg-[rgba(var(--accent),0.18)] text-[rgb(var(--accent))]'
-                  : 'border-[rgba(var(--accent),0.45)] bg-[rgba(var(--accent),0.14)] text-white'
+                  ? 'bg-[var(--veil)] text-white'
+                  : 'border-[var(--hair)] bg-[var(--veil)] text-white'
                 : compact
-                  ? 'text-white/55 hover:bg-white/[0.06] hover:text-white/80'
-                  : 'border-white/[0.08] bg-white/[0.04] text-white/80 hover:border-white/15 hover:bg-white/[0.07]',
+                  ? 'text-quiet hover:text-white'
+                  : 'border-transparent text-white hover:bg-[var(--hover)]',
             )}
           >
             {compact ? (
@@ -58,15 +58,15 @@ export function ReleaseScopePicker({ value, onChange, compact = false, disabled 
               <>
                 <span
                   className={cx(
-                    'mt-1 h-3.5 w-3.5 shrink-0 rounded-full border',
+                    'mt-0.5 h-4 w-4 shrink-0 rounded-full border-[1.5px]',
                     selected
-                      ? 'border-[rgb(var(--accent))] bg-[rgb(var(--accent))]'
-                      : 'border-white/25 bg-black/20',
+                      ? 'border-[var(--ink)] bg-[var(--ink)] shadow-[inset_0_0_0_3px_var(--surface)]'
+                      : 'border-[var(--outline)]',
                   )}
                 />
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium">{t(option.labelKey)}</span>
-                  <span className="mt-0.5 block text-xs text-white/50">{t(option.hintKey)}</span>
+                  <span className="block text-[15px] font-medium">{t(option.labelKey)}</span>
+                  <span className="mt-0.5 block text-[13px] text-quiet">{t(option.hintKey)}</span>
                 </span>
               </>
             )}

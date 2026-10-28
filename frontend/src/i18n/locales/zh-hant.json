@@ -235,7 +235,24 @@
     "timeSeconds": "{{count}} 秒",
     "appleLimitLabel": "限制 Apple Music 請求",
     "cardIntegrations": "整合",
-    "appleLimitIntegrationLabel": "同時限制 octo-fiesta 查詢"
+    "appleLimitIntegrationLabel": "同時限制 octo-fiesta 查詢",
+    "appearance": "外觀",
+    "season": "季節",
+    "seasonFollow": "跟隨節氣",
+    "seasonNext": "現在是{{season}} · {{date}}起為{{next}}",
+    "theme": "主題",
+    "seasons": {
+      "spring": "春",
+      "summer": "夏",
+      "autumn": "秋",
+      "winter": "冬"
+    },
+    "appearances": {
+      "system": "跟隨系統",
+      "day": "白天",
+      "night": "夜間",
+      "midnight": "午夜"
+    }
   },
   "album": {
     "loadError": "載入失敗",

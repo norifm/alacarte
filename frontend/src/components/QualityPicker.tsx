@@ -19,7 +19,7 @@ type Props = {
 export function QualityPicker({ value, onChange, className }: Props) {
   const { t } = useTranslation()
   return (
-    <div className={cx('grid gap-2', className)} role="radiogroup" aria-label={t('qualityPicker.ariaLabel')}>
+    <div className={cx('grid gap-1', className)} role="radiogroup" aria-label={t('qualityPicker.ariaLabel')}>
       {QUALITY_OPTIONS.map((option) => {
         const selected = value === option.value
         return (
@@ -30,23 +30,23 @@ export function QualityPicker({ value, onChange, className }: Props) {
             aria-checked={selected}
             onClick={() => onChange(option.value)}
             className={cx(
-              'flex w-full items-start gap-3 rounded-app border px-3 py-2.5 text-left transition-colors',
+              'flex w-full items-start gap-3 rounded-card border-hair px-3 py-2.5 text-left transition-colors',
               selected
-                ? 'border-[rgba(var(--accent),0.45)] bg-[rgba(var(--accent),0.14)] text-white'
-                : 'border-white/[0.08] bg-white/[0.04] text-white/80 hover:border-white/15 hover:bg-white/[0.07]',
+                ? 'border-[var(--hair)] bg-[var(--veil)] text-white'
+                : 'border-transparent text-white hover:bg-[var(--hover)]',
             )}
           >
             <span
               className={cx(
-                'mt-1 h-3.5 w-3.5 shrink-0 rounded-full border',
+                'mt-0.5 h-4 w-4 shrink-0 rounded-full border-[1.5px]',
                 selected
-                  ? 'border-[rgb(var(--accent))] bg-[rgb(var(--accent))]'
-                  : 'border-white/25 bg-black/20',
+                  ? 'border-[var(--ink)] bg-[var(--ink)] shadow-[inset_0_0_0_3px_var(--surface)]'
+                  : 'border-[var(--outline)]',
               )}
             />
             <span className="min-w-0">
-              <span className="block text-sm font-medium">{t(option.labelKey)}</span>
-              <span className="mt-0.5 block text-xs text-white/50">{t(option.hintKey)}</span>
+              <span className="block text-[15px] font-medium">{t(option.labelKey)}</span>
+              <span className="mt-0.5 block text-[13px] text-quiet">{t(option.hintKey)}</span>
             </span>
           </button>
         )

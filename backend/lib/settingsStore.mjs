@@ -50,6 +50,8 @@ const DEFAULTS = {
   versionOptionsEnabled: false,
   versionOptions: ['atmos', 'lossless', 'aac'],
   uiLanguage: 'system',
+  season: 'follow',
+  appearance: 'system',
   acceptedLanguages: [],
   namingLanguageMode: DEFAULT_NAMING_LANGUAGE_MODE,
   // Apple request pacing (see appleGateway.mjs); null = use the built-in default.
@@ -76,6 +78,8 @@ function normalizeAcceptedLanguages(list) {
 }
 
 const QUALITY_VALUES = new Set(['flac', 'alac', 'atmos', 'aac'])
+export const SEASON_VALUES = new Set(['follow', 'spring', 'summer', 'autumn', 'winter'])
+export const APPEARANCE_VALUES = new Set(['system', 'day', 'night', 'midnight'])
 
 // Number inside [min, max], or null when absent/invalid (= use the default).
 export function clampSetting(value, min, max) {
@@ -279,6 +283,8 @@ function normalizeSettings(input) {
     uiLanguage: UI_LANGUAGE_VALUES.has(parsed?.uiLanguage)
       ? parsed.uiLanguage
       : DEFAULTS.uiLanguage,
+    season: SEASON_VALUES.has(parsed?.season) ? parsed.season : DEFAULTS.season,
+    appearance: APPEARANCE_VALUES.has(parsed?.appearance) ? parsed.appearance : DEFAULTS.appearance,
     acceptedLanguages: normalizeAcceptedLanguages(parsed?.acceptedLanguages),
     namingLanguageMode: NAMING_LANGUAGE_MODE_VALUES.has(parsed?.namingLanguageMode)
       ? parsed.namingLanguageMode
@@ -336,6 +342,8 @@ export async function readPublicSettings() {
       ? s.versionOptions.filter((g) => VERSION_GROUP_VALUES.has(g))
       : [],
     uiLanguage: s.uiLanguage || 'system',
+    season: s.season || DEFAULTS.season,
+    appearance: s.appearance || DEFAULTS.appearance,
     acceptedLanguages: Array.isArray(s.acceptedLanguages) ? s.acceptedLanguages : [],
     namingLanguageMode: s.namingLanguageMode || DEFAULT_NAMING_LANGUAGE_MODE,
   }

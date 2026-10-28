@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { cx } from '../lib/cx'
 
 type Props = {
@@ -7,27 +6,18 @@ type Props = {
   children: React.ReactNode
 } & Omit<React.HTMLAttributes<HTMLDivElement>, 'className'>
 
+// A raised plate: the surface, a hairline edge, the tile's corners. No shadow.
 export function Card({ hover, className, children, ...rest }: Props) {
-  const Comp = hover ? motion.div : 'div'
-  const hoverProps = hover
-    ? {
-        whileHover: { scale: 1.015, y: -2 },
-        transition: { type: 'spring', stiffness: 400, damping: 25 },
-      }
-    : {}
-
   return (
-    <Comp
+    <div
       className={cx(
-        'rounded-app border border-white/[0.08] bg-white/[0.04] overflow-hidden transition-[background,border-color] duration-[400ms] ease-smooth',
-        hover && 'hover:bg-[rgba(var(--accent),0.08)] hover:border-[rgba(var(--accent),0.25)]',
+        'rounded-tile border-hair border-[var(--hair)] bg-surface overflow-hidden',
+        hover && 'transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--ink)_4%,var(--surface))]',
         className,
       )}
-      {...hoverProps}
-      {...(rest as any)}
+      {...rest}
     >
       {children}
-    </Comp>
+    </div>
   )
 }
-

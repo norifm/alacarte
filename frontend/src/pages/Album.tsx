@@ -24,10 +24,9 @@ import { Button } from '../components/Button'
 import { DownloadButton } from '../components/DownloadButton'
 import { ResolvedMediaLink } from '../components/ResolvedMediaLink'
 import { stripYear, formatPercent } from '../lib/format'
-import { StaggeredList, StaggeredItem } from '../components/StaggeredList'
-import { VinylCover, vinylSpring } from '../components/VinylCover'
+import { CoverWash } from '../components/CoverWash'
+import { useCoverTint } from '../hooks/useSeasons'
 import { cx } from '../lib/cx'
-import { motion } from 'framer-motion'
 
 function formatDur(ms: number | undefined) {
   if (!ms || !Number.isFinite(ms)) return '—'
@@ -43,8 +42,6 @@ export function AlbumPage() {
   const [album, setAlbum] = useState<AlbumDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [enqueueing, setEnqueueing] = useState(false)
-  const [vinylHovered, setVinylHovered] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const {
     ready,
     isAlbumInLibrary,
@@ -89,13 +86,6 @@ export function AlbumPage() {
       ) || ((album && isAlbumInLibrary(album)) ? jobs.find((j) => j.albumId === id && j.kind === 'album' && j.status === 'done') : undefined),
     [jobs, id, album, isAlbumInLibrary],
   )
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -164,7 +154,7 @@ export function AlbumPage() {
   }
 
   const coverBig = artworkUrl(album?.artworkTemplate, 600)
-  const bgColor = album?.artworkColor ? `#${album.artworkColor}` : '#1a1a1a'
+  useCoverTint(album?.artworkColor)
   const primaryArtistId = album?.artistId || album?.artists?.[0]?.id || null
   const alreadyInLibrary = allPresent || (!trackPresence && album ? isAlbumInLibrary(album) : false)
   const presentGroups = useMemo(
@@ -217,69 +207,76 @@ export function AlbumPage() {
     ? t('album.fillMissingTracks', { count: missingCount })
     : t('album.download')
 
+  // What the list holds, as small grey capitals under the title: "2019 · 12 SONGS · LOSSLESS".
+  const caption = album
+    ? [
+        album.year,
+        album.trackCount ? t('album.trackCount', { count: album.trackCount }) : null,
+        album.hasHiRes ? t('album.hiResLossless') : album.hasLossless ? t('album.lossless') : null,
+        album.isAppleDigitalMaster ? (
+          <span key="adm" title={admDescription()}>
+            {t('album.appleDigitalMaster')}
+          </span>
+        ) : null,
+        album.hasAtmos ? t('album.dolbyAtmos') : null,
+        album.contentRating === 'explicit' ? t('album.explicit') : album.contentRating === 'clean' ? t('album.clean') : null,
+        ...album.genreNames.slice(0, 2),
+      ].filter(Boolean)
+    : []
+
   return (
-    <div className="mx-auto w-full max-w-6xl pt-4 md:pt-6">
+    <div className="mx-auto w-full max-w-6xl">
+      <CoverWash template={album?.artworkTemplate} />
       {error && <Badge variant="bad">{error}</Badge>}
 
       {album && (
-        <StaggeredList
-          className="rounded-app overflow-hidden relative"
-          style={{
-            background: `linear-gradient(180deg, ${bgColor}99, transparent 300px)`,
-          }}
-        >
-          <StaggeredItem className="p-4 md:p-8 flex flex-col md:flex-row gap-6">
-            <div className="shrink-0 mx-auto md:mx-0 w-[min(280px,70vw)]">
-              <VinylCover
-                coverSrc={coverBig}
-                coverSrcSet={artworkSrcSet(album.artworkTemplate)}
-                sizes="(max-width: 768px) 70vw, 280px"
-                hovered={isMobile ? false : vinylHovered}
-                onHoverChange={setVinylHovered}
-              />
+        <>
+          <div className="mb-7 flex flex-col items-center gap-[18px] text-center md:flex-row md:items-end md:gap-8 md:text-left">
+            <div className="aspect-square w-[min(260px,70vw)] shrink-0 overflow-hidden rounded-card plate md:w-60">
+              {coverBig && (
+                <img
+                  src={coverBig}
+                  srcSet={artworkSrcSet(album.artworkTemplate)}
+                  sizes="(max-width: 768px) 70vw, 240px"
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                />
+              )}
             </div>
-            <motion.div 
-              className="min-w-0 flex-1 flex flex-col"
-              initial={false}
-              animate={{ x: (isMobile ? false : vinylHovered) ? '140px' : 0 }}
-              transition={vinylSpring}
-            >
-              <div className="text-xs uppercase tracking-wider text-white/55 mb-1">{t('album.albumLabel')}</div>
-              <h1 className="text-2xl md:text-4xl font-bold tracking-tight">{stripYear(album.name)}</h1>
-              <div className="mt-1 text-white/70">
+            <div className="flex min-w-0 flex-1 flex-col gap-1 self-stretch md:self-auto">
+              <h1 className="text-[27px] leading-[1.15] md:text-[34px]">{stripYear(album.name)}</h1>
+              <div className="text-[17px] font-medium text-quiet md:text-xl">
                 <ResolvedMediaLink
                   kind="artist"
                   artistId={primaryArtistId}
                   artistName={album.artistName}
-                  className="hover:text-accent transition-colors"
+                  className="transition-colors hover:text-white"
                 >
                   {album.artistName}
                 </ResolvedMediaLink>
-                {album.year ? ` · ${album.year}` : ''}
-                {album.trackCount ? ` · ${t('album.trackCount', { count: album.trackCount })}` : ''}
               </div>
               {album.artists && album.artists.length > 1 && (
-                <div className="mt-2 flex flex-wrap gap-2 text-sm text-white/65">
+                <div className="flex flex-wrap justify-center gap-x-3 text-sm text-quiet md:justify-start">
                   {album.artists.map((a) => (
-                    <Link key={a.id} to={`/artist/${a.id}`} className="hover:text-accent transition-colors">
+                    <Link key={a.id} to={`/artist/${a.id}`} className="transition-colors hover:text-white">
                       {a.name || album.artistName}
                     </Link>
                   ))}
                 </div>
               )}
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {album.hasHiRes && <Badge>{t('album.hiResLossless')}</Badge>}
-                {album.hasLossless && !album.hasHiRes && <Badge>{t('album.lossless')}</Badge>}
-                {album.isAppleDigitalMaster && <Badge title={admDescription()}>{t('album.appleDigitalMaster')}</Badge>}
-                {album.hasAtmos && <Badge>{t('album.dolbyAtmos')}</Badge>}
-                {album.contentRating === 'explicit' && <Badge>{t('album.explicit')}</Badge>}
-                {album.contentRating === 'clean' && <Badge>{t('album.clean')}</Badge>}
-                {album.genreNames.slice(0, 2).map((g) => (
-                  <Badge key={g}>{g}</Badge>
+              <div className="caption mt-1">
+                {caption.map((part, i) => (
+                  <span key={i}>
+                    {i > 0 && ' · '}
+                    {part}
+                  </span>
                 ))}
               </div>
 
-              <div className="mt-4 md:mt-6 flex flex-col gap-3">
+              <div className="mt-[18px] flex flex-col gap-3">
                 {existingJob &&
                   (existingJob.status === 'queued' || existingJob.status === 'running') && (
                     <ProgressBar
@@ -287,8 +284,9 @@ export function AlbumPage() {
                       label={`${formatPercent(existingJob.progress)} · ${existingJob.message || existingJob.status}`}
                     />
                   )}
-                <div className="flex gap-2 md:sticky md:top-20">
+                <div className="flex flex-wrap justify-center gap-2.5 md:justify-start">
                   <Button
+                    variant="primary"
                     onClick={onDownload}
                     disabled={
                       enqueueing ||
@@ -296,13 +294,9 @@ export function AlbumPage() {
                       nothingOutYet ||
                       (existingJob && existingJob.status !== 'failed')
                     }
-                    className="flex-1 md:min-w-[200px] md:flex-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-[46px] min-w-[150px] px-5 text-[15px]"
                   >
-                    {alreadyInLibrary ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Download className="h-4 w-4" />
-                    )}
+                    {alreadyInLibrary ? <Check /> : <Download />}
                     {downloadButtonLabel}
                   </Button>
                   {missingVariants.map((option) => (
@@ -315,132 +309,130 @@ export function AlbumPage() {
                         })
                       }
                       disabled={variantEnqueueing === option.label || existingJob?.status === 'running'}
-                      className="border-white/20 bg-white/5 hover:bg-white/10 disabled:opacity-50"
+                      className="min-h-[46px] px-5 text-[15px]"
                     >
                       {variantEnqueueing === option.label ? t('album.queueing') : option.label}
                     </Button>
                   ))}
                 </div>
               </div>
-            </motion.div>
-          </StaggeredItem>
+            </div>
+          </div>
 
-          <div className="px-4 md:px-8 pb-8">
-            <div className="mt-2 border-t border-white/10 pt-4">
-              <div className="grid grid-cols-[2rem_1fr_auto_2.25rem] md:grid-cols-[2rem_1fr_8rem_5rem_2.25rem] gap-x-3 gap-y-0 text-xs uppercase tracking-wider text-white/40 border-b border-white/5 py-2">
-                <div>#</div>
-                <div>{t('album.title')}</div>
-                <div className="hidden md:block">{t('album.artist')}</div>
-                <div className="text-right"><Clock3 className="h-3.5 w-3.5 inline" /></div>
-                <div />
-              </div>
-              {album.tracks.map((track) => {
-                const tArtistId = track.artistName === album.artistName
-                  ? primaryArtistId
-                  : album.artists?.find(a => a.name === track.artistName)?.id
-                const trackDownloaded = Boolean(trackPresence?.tracks?.[track.id])
-                const notOut = track.released === false && !trackDownloaded
-                const trackJob = trackDownloaded
-                  ? null
-                  : jobs.find(
-                      (j) =>
-                        (j.songId === track.id ||
-                          (j.albumId === album.id && j.kind === 'album')) &&
-                        (j.status === 'queued' || j.status === 'running'),
-                    ) || null
+          <div className="mb-2 grid grid-cols-[1.75rem_1fr_auto_2.25rem] pl-3.5 pr-2 gap-x-3 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet md:grid-cols-[1.75rem_1fr_10rem_5rem_2.25rem]">
+            <div className="text-center">#</div>
+            <div>{t('album.title')}</div>
+            <div className="hidden md:block">{t('album.artist')}</div>
+            <div className="text-right"><Clock3 className="inline h-3.5 w-3.5" /></div>
+            <div />
+          </div>
+          <div className="grouped rows [--row-text:54px]">
+            {album.tracks.map((track) => {
+              const tArtistId = track.artistName === album.artistName
+                ? primaryArtistId
+                : album.artists?.find(a => a.name === track.artistName)?.id
+              const trackDownloaded = Boolean(trackPresence?.tracks?.[track.id])
+              const notOut = track.released === false && !trackDownloaded
+              const trackJob = trackDownloaded
+                ? null
+                : jobs.find(
+                    (j) =>
+                      (j.songId === track.id ||
+                        (j.albumId === album.id && j.kind === 'album')) &&
+                      (j.status === 'queued' || j.status === 'running'),
+                  ) || null
 
-                return (
-                <StaggeredItem
-                  key={track.id}
-                  className="group/track grid grid-cols-[2rem_1fr_auto_2.25rem] md:grid-cols-[2rem_1fr_8rem_5rem_2.25rem] gap-x-3 py-2.5 items-center border-b border-white/5 hover:bg-accent/[0.05] transition-colors rounded-[6px]"
-                >
-                  <div className="text-white/45 tabular-nums text-sm">{track.trackNumber ?? '—'}</div>
-                  <div className={cx('min-w-0', notOut && 'opacity-50')}>
-                    <div className="truncate text-sm font-medium">{track.name}</div>
-                    <div className="md:hidden truncate text-xs text-white/50">
-                      <ResolvedMediaLink
-                        kind="artist"
-                        artistId={tArtistId}
-                        artistName={track.artistName}
-                        className="hover:text-accent transition-colors"
-                      >
-                        {track.artistName}
-                      </ResolvedMediaLink>
-                    </div>
-                  </div>
-                  <div className="hidden md:block truncate text-sm text-white/60">
+              return (
+              <div
+                key={track.id}
+                className="group/track grid min-h-[52px] grid-cols-[1.75rem_1fr_auto_2.25rem] items-center gap-x-3 py-1.5 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)] md:grid-cols-[1.75rem_1fr_10rem_5rem_2.25rem]"
+              >
+                <div className="text-center text-quiet tabular-nums">{track.trackNumber ?? '—'}</div>
+                <div className={cx('min-w-0', notOut && 'opacity-50')}>
+                  <div className={cx('truncate text-base leading-[21px]', trackJob && 'text-accent')}>{track.name}</div>
+                  <div className="truncate text-[13px] text-quiet md:hidden">
                     <ResolvedMediaLink
                       kind="artist"
                       artistId={tArtistId}
                       artistName={track.artistName}
-                      className="hover:text-accent transition-colors"
+                      className="transition-colors hover:text-white"
                     >
                       {track.artistName}
                     </ResolvedMediaLink>
                   </div>
-                  <div className="text-right text-sm text-white/55 tabular-nums">
-                    {formatDur(track.durationMs)}
-                    {track.hasHiRes && (
-                      <BadgeIcon className="h-3.5 w-3.5 text-accent inline ml-1.5" aria-label={t('album.hiRes')} />
-                    )}
-                    {track.isAppleDigitalMaster && !album.isAppleDigitalMaster && <AdmChip />}
-                  </div>
-                  <div className="flex items-center justify-end">
-                    {notOut ? (
-                      <span
-                        className="whitespace-nowrap text-[11px] text-white/40"
-                        title={t('album.trackNotOutYet', { date: releaseDay })}
-                      >
-                        {releaseDay}
-                      </span>
-                    ) : (
-                    <DownloadButton
-                      job={trackJob}
-                      size="sm"
-                      blocked={trackDownloaded}
-                      ariaLabel={t('album.downloadTrack', { name: track.name })}
-                      onStart={async () => {
-                        try {
-                          const quality = await chooseDownloadQuality()
-                          if (quality === false) return false
-                          await api.enqueueSong(track.id, album.id, undefined, quality)
-                          return true
-                        } catch (err: any) {
-                          if (/already in library/i.test(String(err?.message || ''))) {
-                            await verifyAlbumTracksPresence(
-                              {
-                                id: album.id,
-                                artistName: album.artistName,
-                                name: album.name,
-                                tracks: album.tracks.map((x) => ({ id: x.id, name: x.name, isrc: x.isrc })),
-                              },
-                              true,
-                            )
-                            return false
-                          }
-                          throw err
+                </div>
+                <div className="hidden truncate text-quiet md:block">
+                  <ResolvedMediaLink
+                    kind="artist"
+                    artistId={tArtistId}
+                    artistName={track.artistName}
+                    className="transition-colors hover:text-white"
+                  >
+                    {track.artistName}
+                  </ResolvedMediaLink>
+                </div>
+                <div className="text-right text-[13px] text-quiet tabular-nums">
+                  {formatDur(track.durationMs)}
+                  {track.hasHiRes && (
+                    <BadgeIcon className="ml-1.5 inline h-3.5 w-3.5" aria-label={t('album.hiRes')} />
+                  )}
+                  {track.isAppleDigitalMaster && !album.isAppleDigitalMaster && <AdmChip />}
+                </div>
+                <div className="flex items-center justify-end">
+                  {notOut ? (
+                    <span
+                      className="whitespace-nowrap text-[11px] text-quiet"
+                      title={t('album.trackNotOutYet', { date: releaseDay })}
+                    >
+                      {releaseDay}
+                    </span>
+                  ) : (
+                  <DownloadButton
+                    job={trackJob}
+                    size="sm"
+                    blocked={trackDownloaded}
+                    ariaLabel={t('album.downloadTrack', { name: track.name })}
+                    onStart={async () => {
+                      try {
+                        const quality = await chooseDownloadQuality()
+                        if (quality === false) return false
+                        await api.enqueueSong(track.id, album.id, undefined, quality)
+                        return true
+                      } catch (err: any) {
+                        if (/already in library/i.test(String(err?.message || ''))) {
+                          await verifyAlbumTracksPresence(
+                            {
+                              id: album.id,
+                              artistName: album.artistName,
+                              name: album.name,
+                              tracks: album.tracks.map((x) => ({ id: x.id, name: x.name, isrc: x.isrc })),
+                            },
+                            true,
+                          )
+                          return false
                         }
-                      }}
-                      className={cx(
-                        trackDownloaded || trackJob || touchMode
-                          ? 'opacity-100'
-                          : 'opacity-0 group-hover/track:opacity-100 focus-within:opacity-100 transition-opacity duration-200',
-                      )}
-                    />
+                        throw err
+                      }
+                    }}
+                    className={cx(
+                      trackDownloaded || trackJob || touchMode
+                        ? 'opacity-100'
+                        : 'opacity-0 group-hover/track:opacity-100 focus-within:opacity-100 transition-opacity duration-200',
                     )}
-                  </div>
-                </StaggeredItem>
-                )
-              })}
-            </div>
-            {album.recordLabel && (
-              <div className="mt-4 text-xs text-white/40">
-                {album.recordLabel}
-                {album.copyright ? ` · ${album.copyright}` : ''}
+                  />
+                  )}
+                </div>
               </div>
-            )}
+              )
+            })}
           </div>
-        </StaggeredList>
+          {album.recordLabel && (
+            <div className="mx-3.5 mt-4 text-[13px] text-quiet">
+              {album.recordLabel}
+              {album.copyright ? ` · ${album.copyright}` : ''}
+            </div>
+          )}
+        </>
       )}
       {qualityPrompt}
     </div>

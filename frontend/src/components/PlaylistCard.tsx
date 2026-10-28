@@ -8,7 +8,6 @@ import { useDownloadQualityPrompt } from '../hooks/useDownloadQualityPrompt'
 import { useLibraryPresence } from '../hooks/useLibraryPresence'
 import { useQueue } from '../hooks/useQueue'
 import { useTouchMode } from '../hooks/useTouchMode'
-import { Card } from './Card'
 import { DownloadButton } from './DownloadButton'
 
 type Props = {
@@ -53,15 +52,10 @@ export function PlaylistCard({ playlist, href, libraryId = null, userCreatedBadg
       matching.status === 'done')
 
   const thumb = artworkUrl(playlist.artworkTemplate, 600)
-  const bgColor = playlist.artworkColor ? `#${playlist.artworkColor}` : '#1a1a1a'
 
   return (
-    <Card
-      hover
-      className="group relative block"
-      style={{ backgroundColor: bgColor }}
-    >
-      <div className="relative aspect-square w-full overflow-hidden bg-black/50">
+    <div className="group relative flex min-w-0 flex-col">
+      <div className="plate relative aspect-square w-full overflow-hidden rounded-card">
         <Link to={targetHref} className="block h-full w-full">
           {thumb ? (
             <img
@@ -70,22 +64,22 @@ export function PlaylistCard({ playlist, href, libraryId = null, userCreatedBadg
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
               loading="lazy"
               alt=""
-              className="h-full w-full object-cover transition-transform duration-700 ease-smooth group-hover:scale-[1.03]"
+              className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-white/30 text-3xl">
+            <div className="flex h-full w-full items-center justify-center text-3xl">
               ♫
             </div>
           )}
           {(blocked || userCreatedBadge) && (
             <div className="absolute top-2 left-2 z-10 flex flex-col items-start gap-1">
               {blocked && (
-                <div className="rounded bg-emerald-500/90 backdrop-blur-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm ring-1 ring-white/20">
+                <div className="rounded-full border-hair border-[var(--hair)] bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-white">
                   {t('playlistCard.inLibrary')}
                 </div>
               )}
               {userCreatedBadge && !blocked && (
-                <div className="rounded bg-black/80 backdrop-blur-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/85 shadow-sm ring-1 ring-white/15">
+                <div className="rounded-full border-hair border-[var(--hair)] bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-white">
                   {t('playlistCard.yours')}
                 </div>
               )}
@@ -125,19 +119,19 @@ export function PlaylistCard({ playlist, href, libraryId = null, userCreatedBadg
           {qualityPrompt}
         </div>
       </div>
-      <div className="p-3 backdrop-blur-md bg-black/30">
-        <div className="truncate text-sm font-medium text-white">
-          <Link to={targetHref} className="hover:text-accent transition-colors">
+      <div className="pt-2">
+        <div className="truncate text-sm font-medium leading-[19px] text-white">
+          <Link to={targetHref}>
             {playlist.name}
           </Link>
         </div>
-        <div className="truncate text-xs text-white/60">
+        <div className="truncate text-[12.5px] leading-4 text-quiet">
           {playlist.curatorName}
           {typeof playlist.trackCount === 'number'
             ? ` · ${t('playlistCard.trackCount', { count: playlist.trackCount })}`
             : ''}
         </div>
       </div>
-    </Card>
+    </div>
   )
 }

@@ -237,27 +237,23 @@ export function FollowingPage() {
     };
 
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-6 pt-4 md:pt-6">
+        <div className="mx-auto w-full max-w-7xl space-y-5">
+            <div className="messages">
             <AnimatePresence>
                 {queuedCount > 0 && (
                     <motion.div
                         key="queued-banner"
-                        initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                        transition={{
-                            type: "spring",
-                            stiffness: 420,
-                            damping: 28,
-                        }}
-                        className="flex items-center justify-between gap-3 rounded-app border border-[rgba(var(--accent),0.35)] bg-[rgba(var(--accent),0.10)] px-4 py-2.5 text-sm text-white/90 backdrop-blur-[10px]"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        className="message"
                     >
                         <div>
                             {t("following.queuedPrefix")} <b>{queuedCount}</b>{" "}
                             {t("following.queuedItem", { count: queuedCount })}.{" "}
                             <Link
                                 to="/"
-                                className="font-medium text-[rgb(var(--accent))] underline underline-offset-2 transition-colors hover:text-white"
                             >
                                 {t("following.openActivity")}
                             </Link>
@@ -266,20 +262,21 @@ export function FollowingPage() {
                             type="button"
                             onClick={() => setQueuedCount(0)}
                             aria-label={t("following.dismiss")}
-                            className="shrink-0 inline-flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.08)] text-white/75 transition-[background,border-color,color] duration-[250ms] ease-smooth hover:border-[rgba(var(--accent),0.45)] hover:bg-[rgba(var(--accent),0.18)] hover:text-white"
+                            className="glyph h-9 w-9"
                         >
                             <X className="h-3.5 w-3.5" />
                         </button>
                     </motion.div>
                 )}
             </AnimatePresence>
+            </div>
 
             <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div className="space-y-2">
-                    <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
+                    <h1 className="text-[31px] leading-10 md:text-[34px] md:leading-[42px]">
                         {t("following.title")}
                     </h1>
-                    <p className="max-w-2xl text-sm text-white/60 md:text-base">
+                    <p className="max-w-2xl text-[15px] text-quiet">
                         {t("following.subtitle")}
                     </p>
                     <div
@@ -363,7 +360,7 @@ export function FollowingPage() {
             {error && <Badge variant="bad">{error}</Badge>}
 
             {loading ? (
-                <Card className="p-6 text-sm text-white/55">
+                <Card className="px-4 py-5 text-[15px] text-quiet">
                     {activeTab === "artists"
                         ? t("following.loadingArtists")
                         : t("following.loadingPlaylists")}
@@ -458,14 +455,14 @@ function FollowTabPill({
             aria-pressed={active}
             onClick={onClick}
             className={cx(
-                "inline-flex select-none items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[0.8125rem] font-medium text-white/70 transition-[background,border-color,color,transform] duration-[160ms] ease-smooth hover:bg-white/[0.08] hover:text-white active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.30)]",
-                active && "!border-accent/50 !bg-accent/22 !text-white",
+                "chip select-none",
+                active && "on",
             )}
         >
             <Icon className="h-3.5 w-3.5" />
             {label}
             {count > 0 && (
-                <span className="text-white/50 text-[11px] font-normal">
+                <span className="text-quiet text-[11px] font-normal">
                     {count}
                 </span>
             )}
@@ -487,17 +484,16 @@ function EmptyState({
     linkHref?: string;
 }) {
     return (
-        <Card className="relative overflow-hidden p-8 md:p-10">
-            <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[rgba(var(--accent),0.12)] blur-3xl" />
-            <div className="relative max-w-xl space-y-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.10)] text-[rgb(var(--accent))]">
+        <Card className="p-8 md:p-10">
+            <div className="max-w-xl space-y-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
                     {icon}
                 </div>
-                <h2 className="text-xl font-semibold text-white">{title}</h2>
-                <p className="text-sm text-white/60">{body}</p>
+                <h2 className="text-xl font-semibold tracking-[-0.4px] text-white">{title}</h2>
+                <p className="text-sm text-quiet">{body}</p>
                 <Link
                     to={linkHref}
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-white/80 transition-all hover:border-[rgba(var(--accent),0.3)] hover:bg-[rgba(var(--accent),0.12)] hover:text-[rgb(var(--accent))]"
+                    className="pill small quiet"
                 >
                     {linkLabel}
                 </Link>
@@ -554,12 +550,11 @@ function PlaylistFollowCard({
                 hover
                 className="group relative flex h-full flex-col overflow-hidden p-4"
             >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent),0.12),transparent_42%)] opacity-80" />
-                <div className="relative flex flex-1 flex-col gap-4">
+                <div className="flex flex-1 flex-col gap-4">
                     <div className="flex items-start gap-4">
                         <Link
                             to={href}
-                            className="h-20 w-20 shrink-0 overflow-hidden rounded-[24px] border border-white/[0.08] bg-black/45 shadow-[0_18px_35px_-22px_rgba(0,0,0,0.9)]"
+                            className="h-20 w-20 shrink-0 overflow-hidden plate rounded-card"
                         >
                             {art ? (
                                 <img
@@ -568,7 +563,7 @@ function PlaylistFollowCard({
                                     className="h-full w-full object-cover"
                                 />
                             ) : (
-                                <div className="flex h-full w-full items-center justify-center text-white/35">
+                                <div className="flex h-full w-full items-center justify-center text-quiet">
                                     <ListMusic className="h-7 w-7" />
                                 </div>
                             )}
@@ -576,11 +571,11 @@ function PlaylistFollowCard({
                         <div className="min-w-0 flex-1">
                             <Link
                                 to={href}
-                                className="line-clamp-2 text-lg font-semibold leading-tight text-white transition-colors hover:text-[rgb(var(--accent))]"
+                                className="line-clamp-2 text-base font-semibold leading-tight text-white"
                             >
                                 {playlist.name}
                             </Link>
-                            <div className="mt-0.5 truncate text-xs text-white/50">
+                            <div className="mt-0.5 truncate text-[13px] text-quiet">
                                 {playlist.curatorName}
                             </div>
                             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -615,7 +610,7 @@ function PlaylistFollowCard({
                     </div>
 
                     <div className="mt-auto flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="min-w-0 text-xs text-white/45">
+                        <div className="min-w-0 text-xs text-quiet">
                             <div className="flex items-center gap-1.5">
                                 <Clock className="h-3.5 w-3.5" />
                                 {playlist.lastCheckedAt
@@ -625,7 +620,7 @@ function PlaylistFollowCard({
                                     : t("following.waitingFirstSync")}
                             </div>
                             {activeJobCount > 0 && (
-                                <div className="mt-1 text-[rgb(var(--accent))]">
+                                <div className="mt-1 text-accent">
                                     {t("following.tracksDownloading", { count: activeJobCount })}
                                 </div>
                             )}
@@ -644,7 +639,7 @@ function PlaylistFollowCard({
                                             console.error(err);
                                         }
                                     }}
-                                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 text-xs font-medium text-white/65 transition-colors hover:border-[rgba(var(--accent),0.3)] hover:bg-[rgba(var(--accent),0.12)] hover:text-white"
+                                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--veil)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.1] disabled:opacity-40"
                                 >
                                     <Download className="h-3.5 w-3.5" />
                                     {t("following.downloadMissing")}
@@ -654,7 +649,7 @@ function PlaylistFollowCard({
                                 type="button"
                                 onClick={onSync}
                                 disabled={syncing}
-                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 text-xs font-medium text-white/65 transition-colors hover:border-[rgba(var(--accent),0.3)] hover:bg-[rgba(var(--accent),0.12)] hover:text-white disabled:opacity-50"
+                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--veil)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.1] disabled:opacity-40"
                             >
                                 <RefreshCw
                                     className={
@@ -669,7 +664,7 @@ function PlaylistFollowCard({
                             <button
                                 type="button"
                                 onClick={onUnfollow}
-                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 text-xs font-medium text-white/65 transition-colors hover:border-rose-300/30 hover:bg-rose-500/10 hover:text-rose-200"
+                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-quiet transition-colors hover:bg-[var(--hover)] hover:text-rose-500 disabled:opacity-40"
                             >
                                 <X className="h-3.5 w-3.5" />
                                 {t("following.unfollow")}
@@ -742,12 +737,11 @@ function ArtistFollowCard({
                 hover
                 className="group relative flex h-full flex-col overflow-hidden p-4"
             >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent),0.12),transparent_42%)] opacity-80" />
-                <div className="relative flex flex-1 flex-col gap-4">
+                <div className="flex flex-1 flex-col gap-4">
                     <div className="flex items-start gap-4">
                         <Link
                             to={`/artist/${artist.id}`}
-                            className="h-20 w-20 shrink-0 overflow-hidden rounded-[24px] border border-white/[0.08] bg-black/45 shadow-[0_18px_35px_-22px_rgba(0,0,0,0.9)]"
+                            className="h-20 w-20 shrink-0 overflow-hidden plate rounded-full"
                         >
                             {art ? (
                                 <img
@@ -756,7 +750,7 @@ function ArtistFollowCard({
                                     className="h-full w-full object-cover"
                                 />
                             ) : (
-                                <div className="flex h-full w-full items-center justify-center text-white/35">
+                                <div className="flex h-full w-full items-center justify-center text-quiet">
                                     <UserRoundCheck className="h-7 w-7" />
                                 </div>
                             )}
@@ -764,7 +758,7 @@ function ArtistFollowCard({
                         <div className="min-w-0 flex-1">
                             <Link
                                 to={`/artist/${artist.id}`}
-                                className="line-clamp-2 text-lg font-semibold leading-tight text-white transition-colors hover:text-[rgb(var(--accent))]"
+                                className="line-clamp-2 text-base font-semibold leading-tight text-white"
                             >
                                 {artist.name}
                             </Link>
@@ -793,7 +787,7 @@ function ArtistFollowCard({
                     </div>
 
                     <div className="mt-auto flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="min-w-0 text-xs text-white/45">
+                        <div className="min-w-0 text-xs text-quiet">
                             <div className="flex items-center gap-1.5">
                                 <Clock className="h-3.5 w-3.5" />
                                 {artist.lastCheckedAt
@@ -815,11 +809,11 @@ function ArtistFollowCard({
                         </div>
                         <div className="flex flex-wrap items-center justify-start gap-2 lg:shrink-0 lg:justify-end">
                             {isDownloading ? (
-                                <div className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.08)] px-3 text-xs font-medium text-[rgb(var(--accent))]">
+                                <div className="inline-flex h-9 shrink-0 items-center gap-2 px-1 text-[13px] font-medium text-accent tabular-nums">
                                     <div className="w-16">
-                                        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-[rgba(var(--accent),0.2)]">
+                                        <div className="relative h-1 w-full overflow-hidden rounded-full bg-[var(--seek-track)]">
                                             <div
-                                                className="absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--accent))] transition-[width] duration-300 ease-snappy"
+                                                className="absolute inset-y-0 left-0 rounded-full bg-[var(--ink)] transition-[width] duration-300 ease-snappy"
                                                 style={{
                                                     width: `${progressPercent}%`,
                                                 }}
@@ -846,7 +840,7 @@ function ArtistFollowCard({
                                             console.error(err);
                                         }
                                     }}
-                                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 text-xs font-medium text-white/65 transition-colors hover:border-[rgba(var(--accent),0.3)] hover:bg-[rgba(var(--accent),0.12)] hover:text-white"
+                                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--veil)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.1] disabled:opacity-40"
                                 >
                                     {t("following.downloadMissing")}
                                 </button>
@@ -855,7 +849,7 @@ function ArtistFollowCard({
                             <button
                                 type="button"
                                 onClick={onUnfollow}
-                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 text-xs font-medium text-white/65 transition-colors hover:border-rose-300/30 hover:bg-rose-500/10 hover:text-rose-200"
+                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-quiet transition-colors hover:bg-[var(--hover)] hover:text-rose-500 disabled:opacity-40"
                             >
                                 <X className="h-3.5 w-3.5" />
                                 {t("following.unfollow")}

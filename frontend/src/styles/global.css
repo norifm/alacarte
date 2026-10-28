@@ -1,44 +1,74 @@
+/* alacarte in Nori Seasons, the look of the nori music app: the season's palette (lib/seasons.ts) in five
+   roles and fixed shares of ink, Inter and Literata, no shadows, hairlines and steps of paper between
+   surfaces. This is the ground every page shares. */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Literata';
+  src: url('/fonts/literata.ttf') format('truetype');
+  font-weight: 200 900;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Registered so a cover's colors cross-fade every color made from these in one go. */
+@property --page { syntax: '<color>'; inherits: true; initial-value: #110e0a; }
+@property --surface { syntax: '<color>'; inherits: true; initial-value: #1c1813; }
+@property --ink { syntax: '<color>'; inherits: true; initial-value: #f3ede3; }
+@property --ink2 { syntax: '<color>'; inherits: true; initial-value: #a49f97; }
+@property --hair { syntax: '<color>'; inherits: true; initial-value: #312d28; }
+@property --outline { syntax: '<color>'; inherits: true; initial-value: #625e58; }
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #e8743b; }
+@property --on { syntax: '<color>'; inherits: true; initial-value: #7fa27f; }
+@property --on-accent { syntax: '<color>'; inherits: true; initial-value: #ffffff; }
+
 :root {
-  --accent: 204, 204, 255;
-  --radius: 16px;
-  --indicator: 61, 61, 76;
-  --glass-tint: 28, 28, 32;
+  --scrim: rgb(0 0 0 / 0.32);
+  --error: #f2b8b5;
+  --warn: #e3b25f;
+  /* Corners: cover, card, tile (grouped rows, popovers), sheet; pills are fully round. */
+  --r-cover: 8px;
+  --r-card: 12px;
+  --r-tile: 18px;
+  --r-sheet: 26px;
+  --hairline: 0.5px;
+  --gutter: 40px;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-snappy: cubic-bezier(0.4, 0, 0.2, 1);
-  --bg: #0a0a0a;
-  --bg-elev: rgba(255, 255, 255, 0.04);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --text: #f5f5f7;
-  --text-dim: rgba(245, 245, 247, 0.65);
-  --text-faint: rgba(245, 245, 247, 0.4);
 }
 
-html,
-body,
-#root {
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui,
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+/* Fixed shares of ink over the page, and the chrome: the page blurred inside an outline of ink. */
+:root {
+  --line: color-mix(in srgb, var(--ink) 10%, transparent);
+  --hover: color-mix(in srgb, var(--ink) 5%, transparent);
+  --veil: color-mix(in srgb, var(--ink) 6%, transparent);
+  --field: color-mix(in srgb, var(--ink) 7%, transparent);
+  --plate: linear-gradient(135deg, color-mix(in srgb, var(--ink) 13%, var(--page)), color-mix(in srgb, var(--ink) 6%, var(--page)));
+  --switch-off: color-mix(in srgb, var(--ink) 16%, var(--page));
+  --seek-track: color-mix(in srgb, var(--ink) 22%, transparent);
+  --glass: color-mix(in srgb, var(--page) 55%, transparent);
+  --chrome: color-mix(in srgb, var(--ink) 20%, transparent);
 }
 
-html {
-  scrollbar-gutter: stable;
+/* A page about one cover fades into its colors and back out. */
+:root.tinting,
+:root.tinting body {
+  transition: --page 340ms, --surface 340ms, --ink 340ms, --ink2 340ms, --hair 340ms, --outline 340ms, --accent 340ms, --on-accent 340ms;
 }
 
-body {
-  overflow-y: scroll;
-  scrollbar-color: rgb(var(--accent)) var(--bg);
+@media (max-width: 767px) {
+  :root {
+    --gutter: 20px;
+  }
 }
 
 *,
@@ -47,97 +77,78 @@ body {
   box-sizing: border-box;
 }
 
-button {
-  font-family: inherit;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      ellipse 80% 60% at 20% 0%,
-      rgba(var(--accent), 0.08),
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 60% 50% at 100% 100%,
-      rgba(var(--accent), 0.04),
-      transparent 70%
-    );
-  z-index: 0;
-}
-
+html,
+body,
 #root {
-  position: relative;
-  z-index: 1;
+  background: var(--page);
+  color: var(--ink);
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+* {
+  scrollbar-color: color-mix(in srgb, var(--ink) 18%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+body {
+  overflow-y: scroll;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* What a page is called: Literata, the only place it is used. */
+h1 {
+  font-family: Literata, Georgia, 'Iowan Old Style', serif;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* Iconoir's weight: every outline glyph at one 1.5 stroke. */
+.lucide {
+  stroke-width: 1.5;
 }
 
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgb(var(--accent));
-  border: 3px solid var(--bg);
+  background: var(--veil);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg);
+  background: transparent;
 }
 
-input[type="checkbox"] {
-  appearance: none;
-  background-color: rgba(255, 255, 255, 0.04);
-  margin: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-content: center;
-  transition: all 0.2s var(--ease);
-  cursor: pointer;
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
-input[type="checkbox"]::before {
-  content: "";
-  width: 12px;
-  height: 12px;
-  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-  transform: scale(0);
-  background-color: #0a0a0a;
-  transition: 0.2s transform var(--ease-snappy);
-}
-
-input[type="checkbox"]:checked {
-  background-color: rgb(var(--accent));
-  border-color: rgb(var(--accent));
-}
-
-input[type="checkbox"]:checked::before {
-  transform: scale(1);
-}
-
-select {
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 1.25em;
-}
-
-a:focus-visible,
-button:focus-visible,
-[role='button']:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid rgba(var(--accent), 0.8);
+:focus-visible {
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 input:focus,
@@ -147,6 +158,477 @@ textarea:focus-visible,
 select:focus,
 select:focus-visible {
   outline: none !important;
+}
+
+/* A checkbox: an outline while idle, the ink with the page's check once ticked. */
+input[type='checkbox']:not(.switch) {
+  appearance: none;
+  margin: 0;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border: 1.5px solid var(--outline);
+  border-radius: 6px;
+  background: transparent;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+
+input[type='checkbox']:not(.switch)::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform: scale(0);
+  background: var(--page);
+  transition: transform 160ms var(--ease-snappy);
+}
+
+input[type='checkbox']:not(.switch):checked {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+input[type='checkbox']:not(.switch):checked::before {
+  transform: scale(1);
+}
+
+/* The switch: iOS's, its track filling with the season's "on" color. */
+.switch {
+  appearance: none;
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  background: var(--switch-off);
+  position: relative;
+  cursor: pointer;
+  flex: none;
+  margin: 0;
+  border: 0;
+  transition: background 180ms;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.18), 0 0 1px rgb(0 0 0 / 0.12);
+  transition: transform 180ms var(--ease);
+}
+
+.switch:checked,
+.switch[aria-checked='true'] {
+  background: var(--on);
+}
+
+.switch:checked::after,
+.switch[aria-checked='true']::after {
+  transform: translateX(20px);
+}
+
+.switch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.1em;
+}
+
+select option {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* A slider: a 4 px track in the switch's grey, filled with the ink, a white knob. */
+input[type='range'] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 28px;
+  background: linear-gradient(to right, var(--ink) var(--v, 0%), var(--switch-off) var(--v, 0%)) center / 100% 4px no-repeat;
+  cursor: pointer;
+  margin: 0;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+}
+
+@layer components {
+  /* The one outline: the page blurred inside it, a hairline round it, no shadow. Without a blur the page
+     is thicker, not absent. */
+  .chrome {
+    background: var(--glass);
+    border: var(--hairline) solid var(--chrome);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .chrome {
+      background: color-mix(in srgb, var(--page) 88%, transparent);
+    }
+  }
+
+  /* A section's heading: Inter 19 semibold, 12 above what it heads. */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 19px;
+    line-height: 24px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+  }
+
+  .section-title > .lucide {
+    width: 20px;
+    height: 20px;
+    color: var(--ink2);
+  }
+
+  /* The small capitals over a grouped card: "DOWNLOADS". */
+  .group-label {
+    margin: 22px 14px 8px;
+    font-size: 11.5px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink2);
+  }
+
+  /* Rows grouped on one raised plate: the surface, a hairline edge, the tile's corners. */
+  .grouped {
+    background: var(--surface);
+    border: var(--hairline) solid var(--hair);
+    border-radius: var(--r-tile);
+    overflow: hidden;
+    color: var(--ink);
+  }
+
+  /* A row of a group; its hairline starts where its text does, the last row has none. */
+  .group-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 52px;
+    padding: 8px 14px;
+    text-align: left;
+  }
+
+  .group-row::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .group-row:last-child::after {
+    display: none;
+  }
+
+  /* A list of rows on the surface (tracks, downloads): dividers from the text, none after the last. */
+  .rows > * {
+    position: relative;
+  }
+
+  .rows > *:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: var(--row-text, 14px);
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--line);
+    pointer-events: none;
+  }
+
+  /* A choice: the one chosen raised on the surface with a hairline edge and in ink, the others quiet words. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: var(--hairline) solid transparent;
+    color: var(--ink2);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .chip:hover:not(:disabled) {
+    color: var(--ink);
+  }
+
+  .chip.on {
+    background: var(--surface);
+    border-color: var(--hair);
+    color: var(--ink);
+  }
+
+  /* The button a page is built around: a full pill in the ink with the page as its words. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--page);
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .pill.quiet {
+    background: var(--veil);
+    color: var(--ink);
+  }
+
+  .pill.small {
+    min-height: 34px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+
+  .pill > .lucide {
+    width: 18px;
+    height: 18px;
+  }
+
+  .pill:disabled {
+    opacity: 0.38;
+    cursor: default;
+  }
+
+  /* A bare glyph that does something: a 48 px target, the glyph in ink, the accent while lit; pressed, a
+     round ripple in the ink grows from half size. */
+  .glyph {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    color: var(--ink);
+    flex: none;
+  }
+
+  .glyph::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--ink);
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 380ms ease-out, transform 380ms ease-out;
+  }
+
+  .glyph:hover:not(:disabled)::before {
+    opacity: 0.05;
+    transform: scale(1);
+  }
+
+  .glyph:active:not(:disabled)::before {
+    opacity: 0.14;
+    transform: scale(1);
+    transition-duration: 90ms;
+  }
+
+  .glyph.quiet {
+    color: var(--ink2);
+  }
+
+  .glyph.on {
+    color: var(--accent);
+  }
+
+  .glyph > * {
+    position: relative;
+  }
+
+  .glyph:disabled {
+    opacity: 0.38;
+  }
+
+  /* A field: a capsule on the surface with a hairline edge, its edge in the accent while focused. */
+  .field {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: var(--hairline) solid var(--hair);
+    background: var(--surface);
+    color: var(--ink);
+    outline: none;
+    font-size: 15px;
+  }
+
+  .field:focus,
+  .field:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.5px var(--accent);
+  }
+
+  .field::placeholder,
+  .field input::placeholder,
+  .field textarea::placeholder {
+    color: var(--ink2);
+  }
+
+  /* Every menu: one surface on the paper with a hairline edge, no shadow, the tile's corners. */
+  .popover {
+    --inset: 6px;
+    --inner: calc(var(--r-tile) - var(--inset));
+    background: var(--surface);
+    border: var(--hairline) solid var(--hair);
+    border-radius: var(--r-tile);
+    color: var(--ink);
+    padding: var(--inset);
+  }
+
+  .popover-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 10px;
+    border-radius: var(--inner);
+    font-size: 15px;
+    line-height: 20px;
+    text-align: left;
+  }
+
+  .popover-item + .popover-item::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    top: 0;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .popover-item:hover:not(:disabled) {
+    background: var(--hover);
+  }
+
+  .popover-item > .lucide {
+    width: 18px;
+    height: 18px;
+    color: var(--ink2);
+  }
+
+  /* Message pills float over the page on the surface with a hairline, above the dock on a phone; words and
+     action in ink, the × quiet. */
+  .messages {
+    position: fixed;
+    inset-inline: 0;
+    bottom: calc(max(6px, env(safe-area-inset-bottom)) + 104px);
+    z-index: 45;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    pointer-events: none;
+  }
+
+  @media (min-width: 768px) {
+    .messages {
+      bottom: 24px;
+    }
+  }
+
+  .message {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: min(600px, 100%);
+    padding: 8px 8px 8px 18px;
+    border-radius: 24px;
+    background: var(--surface);
+    border: var(--hairline) solid var(--hair);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .message a {
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .message > button:last-child {
+    color: color-mix(in srgb, var(--ink2) 75%, transparent);
+  }
+
+  /* Small grey capitals under a title: "2019 · ALTERNATIVE · LOSSLESS". */
+  .caption {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink2);
+  }
+
+  /* An image placeholder: a plate of ink with a note at 22 %. */
+  .plate {
+    background: var(--plate);
+    color: color-mix(in srgb, var(--ink) 22%, transparent);
+  }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes dots-in {
+  from { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

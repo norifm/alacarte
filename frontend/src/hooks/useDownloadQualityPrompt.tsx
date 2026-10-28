@@ -49,9 +49,9 @@ export function useDownloadQualityPrompt() {
     >
       <div className="p-6">
         <div>
-          <div className="text-xs uppercase tracking-wider text-white/55">{t('downloadQualityPrompt.chooseDownloadQuality')}</div>
+          <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">{t('downloadQualityPrompt.chooseDownloadQuality')}</div>
           <h2 className="mt-1 text-lg font-semibold text-white">{t('downloadQualityPrompt.chooseQuality')}</h2>
-          <p className="mt-2 text-sm text-white/60">
+          <p className="mt-2 text-sm text-quiet">
             {t('downloadQualityPrompt.appliesToThisDownloadOnly')}
           </p>
         </div>

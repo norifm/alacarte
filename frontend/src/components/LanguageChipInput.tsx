@@ -69,7 +69,7 @@ export function LanguageChipInput({ value, onChange, options, placeholder, empty
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-1.5 rounded-app border border-white/[0.08] bg-white/[0.04] p-2">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-card bg-[var(--field)] p-2">
         {value.map((code, i) => (
           <span
             key={code}
@@ -90,8 +90,8 @@ export function LanguageChipInput({ value, onChange, options, placeholder, empty
               setOverIndex(null)
             }}
             className={cx(
-              'inline-flex cursor-grab select-none items-center gap-1.5 rounded-full border border-white/15 bg-white/10 py-1 pl-3 pr-1.5 text-[13px] font-medium text-white active:cursor-grabbing',
-              overIndex === i && dragIndex !== null && dragIndex !== i && 'border-[rgba(var(--accent),0.5)]',
+              'inline-flex cursor-grab select-none items-center gap-1.5 rounded-full border-hair border-[var(--hair)] bg-surface py-1 pl-3 pr-1.5 text-[13px] font-medium text-white active:cursor-grabbing',
+              overIndex === i && dragIndex !== null && dragIndex !== i && '!border-[var(--outline)]',
             )}
             title="Drag to reorder"
           >
@@ -99,7 +99,7 @@ export function LanguageChipInput({ value, onChange, options, placeholder, empty
             <button
               type="button"
               onClick={() => removeCode(code)}
-              className="inline-flex h-4 w-4 items-center justify-center rounded-full text-white/60 hover:bg-white/15 hover:text-white"
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full text-quiet hover:bg-[var(--hover)] hover:text-white"
               aria-label={`Remove ${labelFor(code)}`}
             >
               <X className="h-3 w-3" />
@@ -114,21 +114,21 @@ export function LanguageChipInput({ value, onChange, options, placeholder, empty
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={value.length === 0 ? placeholder : undefined}
-            className="w-full min-w-[8rem] bg-transparent px-2 py-1 text-sm text-white placeholder:text-white/30 outline-none"
+            className="w-full min-w-[8rem] bg-transparent px-2 py-1 text-sm text-white placeholder:text-quiet outline-none"
           />
           {suggestions.length > 0 && (
             // opens upward: the input sits at the bottom of its card, which clips overflow
-            <ul className="absolute left-0 bottom-full z-10 mb-1 w-48 overflow-hidden rounded-app border border-white/10 bg-zinc-900 shadow-lg">
+            <ul className="popover absolute bottom-full left-0 z-10 mb-1 w-52">
               {suggestions.map((o) => (
                 <li key={o.code}>
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => addCode(o.code)}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-white/85 hover:bg-white/10"
+                    className="popover-item justify-between"
                   >
                     <span>{o.label}</span>
-                    <span className="text-xs uppercase text-white/40">{o.code}</span>
+                    <span className="text-xs uppercase text-quiet">{o.code}</span>
                   </button>
                 </li>
               ))}
@@ -137,7 +137,7 @@ export function LanguageChipInput({ value, onChange, options, placeholder, empty
         </div>
       </div>
       {value.length === 0 && emptyHint && (
-        <p className="mt-1.5 text-xs text-white/45">{emptyHint}</p>
+        <p className="mt-1.5 text-xs text-quiet">{emptyHint}</p>
       )}
     </div>
   )

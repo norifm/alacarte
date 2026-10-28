@@ -1,3 +1,5 @@
+import type { Appearance, SeasonSetting } from '../lib/seasons'
+
 export type Album = {
   id: string
   name: string
@@ -245,6 +247,8 @@ export type PublicSettings = {
   versionOptionsEnabled: boolean
   versionOptions: QualityGroup[]
   uiLanguage: UiLanguage
+  season: SeasonSetting
+  appearance: Appearance
   acceptedLanguages: string[]
   namingLanguageMode: NamingLanguageMode
 }

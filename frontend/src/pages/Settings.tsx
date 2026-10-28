@@ -17,6 +17,7 @@ import {
   User as UserIcon,
   Users,
   Wrench,
+  Palette,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -33,7 +34,6 @@ import { setAppSettingsCache } from '../hooks/useAppSettings'
 import { useEventStream } from '../hooks/useEventStream'
 import i18n, { SUPPORTED_LANGUAGES, LANGUAGE_NATIVE_LABELS } from '../i18n'
 
-import { Card } from '../components/Card'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
@@ -42,6 +42,10 @@ import { ProgressBar } from '../components/ProgressBar'
 import { StaggeredList, StaggeredItem } from '../components/StaggeredList'
 import { LanguageChipInput, type LanguageOption } from '../components/LanguageChipInput'
 import { cx } from '../lib/cx'
+import { calendarNow, seasonTiles, setLook } from '../lib/seasons'
+import { useLook } from '../hooks/useSeasons'
+import { PageTitle } from '../components/PageTitle'
+import { SeasonMark } from '../components/SeasonMark'
 
 // Must match backend/lib/metadataLanguage.mjs's LANGUAGE_CATALOG.
 const ACCEPTED_LANGUAGE_OPTIONS: LanguageOption[] = [
@@ -152,20 +156,23 @@ export function SettingsPage() {
         {message && (
           <motion.div
             key="settings-flash"
-            initial={{ opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-            className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="messages"
           >
-            <Badge className="h-10 px-3.5 text-[0.8125rem] leading-none">
-              {message}
-            </Badge>
+            <div className="message min-h-10 !pr-[18px]">{message}</div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <StaggeredList className="mx-auto w-full max-w-3xl space-y-6 pt-4 md:pt-6">
+      <StaggeredList className="mx-auto w-full max-w-3xl">
+        <PageTitle>{t('nav.settings')}</PageTitle>
+
+        <StaggeredItem>
+          <AppearanceSection settings={settings} update={update} />
+        </StaggeredItem>
         <StaggeredItem>
           <SettingsCard icon={<Lock className="h-4 w-4" />} title={t('settings.cardAppleCredentials')}>
             <AppleCredsForm
@@ -187,54 +194,54 @@ export function SettingsPage() {
           <SettingsCard icon={<Globe className="h-4 w-4" />} title={t('settings.cardCatalog')}>
             <div className="space-y-4">
               <label className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-3">
-                <span className="text-sm text-white/70 md:w-32">{t('settings.language')}</span>
+                <span className="text-[15px] md:w-40">{t('settings.language')}</span>
                 <select
                   value={settings.uiLanguage}
                   onChange={(e) => update({ uiLanguage: e.target.value as PublicSettings['uiLanguage'] })}
-                  className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)] md:flex-1"
+                  className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)] md:flex-1"
                 >
-                  <option value="system" className="bg-zinc-900">
+                  <option value="system">
                     {t('settings.followSystemDefault')}
                   </option>
                   {SUPPORTED_LANGUAGES.map((code) => (
-                    <option key={code} value={code} className="bg-zinc-900">
+                    <option key={code} value={code}>
                       {LANGUAGE_NATIVE_LABELS[code]}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-3">
-                <span className="text-sm text-white/70 md:w-32">{t('settings.storefront')}</span>
+                <span className="text-[15px] md:w-40">{t('settings.storefront')}</span>
                 <select
                   value={settings.storefront}
                   onChange={(e) => update({ storefront: e.target.value })}
-                  className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)] md:flex-1"
+                  className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)] md:flex-1"
                 >
                   {!storefronts.some((s) => s.id === settings.storefront) && (
-                    <option value={settings.storefront} className="bg-zinc-900">
+                    <option value={settings.storefront}>
                       {settings.storefront.toUpperCase()}
                     </option>
                   )}
                   {storefronts.map((s) => (
-                    <option key={s.id} value={s.id} className="bg-zinc-900">
+                    <option key={s.id} value={s.id}>
                       {s.name} ({s.id.toUpperCase()})
                     </option>
                   ))}
                 </select>
               </label>
-              <label className="flex items-start gap-3">
+              <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+                <div>
+                  <div className="text-[15px]">{t('settings.autoStorefront')}</div>
+                </div>
                 <input
                   type="checkbox"
                   checked={settings.autoStorefront}
                   onChange={(e) => update({ autoStorefront: e.target.checked })}
-                  className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                  className="switch"
                 />
-                <div>
-                  <div className="text-sm font-medium">{t('settings.autoStorefront')}</div>
-                </div>
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
-                <span className="text-sm text-white/70 md:w-32 md:pt-2">
+                <span className="text-[15px] md:w-40 md:pt-2">
                   {t('settings.contentRating')}
                 </span>
                 <div className="md:flex-1">
@@ -246,15 +253,15 @@ export function SettingsPage() {
                           .value as PublicSettings['explicitFilter'],
                       })
                     }
-                    className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)]"
+                    className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)]"
                   >
-                    <option value="explicit" className="bg-zinc-900">
+                    <option value="explicit">
                       {t('settings.preferExplicit')}
                     </option>
-                    <option value="clean" className="bg-zinc-900">
+                    <option value="clean">
                       {t('settings.preferClean')}
                     </option>
-                    <option value="both" className="bg-zinc-900">
+                    <option value="both">
                       {t('settings.showBoth')}
                     </option>
                   </select>
@@ -269,81 +276,77 @@ export function SettingsPage() {
           <SettingsCard icon={<FolderOpen className="h-4 w-4" />} title={t('settings.libraryOutput')}>
             <div className="space-y-4">
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
-                <span className="text-sm text-white/70 md:w-32 md:pt-2">{t('settings.quality')}</span>
+                <span className="text-[15px] md:w-40 md:pt-2">{t('settings.quality')}</span>
                 <div className="md:flex-1">
                   <select
                     value={settings.quality}
                     onChange={(e) =>
                       update({ quality: e.target.value as PublicSettings['quality'] })
                     }
-                    className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)]"
+                    className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)]"
                   >
                     {QUALITY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value} className="bg-zinc-900">
+                      <option key={option.value} value={option.value}>
                         {t(option.labelKey)}
                       </option>
                     ))}
                   </select>
                 </div>
               </label>
-              <label className="flex items-start gap-3">
+              <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+                <div>
+                  <div className="text-[15px]">{t('settings.askQualityBeforeManual')}</div>
+                </div>
                 <input
                   type="checkbox"
                   checked={settings.promptForDownloadQuality}
                   onChange={(e) => update({ promptForDownloadQuality: e.target.checked })}
-                  className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                  className="switch"
                 />
-                <div>
-                  <div className="text-sm font-medium">{t('settings.askQualityBeforeManual')}</div>
-                </div>
               </label>
-              <label className="flex items-start gap-3">
+              <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+                <div>
+                  <div className="text-[15px]">{t('settings.stagingInsideLibrary')}</div>
+                </div>
                 <input
                   type="checkbox"
                   checked={settings.stagingInsideMusicLibrary}
                   onChange={(e) => update({ stagingInsideMusicLibrary: e.target.checked })}
-                  className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                  className="switch"
                 />
-                <div>
-                  <div className="text-sm font-medium">{t('settings.stagingInsideLibrary')}</div>
-                </div>
               </label>
               <div className="flex items-start gap-3">
                 <div className="flex-1">
-                  <div className="text-sm font-medium">{t('settings.namingConvention')}</div>
+                  <div className="text-[15px]">{t('settings.namingConvention')}</div>
                   <select
                     value={settings.namingConvention ?? 'apple'}
                     onChange={(e) => update({ namingConvention: e.target.value as 'apple' | 'qobuz' })}
-                    className="mt-2 w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)]"
+                    className="mt-2 w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)]"
                   >
-                    <option value="apple" className="bg-zinc-900">{t('settings.namingApple')}</option>
-                    <option value="qobuz" className="bg-zinc-900">{t('settings.qobuzCompatible')}</option>
+                    <option value="apple">{t('settings.namingApple')}</option>
+                    <option value="qobuz">{t('settings.qobuzCompatible')}</option>
                   </select>
                 </div>
               </div>
-              <label
-                className={`flex items-start gap-3 ${settings.hasMediaUserToken ? 'cursor-pointer' : 'cursor-not-allowed'
-                  }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={settings.downloadLyrics}
-                  onChange={(e) => update({ downloadLyrics: e.target.checked })}
-                  className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={!settings.hasMediaUserToken}
-                />
+              <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
                 <div>
                   <div
-                    className={`text-sm font-medium ${settings.hasMediaUserToken ? '' : 'text-white/45'
-                      }`}
+                    className={`text-[15px] ${settings.hasMediaUserToken ? '' : 'text-quiet'}`}
                   >
                     {t('settings.downloadLyrics')}
                   </div>
 
                 </div>
+                <input
+                  type="checkbox"
+                  checked={settings.downloadLyrics}
+                  onChange={(e) => update({ downloadLyrics: e.target.checked })}
+                  className="switch"
+                  disabled={!settings.hasMediaUserToken}
+                />
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
-                <span className="text-sm text-white/70 md:w-32 md:pt-2">{t('settings.lyricsFormat')}</span>
+                <span className="text-[15px] md:w-40 md:pt-2">{t('settings.lyricsFormat')}</span>
                 <div className="md:flex-1">
                   <select
                     id="lyrics-format-select"
@@ -352,17 +355,17 @@ export function SettingsPage() {
                     onChange={(e) =>
                       update({ lyricsFormat: e.target.value as PublicSettings['lyricsFormat'] })
                     }
-                    className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="lrc" className="bg-zinc-900">{t('settings.lyricsFormatLrc')}</option>
-                    <option value="ttml" className="bg-zinc-900">{t('settings.lyricsFormatTtml')}</option>
-                    <option value="both" className="bg-zinc-900">{t('settings.lyricsFormatBoth')}</option>
+                    <option value="lrc">{t('settings.lyricsFormatLrc')}</option>
+                    <option value="ttml">{t('settings.lyricsFormatTtml')}</option>
+                    <option value="both">{t('settings.lyricsFormatBoth')}</option>
                   </select>
 
                 </div>
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
-                <span className="text-sm text-white/70 md:w-32 md:pt-2">{t('settings.lyricsType')}</span>
+                <span className="text-[15px] md:w-40 md:pt-2">{t('settings.lyricsType')}</span>
                 <div className="md:flex-1">
                   <select
                     id="lyrics-type-select"
@@ -371,35 +374,35 @@ export function SettingsPage() {
                     onChange={(e) =>
                       update({ lyricsType: e.target.value as PublicSettings['lyricsType'] })
                     }
-                    className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="lyrics" className="bg-zinc-900">{t('settings.lyricsTypeLyrics')}</option>
-                    <option value="lyrics-with-translation" className="bg-zinc-900">{t('settings.lyricsTypeWithTranslation')}</option>
+                    <option value="lyrics">{t('settings.lyricsTypeLyrics')}</option>
+                    <option value="lyrics-with-translation">{t('settings.lyricsTypeWithTranslation')}</option>
                   </select>
 
                 </div>
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
-                <span className="text-sm text-white/70 md:w-32 md:pt-2">
+                <span className="text-[15px] md:w-40 md:pt-2">
                   {t('settings.coverSize')}
                 </span>
                 <div className="md:flex-1">
                   <select
                     value={settings.coverSize}
                     onChange={(e) => update({ coverSize: e.target.value })}
-                    className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)]"
+                    className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)]"
                   >
-                    <option value="1400x1400" className="bg-zinc-900">{t('settings.coverSize1400')}</option>
-                    <option value="2000x2000" className="bg-zinc-900">{t('settings.coverSize2000')}</option>
-                    <option value="3000x3000" className="bg-zinc-900">{t('settings.coverSize3000')}</option>
-                    <option value="5000x5000" className="bg-zinc-900">{t('settings.coverSize5000')}</option>
+                    <option value="1400x1400">{t('settings.coverSize1400')}</option>
+                    <option value="2000x2000">{t('settings.coverSize2000')}</option>
+                    <option value="3000x3000">{t('settings.coverSize3000')}</option>
+                    <option value="5000x5000">{t('settings.coverSize5000')}</option>
                   </select>
 
                 </div>
               </label>
 
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
-                <span className="text-sm text-white/70 md:w-32 md:pt-2">
+                <span className="text-[15px] md:w-40 md:pt-2">
                   {t('settings.namingLanguageMode')}
                 </span>
                 <div className="md:flex-1">
@@ -410,23 +413,23 @@ export function SettingsPage() {
                         namingLanguageMode: e.target.value as PublicSettings['namingLanguageMode'],
                       })
                     }
-                    className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)]"
+                    className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)]"
                   >
                     {NAMING_LANGUAGE_MODE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value} className="bg-zinc-900">
+                      <option key={option.value} value={option.value}>
                         {t(option.labelKey)}
                       </option>
                     ))}
                   </select>
                   {settings.namingLanguageMode !== 'display' && (
-                    <div className="mt-1.5 text-[13px] text-white/45">
+                    <div className="mt-1.5 text-[13px] text-quiet">
                       {t(`${NAMING_LANGUAGE_MODE_OPTIONS.find((o) => o.value === settings.namingLanguageMode)?.labelKey}Help`)}
                     </div>
                   )}
                 </div>
               </label>
 
-              <div className="border-t border-white/[0.06] pt-4">
+              <div className="border-t border-[var(--line)] pt-4">
                 <div className="text-sm text-white/70">{t('settings.acceptedLanguages')}</div>
                 <div className="mt-2">
                   <LanguageChipInput
@@ -445,20 +448,20 @@ export function SettingsPage() {
         <StaggeredItem>
           <SettingsCard icon={<ListPlus className="h-4 w-4" />} title={t('settings.cardOtherVersions')}>
             <div className="space-y-4">
-              <label className="flex items-start gap-3">
+              <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+                <div>
+                  <div className="text-[15px]">
+                    {t('settings.showOtherVersionOptions')}
+                  </div>
+                </div>
                 <input
                   type="checkbox"
                   checked={settings.versionOptionsEnabled}
                   onChange={(e) =>
                     update({ versionOptionsEnabled: e.target.checked })
                   }
-                  className="mt-0.5 shrink-0"
+                  className="switch"
                 />
-                <div>
-                  <div className="text-[13px] font-medium">
-                    {t('settings.showOtherVersionOptions')}
-                  </div>
-                </div>
               </label>
               {settings.versionOptionsEnabled && (
                 <div
@@ -466,7 +469,7 @@ export function SettingsPage() {
                   role="group"
                   aria-label={t('settings.versionsToOffer')}
                 >
-                  <span className="text-[13px] text-[var(--text-dim)]">{t('settings.offer')}</span>
+                  <span className="mr-1 text-[13px] text-quiet">{t('settings.offer')}</span>
                   {(['lossless', 'atmos', 'aac'] as const).map((group) => {
                     const on = settings.versionOptions.includes(group)
                     return (
@@ -480,12 +483,7 @@ export function SettingsPage() {
                             : [...settings.versionOptions, group]
                           update({ versionOptions: next })
                         }}
-                        className={
-                          'inline-flex select-none items-center rounded-full border px-3 py-1 text-[13px] font-medium transition-colors ' +
-                          (on
-                            ? 'border-white/30 bg-white/15 text-white'
-                            : 'border-white/15 bg-transparent text-white/60 hover:bg-white/10')
-                        }
+                        className={'chip' + (on ? ' on' : '')}
                       >
                         {group === 'lossless'
                           ? t('settings.versionLossless')
@@ -504,19 +502,19 @@ export function SettingsPage() {
         <StaggeredItem>
           <SettingsCard icon={<Radar className="h-4 w-4" />} title={t('settings.cardAutoDownloads')}>
             <div className="space-y-4">
-              <label className="flex items-start gap-3">
+              <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+                <div>
+                  <div className="text-[15px]">{t('settings.enableAutoDownloads')}</div>
+                </div>
                 <input
                   type="checkbox"
                   checked={settings.autoDownloadsEnabled}
                   onChange={(e) => update({ autoDownloadsEnabled: e.target.checked })}
-                  className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                  className="switch"
                 />
-                <div>
-                  <div className="text-sm font-medium">{t('settings.enableAutoDownloads')}</div>
-                </div>
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
-                <span className="text-sm text-white/70 md:w-32 md:pt-2">{t('settings.checkFrequency')}</span>
+                <span className="text-[15px] md:w-40 md:pt-2">{t('settings.checkFrequency')}</span>
                 <div className="md:flex-1">
                   <select
                     value={settings.autoDownloadCheckFrequency}
@@ -526,10 +524,10 @@ export function SettingsPage() {
                           e.target.value as PublicSettings['autoDownloadCheckFrequency'],
                       })
                     }
-                    className="w-full rounded-app border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-white outline-none transition-[border-color,background,box-shadow] duration-[250ms] ease-smooth focus:border-[rgba(var(--accent),0.45)] focus:bg-[rgba(var(--accent),0.04)] focus:shadow-[0_0_0_3px_rgba(var(--accent),0.18)]"
+                    className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)]"
                   >
                     {AUTO_DOWNLOAD_FREQUENCY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value} className="bg-zinc-900">
+                      <option key={option.value} value={option.value}>
                         {t(option.labelKey)}
                       </option>
                     ))}
@@ -550,10 +548,10 @@ export function SettingsPage() {
           <SettingsCard icon={<Wrench className="h-4 w-4" />} title={t('settings.cardLibraryMaintenance')}>
             <div className="space-y-5">
               <TagBackfillCard flash={flash} />
-              <div className="border-t border-white/[0.06] pt-5">
+              <div className="border-t border-[var(--line)] pt-5">
                 <LyricsBackfillCard flash={flash} />
               </div>
-              <div className="border-t border-white/[0.06] pt-5">
+              <div className="border-t border-[var(--line)] pt-5">
                 <ArtistBackfillCard flash={flash} />
               </div>
             </div>
@@ -573,7 +571,7 @@ export function SettingsPage() {
                 <div className="text-sm font-semibold text-white/80">Navidrome</div>
                 <NavidromeForm settings={settings} onChange={reload} onFlash={flash} />
               </div>
-              <div className="border-t border-white/[0.06]" />
+              <div className="border-t border-[var(--line)]" />
               <div className="space-y-3">
                 <div className="text-sm font-semibold text-white/80">octo-fiesta</div>
                 <OctoIntegrationForm settings={settings} onChange={reload} onFlash={flash} />
@@ -583,13 +581,13 @@ export function SettingsPage() {
         </StaggeredItem>
 
         <StaggeredItem>
-          <footer className="pb-1 pt-1 text-center text-xs text-white/45">
+          <footer className="pb-1 pt-1 text-center text-xs text-quiet">
             {t('settings.builtBy')}{' '}
             <a
               href="https://github.com/sosjalapeno"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent hover:text-white underline decoration-accent/50 underline-offset-2"
+              className="underline underline-offset-2"
             >
               sosjalapeno
             </a>
@@ -597,6 +595,105 @@ export function SettingsPage() {
         </StaggeredItem>
       </StaggeredList>
     </>
+  )
+}
+
+// The look, as nori's Appearance has it: the four season tiles (each its season's paper with its kanji in
+// its accent and its name under it, the one worn ringed in that accent; picking one stops following the
+// calendar), Follow the calendar, then System, Day, Night or Midnight.
+function AppearanceSection({
+  settings,
+  update,
+}: {
+  settings: PublicSettings
+  update: (patch: Partial<PublicSettings>) => void
+}) {
+  const { t, i18n } = useTranslation()
+  const look = useLook()
+  const now = calendarNow()
+  const following = settings.season === 'follow'
+  const worn = following ? now.season : settings.season
+  const set = (patch: Partial<Pick<PublicSettings, 'season' | 'appearance'>>) => {
+    setLook(patch)
+    update(patch)
+  }
+  const nextDate = new Date(2001, now.nextMonth - 1, now.nextDay).toLocaleDateString(i18n.language, {
+    day: 'numeric',
+    month: 'long',
+  })
+  return (
+    <section>
+      <h2 className="group-label flex items-center gap-2 [&_.lucide]:h-3.5 [&_.lucide]:w-3.5">
+        <Palette />
+        {t('settings.appearance')}
+      </h2>
+      <div className="mb-2.5 flex gap-2.5" role="radiogroup" aria-label={t('settings.season')}>
+        {seasonTiles().map((tile) => {
+          const on = worn === tile.season
+          return (
+            <button
+              key={tile.season}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => (!on || following) && set({ season: tile.season })}
+              className={cx('flex min-w-0 flex-1 flex-col items-center gap-1.5 text-quiet', on && '!text-white')}
+            >
+              <span
+                className="grid h-[72px] self-stretch place-items-center rounded-tile"
+                style={{
+                  background: tile.page,
+                  color: tile.accent,
+                  boxShadow: `inset 0 0 0 ${on ? '2px' : 'var(--hairline)'} ${on ? tile.accent : 'var(--hair)'}`,
+                }}
+              >
+                <SeasonMark season={tile.season} className="h-8 w-8" />
+              </span>
+              <span className="max-w-full truncate text-xs font-medium">{t(`settings.seasons.${tile.season}`)}</span>
+            </button>
+          )
+        })}
+      </div>
+      <div className="grouped">
+        <label className="group-row cursor-pointer justify-between">
+          <span className="flex min-w-0 flex-col">
+            <span className="text-[15px]">{t('settings.seasonFollow')}</span>
+            {following && (
+              <span className="text-[13px] text-quiet">
+                {t('settings.seasonNext', {
+                  season: t(`settings.seasons.${now.season}`),
+                  next: t(`settings.seasons.${now.next}`),
+                  date: nextDate,
+                })}
+              </span>
+            )}
+          </span>
+          <input
+            type="checkbox"
+            className="switch"
+            checked={following}
+            onChange={(e) => set({ season: e.target.checked ? 'follow' : now.season })}
+          />
+        </label>
+        <div className="group-row flex-col !items-stretch gap-2.5 py-3">
+          <span className="text-[15px]">{t('settings.theme')}</span>
+          <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={t('settings.theme')}>
+            {(['system', 'day', 'night', 'midnight'] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={look.appearance === id}
+                className={cx('chip', look.appearance === id && 'on')}
+                onClick={() => look.appearance !== id && set({ appearance: id })}
+              >
+                {t(`settings.appearances.${id}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -610,13 +707,13 @@ function SettingsCard({
   children: React.ReactNode
 }) {
   return (
-    <Card className="p-5 md:p-6">
-      <header className="flex items-center gap-2 mb-4">
-        {icon && <span className="text-accent">{icon}</span>}
-        <h2 className="text-base font-semibold">{title}</h2>
-      </header>
-      {children}
-    </Card>
+    <section>
+      <h2 className="group-label flex items-center gap-2 [&_.lucide]:h-3.5 [&_.lucide]:w-3.5">
+        {icon}
+        {title}
+      </h2>
+      <div className="grouped px-3.5 py-3.5">{children}</div>
+    </section>
   )
 }
 
@@ -757,7 +854,7 @@ function AppleCredsForm({
     <>
       <form className="space-y-3" onSubmit={save}>
         {hardBlocked && (
-          <div className="rounded-app border border-rose-400/40 bg-rose-500/[0.08] p-4 space-y-2">
+          <div className="rounded-tile border border-rose-400/40 bg-rose-500/[0.08] p-4 space-y-2">
             <div className="flex items-center gap-2 text-rose-300 font-semibold">
               <AlertCircle className="h-4 w-4" />
               {t('settings.appleAccountLocked')}
@@ -766,12 +863,12 @@ function AppleCredsForm({
             <ol className="text-sm text-white/70 list-decimal pl-5 space-y-1">
               <li>
                 {t('settings.resetPasswordAt')}{' '}
-                <a href="https://iforgot.apple.com" target="_blank" rel="noopener noreferrer" className="text-accent underline">iforgot.apple.com</a>.
+                <a href="https://iforgot.apple.com" target="_blank" rel="noopener noreferrer" className="underline">iforgot.apple.com</a>.
               </li>
               <li>{t('settings.signInOnTrustedDevice')}</li>
               <li>{t('settings.waitThenClear', { clear: t('settings.clear') })}</li>
             </ol>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-quiet">
               {t('settings.lockoutWarning')}
             </p>
           </div>
@@ -782,7 +879,7 @@ function AppleCredsForm({
             {t('settings.current')} <span className="text-white">{settings.appleEmailMasked}</span>
           </div>
         ) : (
-          <div className="text-sm text-white/55">
+          <div className="text-sm text-quiet">
             {t('settings.noAppleCredsStored')}
           </div>
         )}
@@ -845,19 +942,19 @@ function AppleCredsForm({
           </Badge>
         )}
         {error && (
-          <div className="-mt-1 ml-0.5 text-xs text-white/60">
+          <div className="-mt-1 ml-0.5 text-xs text-quiet">
             <a
               href="https://github.com/sosjalapeno/alacarte#sign-in-troubleshooting"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline decoration-accent/60 underline-offset-2 text-accent hover:text-white"
+              className="underline underline-offset-2"
             >
               {t('settings.troubleshooting')}
             </a>
           </div>
         )}
         {phase === 'failed' && failureTail.length > 0 && (
-          <div className="space-y-2 rounded-app border border-white/[0.08] bg-white/[0.02] p-3">
+          <div className="space-y-2 rounded-tile border-hair bg-white/[0.02] p-3">
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
@@ -874,14 +971,14 @@ function AppleCredsForm({
                     await navigator.clipboard.writeText(failureTail.join('\n'))
                   } catch { }
                 }}
-                className="inline-flex items-center gap-1.5 text-xs text-white/60 hover:text-white"
+                className="inline-flex items-center gap-1.5 text-xs text-quiet hover:text-white"
               >
                 <Copy className="h-3.5 w-3.5" />
                 {t('settings.copy')}
               </button>
             </div>
             {showFailureTail && (
-              <pre className="max-h-52 overflow-auto rounded-app border border-white/[0.06] bg-black/35 px-3 py-2 text-[11px] leading-5 text-white/80 font-mono whitespace-pre-wrap break-words">
+              <pre className="max-h-52 overflow-auto rounded-tile border-hair bg-[var(--field)] px-3 py-2 text-[11px] leading-5 text-white/80 font-mono whitespace-pre-wrap break-words">
                 {/* Backend already redacts Apple email/password to [redacted-email]/[redacted-password]. */}
                 {failureTail.join('\n')}
               </pre>
@@ -935,7 +1032,7 @@ function TwoFaModal({ onClose, onCancel }: { onClose: () => void; onCancel: () =
   return (
     <Modal open={true} onClose={onCancel} className="max-w-sm p-6" label={t('settings.twoFactorCode')}>
       <h3 className="text-lg font-semibold mb-1">{t('settings.twoFactorCode')}</h3>
-      <p className="text-sm text-white/60 mb-4">
+      <p className="text-sm text-quiet mb-4">
         {t('settings.twoFactorCodeHelp')}
       </p>
       <form onSubmit={submit} className="space-y-3">
@@ -994,9 +1091,9 @@ function MediaUserTokenForm({ settings, onChange }: { settings: PublicSettings; 
 
   return (
     <form className="space-y-3" onSubmit={save}>
-      <div className="text-sm text-white/55">
+      <div className="text-sm text-quiet">
         {t('settings.mediaTokenHelpPre')}{' '}
-        <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" className="text-accent underline underline-offset-2 decoration-accent/50 hover:text-white">music.apple.com</a>
+        <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">music.apple.com</a>
         {t('settings.mediaTokenHelpPost')}
       </div>
       {settings.hasMediaUserToken && (
@@ -1031,7 +1128,7 @@ function MediaUserTokenForm({ settings, onChange }: { settings: PublicSettings; 
           )}
         </AnimatePresence>
       </div>
-      {msg && <div className="text-xs text-white/60">{msg}</div>}
+      {msg && <div className="text-xs text-quiet">{msg}</div>}
     </form>
   )
 }
@@ -1061,16 +1158,16 @@ function NavidromeForm({ settings, onChange, onFlash }: { settings: PublicSettin
 
   return (
     <form className="space-y-4" onSubmit={save}>
-      <label className="flex items-start gap-3 cursor-pointer">
+      <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+        <div>
+          <div className="text-[15px]">{t('settings.enableNavidromeScan')}</div>
+        </div>
         <input
           type="checkbox"
           checked={enabled}
           onChange={(e) => setEnabled(e.target.checked)}
-          className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+          className="switch"
         />
-        <div>
-          <div className="text-sm font-medium">{t('settings.enableNavidromeScan')}</div>
-        </div>
       </label>
 
       {enabled && (
@@ -1080,7 +1177,7 @@ function NavidromeForm({ settings, onChange, onFlash }: { settings: PublicSettin
               {t('settings.current')} <span className="text-white">{settings.navidromeUser}</span>
             </div>
           ) : (
-            <div className="text-sm text-white/55">
+            <div className="text-sm text-quiet">
               {t('settings.noNavidromeCredsStored')}
             </div>
           )}
@@ -1179,30 +1276,30 @@ function OctoIntegrationForm({ settings, onChange, onFlash }: { settings: Public
 
   return (
     <div className="space-y-4">
-      <label className="flex items-start gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => toggle(e.target.checked)}
-          className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
-        />
+      <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
         <div>
-          <div className="text-sm font-medium">{t('settings.letOctoFiestaUseAlacarte')}</div>
-          <div className="text-xs text-white/55 mt-0.5">
+          <div className="text-[15px]">{t('settings.letOctoFiestaUseAlacarte')}</div>
+          <div className="text-xs text-quiet mt-0.5">
             <a href={OCTO_FIESTA_URL} target="_blank" rel="noreferrer" className="underline hover:text-white">
               {t('settings.octoFiestaLinkText')}
             </a>{' '}
             {t('settings.octoFiestaDescription')}
           </div>
         </div>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => toggle(e.target.checked)}
+          className="switch"
+        />
       </label>
 
       {enabled && (
         <div className="space-y-3 pt-2">
-          <div className="text-xs text-white/55">
+          <div className="text-xs text-quiet">
             {t('settings.octoFiestaSetupHint')}
           </div>
-          <pre className="overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-3 text-xs text-white/80 select-all">
+          <pre className="overflow-x-auto rounded-card border-hair bg-[var(--field)] p-3 text-xs text-white/80 select-all">
 {`AppleMusic__AlacarteUrl=${alacarteUrl}
 AppleMusic__ApiToken=${shown && token ? token : '••••••••••••••••'}`}
           </pre>
@@ -1244,12 +1341,12 @@ function AccountSection({ onFlash }: { onFlash: (msg: string, err?: boolean) => 
       className="space-y-6"
     >
       {username && (
-        <div className="flex items-center gap-3 rounded-app border border-white/[0.06] bg-white/[0.025] px-4 py-3">
-          <div className="h-9 w-9 shrink-0 rounded-full bg-[rgba(var(--accent),0.12)] border border-[rgba(var(--accent),0.25)] flex items-center justify-center text-[rgb(var(--accent))]">
+        <div className="flex items-center gap-3 rounded-tile border-hair bg-white/[0.025] px-4 py-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent">
             <UserIcon className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs uppercase tracking-wide text-white/40">{t('settings.signedInAs')}</div>
+            <div className="text-xs uppercase tracking-wide text-quiet">{t('settings.signedInAs')}</div>
             <div className="text-sm font-medium text-white truncate">{username}</div>
           </div>
         </div>
@@ -1263,11 +1360,11 @@ function AccountSection({ onFlash }: { onFlash: (msg: string, err?: boolean) => 
         }}
       />
 
-      <div className="border-t border-white/[0.06]" />
+      <div className="border-t border-[var(--line)]" />
 
       <ChangePasswordForm onUpdated={() => onFlash(t('settings.passwordUpdated'))} />
 
-      <div className="border-t border-white/[0.06]" />
+      <div className="border-t border-[var(--line)]" />
 
       <div className="space-y-3">
         <Button
@@ -1391,7 +1488,7 @@ function ChangeUsernameForm({
           disabled={submitting}
           className={cx(
             (tooShort || tooLong || badChars) &&
-            'border-rose-400/50 focus:border-rose-400/70 focus:shadow-[0_0_0_3px_rgba(244,63,94,0.18)]',
+            'border-rose-400/50 focus:border-rose-400/70',
           )}
         />
         <Input
@@ -1495,7 +1592,7 @@ function ChangePasswordForm({ onUpdated }: { onUpdated: () => void }) {
           disabled={submitting}
           className={cx(
             tooShort &&
-            'border-rose-400/50 focus:border-rose-400/70 focus:shadow-[0_0_0_3px_rgba(244,63,94,0.18)]',
+            'border-rose-400/50 focus:border-rose-400/70',
           )}
         />
         <Input
@@ -1507,7 +1604,7 @@ function ChangePasswordForm({ onUpdated }: { onUpdated: () => void }) {
           disabled={submitting}
           className={cx(
             mismatch &&
-            'border-rose-400/50 focus:border-rose-400/70 focus:shadow-[0_0_0_3px_rgba(244,63,94,0.18)]',
+            'border-rose-400/50 focus:border-rose-400/70',
           )}
         />
       </div>
@@ -1538,7 +1635,7 @@ function ChangePasswordForm({ onUpdated }: { onUpdated: () => void }) {
 type HintTone = 'dim' | 'warn' | 'error'
 
 const HINT_TONE: Record<HintTone, string> = {
-  dim: 'text-white/45',
+  dim: 'text-quiet',
   warn: 'text-amber-300/85',
   error: 'text-rose-300',
 }
@@ -1673,10 +1770,10 @@ function BackfillCard<S extends BackfillStatusBase>({
       <div className="space-y-3">
         <div>
           <div className="flex items-center gap-2 text-sm font-medium">
-            <Icon className="h-4 w-4 text-white/55" />
+            <Icon className="h-4 w-4 text-quiet" />
             {title}
           </div>
-          <div className="mt-1 text-[13px] text-white/50">{description}</div>
+          <div className="mt-1 text-[13px] text-quiet">{description}</div>
         </div>
 
         {running && (
@@ -1695,7 +1792,7 @@ function BackfillCard<S extends BackfillStatusBase>({
               </div>
             )}
             {!!status!.albumsTotal && (
-              <div className="text-xs text-white/45">
+              <div className="text-xs text-quiet">
                 {t('settings.backfillAlbums', {
                   done: status!.albumsDone ?? 0,
                   total: status!.albumsTotal,
@@ -1706,14 +1803,14 @@ function BackfillCard<S extends BackfillStatusBase>({
             <div className="flex flex-wrap gap-1.5">{badges(status!, false)}</div>
             {status!.current && (
               <div
-                className="truncate text-xs text-white/40"
+                className="truncate text-xs text-quiet"
                 title={status!.current}
               >
                 {status!.current}
               </div>
             )}
             {status!.stopRequested && (
-              <div className="text-xs text-white/45">
+              <div className="text-xs text-quiet">
                 {t('settings.stoppingAfterCurrentFile')}
               </div>
             )}
@@ -1731,7 +1828,7 @@ function BackfillCard<S extends BackfillStatusBase>({
             <Button
               onClick={stop}
               disabled={busy || status!.stopRequested}
-              className="border-rose-300/30 bg-rose-500/10 text-rose-200 hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
+              variant="ghost" className="!text-rose-500"
             >
               {status!.stopRequested ? t('settings.stopping') : t('settings.stopBackfill')}
             </Button>
@@ -1753,11 +1850,11 @@ function BackfillCard<S extends BackfillStatusBase>({
       >
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.12)] text-[rgb(var(--accent))]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
               <Icon className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wider text-white/55">
+              <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                 {actionLabel}
               </div>
               <h2 className="mt-1 text-lg font-semibold text-white">
@@ -1891,17 +1988,17 @@ function AppleStatusCard({ flash }: { flash: (msg: string, err?: boolean) => voi
 
   return (
     <div>
-      <label className="flex items-start gap-3">
+      <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+        <div>
+          <div className="text-[15px]">{t('settings.appleLimitLabel')}</div>
+        </div>
         <input
           type="checkbox"
           checked={status.config.enabled}
           disabled={busy}
           onChange={(e) => toggle(e.target.checked)}
-          className="mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+          className="switch"
         />
-        <div>
-          <div className="text-sm font-medium">{t('settings.appleLimitLabel')}</div>
-        </div>
       </label>
       <AnimatePresence initial={false}>
         {status.config.enabled && (
@@ -1922,17 +2019,17 @@ function AppleStatusCard({ flash }: { flash: (msg: string, err?: boolean) => voi
                     ? t('settings.appleStatusProbing')
                     : t('settings.appleStatusOk')}
               </Badge>
-              <div className="text-[13px] text-white/50">
+              <div className="text-[13px] text-quiet">
                 {t('settings.applePace', { seconds: (status.intervalMs / 1000).toFixed(1) })}
               </div>
-              <div className="text-[13px] text-white/50">{t('settings.appleQueued', status.queued)}</div>
+              <div className="text-[13px] text-quiet">{t('settings.appleQueued', status.queued)}</div>
               {status.rateLimited24h > 0 && (
                 <div className="text-[13px] text-amber-200/80">
                   {t('settings.appleRateLimited24h', { count: status.rateLimited24h })}
                 </div>
               )}
               {status.learnedFloorMs > 0 && (
-                <div className="flex flex-wrap items-center gap-3 text-[13px] text-white/50">
+                <div className="flex flex-wrap items-center gap-3 text-[13px] text-quiet">
                   <span>{t('settings.appleLearnedFloor', { seconds: (status.learnedFloorMs / 1000).toFixed(1) })}</span>
                   <Button type="button" variant="ghost" onClick={reset} disabled={busy}>
                     {t('settings.appleResetLearned')}
@@ -1959,23 +2056,23 @@ function AppleStatusCard({ flash }: { flash: (msg: string, err?: boolean) => voi
                     onChange={(e) => setForm({ ...form, cooldown: e.target.value })} {...numberProps} />
                 </label>
               </div>
-              <label className="flex items-start gap-3">
+              <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+                <span className="text-sm text-white/70">{t('settings.appleAdaptiveLabel')}</span>
                 <input
                   type="checkbox"
                   checked={form.adaptive}
                   onChange={(e) => change({ adaptive: e.target.checked })}
-                  className="mt-0.5 shrink-0"
+                  className="switch"
                 />
-                <span className="text-sm text-white/70">{t('settings.appleAdaptiveLabel')}</span>
               </label>
-              <label className="flex items-start gap-3">
+              <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
+                <span className="text-sm text-white/70">{t('settings.appleLimitIntegrationLabel')}</span>
                 <input
                   type="checkbox"
                   checked={form.pace}
                   onChange={(e) => change({ pace: e.target.checked })}
-                  className="mt-0.5 shrink-0"
+                  className="switch"
                 />
-                <span className="text-sm text-white/70">{t('settings.appleLimitIntegrationLabel')}</span>
               </label>
             </div>
             </div>

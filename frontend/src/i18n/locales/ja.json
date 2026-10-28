@@ -235,7 +235,24 @@
     "timeSeconds": "{{count}} 秒",
     "appleLimitLabel": "Apple Music へのリクエストを制限",
     "cardIntegrations": "連携",
-    "appleLimitIntegrationLabel": "octo-fiesta の検索も制限する"
+    "appleLimitIntegrationLabel": "octo-fiesta の検索も制限する",
+    "appearance": "外観",
+    "season": "季節",
+    "seasonFollow": "暦に合わせる",
+    "seasonNext": "いまは{{season}} · {{date}}から{{next}}",
+    "theme": "テーマ",
+    "seasons": {
+      "spring": "春",
+      "summer": "夏",
+      "autumn": "秋",
+      "winter": "冬"
+    },
+    "appearances": {
+      "system": "システム",
+      "day": "昼",
+      "night": "夜",
+      "midnight": "真夜中"
+    }
   },
   "album": {
     "loadError": "読み込みに失敗しました",

@@ -236,7 +236,24 @@
     "timeSeconds": "{{count}} s",
     "appleLimitLabel": "Limitar solicitudes a Apple Music",
     "cardIntegrations": "Integraciones",
-    "appleLimitIntegrationLabel": "Limitar también las búsquedas de octo-fiesta"
+    "appleLimitIntegrationLabel": "Limitar también las búsquedas de octo-fiesta",
+    "appearance": "Apariencia",
+    "season": "Estación",
+    "seasonFollow": "Seguir el calendario",
+    "seasonNext": "Ahora {{season}} · {{next}} desde el {{date}}",
+    "theme": "Tema",
+    "seasons": {
+      "spring": "Primavera",
+      "summer": "Verano",
+      "autumn": "Otoño",
+      "winter": "Invierno"
+    },
+    "appearances": {
+      "system": "Sistema",
+      "day": "Día",
+      "night": "Noche",
+      "midnight": "Medianoche"
+    }
   },
   "album": {
     "loadError": "Error al cargar",

@@ -6,13 +6,14 @@ type Props = {
   className?: string
 }
 
+// A page change cross-fades; nothing slides.
 export function PageWrapper({ children, className }: Props) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.14, ease: 'easeOut' }}
       className={cx('w-full', className)}
     >
       {children}

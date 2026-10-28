@@ -2,13 +2,14 @@ import { cx } from '../lib/cx'
 
 type Variant = 'accent' | 'ok' | 'bad' | 'warn' | 'muted'
 
+// A chip of quiet words on the surface; a state reads in its own color (the season's second voice for
+// "ok", the error color for "bad").
 const variantClasses: Record<Variant, string> = {
-  accent:
-    'border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.12)] text-[rgb(var(--accent))]',
-  ok: 'border-emerald-400/35 bg-emerald-500/[0.18] text-emerald-400',
-  bad: 'border-rose-400/35 bg-rose-500/[0.18] text-rose-400',
-  warn: 'border-amber-400/35 bg-amber-500/[0.18] text-amber-400',
-  muted: 'border-white/15 bg-black/80 text-white/80',
+  accent: 'border-[var(--hair)] bg-surface text-quiet',
+  ok: 'border-[var(--hair)] bg-surface text-on',
+  bad: 'border-rose-500/40 bg-rose-500/[0.08] text-rose-500',
+  warn: 'border-[var(--hair)] bg-surface text-amber-500',
+  muted: 'border-[var(--hair)] bg-surface text-quiet',
 }
 
 type Props = {
@@ -26,7 +27,7 @@ export function Badge({
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-[200ms] ease-smooth',
+        'inline-flex items-center gap-1.5 rounded-full border-hair px-2.5 py-1 text-xs font-medium',
         variantClasses[variant],
         className,
       )}

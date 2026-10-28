@@ -43,7 +43,7 @@ export function Modal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-[2px]"
+            className="fixed inset-0 z-50 bg-[var(--scrim)]"
             onClick={onClose}
             aria-hidden
           />
@@ -57,12 +57,12 @@ export function Modal({
             onClick={onClose}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
               className={cx(
-                'pointer-events-auto relative mx-auto w-full max-w-[44rem] rounded-[20px] border border-white/10 bg-[rgba(18,18,24,0.94)] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-[24px] backdrop-saturate-[1.25]',
+                'pointer-events-auto relative mx-auto w-full max-w-[44rem] rounded-sheet border-hair bg-surface text-white',
                 className,
               )}
               role="dialog"

@@ -10,7 +10,6 @@ import { useDownloadQualityPrompt } from '../hooks/useDownloadQualityPrompt'
 import { useLibraryPresence } from '../hooks/useLibraryPresence'
 import { useQueue } from '../hooks/useQueue'
 import { useTouchMode } from '../hooks/useTouchMode'
-import { Card } from './Card'
 import { DownloadButton } from './DownloadButton'
 import { ResolvedMediaLink } from './ResolvedMediaLink'
 
@@ -55,14 +54,9 @@ export function AlbumCard({ album, size = 'md', alreadyInLibrary = false }: Prop
         matching.status === 'queued' ||
         matching.status === 'done'))
   const thumb = artworkUrl(album.artworkTemplate, size === 'sm' ? 300 : 600)
-  const bgColor = album.artworkColor ? `#${album.artworkColor}` : '#1a1a1a'
   return (
-    <Card
-      hover
-      className="group relative block"
-      style={{ backgroundColor: bgColor }}
-    >
-      <div className="relative aspect-square w-full overflow-hidden bg-black/50">
+    <div className="group relative flex min-w-0 flex-col">
+      <div className="plate relative aspect-square w-full overflow-hidden rounded-card">
         <Link to={`/album/${album.id}`} className="block h-full w-full">
           {thumb ? (
             <img
@@ -71,23 +65,23 @@ export function AlbumCard({ album, size = 'md', alreadyInLibrary = false }: Prop
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
               loading="lazy"
               alt=""
-              className="h-full w-full object-cover transition-transform duration-700 ease-smooth group-hover:scale-[1.03]"
+              className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-white/30">
+            <div className="flex h-full w-full items-center justify-center text-3xl">
               ♪
             </div>
           )}
           {(blocked || partial || showRatingBadge) && (
             <div className="absolute top-2 left-2 z-10 flex flex-col items-start gap-1">
               {blocked && (
-                <div className="rounded bg-emerald-500/90 backdrop-blur-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm ring-1 ring-white/20">
+                <div className="rounded-full border-hair border-[var(--hair)] bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-white">
                   {t('albumCard.inLibrary')}
                 </div>
               )}
               {partial && !blocked && (
                 <div
-                  className="rounded bg-amber-400/90 backdrop-blur-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black shadow-sm ring-1 ring-black/10"
+                  className="rounded-full border-hair border-[var(--hair)] bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-white"
                   title={t('albumCard.tracksDownloaded', {
                     present: trackPresence?.present || 0,
                     expected: trackPresence?.expected || 0,
@@ -98,7 +92,7 @@ export function AlbumCard({ album, size = 'md', alreadyInLibrary = false }: Prop
               )}
               {showRatingBadge && album.contentRating === 'explicit' && (
                 <div
-                  className="rounded bg-black/80 backdrop-blur-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm ring-1 ring-white/15"
+                  className="rounded-full border-hair border-[var(--hair)] bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-white"
                   title={t('albumCard.explicit')}
                 >
                   E
@@ -106,7 +100,7 @@ export function AlbumCard({ album, size = 'md', alreadyInLibrary = false }: Prop
               )}
               {showRatingBadge && album.contentRating === 'clean' && (
                 <div
-                  className="rounded bg-sky-200/95 backdrop-blur-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black shadow-sm ring-1 ring-black/10"
+                  className="rounded-full border-hair border-[var(--hair)] bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-white"
                   title={t('albumCard.clean')}
                 >
                   {t('albumCard.clean')}
@@ -144,24 +138,24 @@ export function AlbumCard({ album, size = 'md', alreadyInLibrary = false }: Prop
           {qualityPrompt}
         </div>
       </div>
-      <div className="p-3 backdrop-blur-md bg-black/30">
-        <div className="truncate text-sm font-medium text-white">
-          <Link to={`/album/${album.id}`} className="hover:text-accent transition-colors">
+      <div className="pt-2">
+        <div className="truncate text-sm font-medium leading-[19px] text-white">
+          <Link to={`/album/${album.id}`}>
             {stripYear(album.name)}
           </Link>
         </div>
-        <div className="truncate text-xs text-white/60">
+        <div className="truncate text-[12.5px] leading-4 text-quiet">
           <ResolvedMediaLink
             kind="artist"
             artistId={album.artistId}
             artistName={album.artistName}
-            className="hover:text-accent transition-colors"
+            className="transition-colors hover:text-white"
           >
             {album.artistName}
           </ResolvedMediaLink>
           {album.year ? ` · ${album.year}` : ''}
         </div>
       </div>
-    </Card>
+    </div>
   )
 }

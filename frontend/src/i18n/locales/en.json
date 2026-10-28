@@ -236,7 +236,24 @@
     "timeSeconds": "{{count}} s",
     "appleLimitLabel": "Limit Apple Music requests",
     "cardIntegrations": "Integrations",
-    "appleLimitIntegrationLabel": "Also limit octo-fiesta lookups"
+    "appleLimitIntegrationLabel": "Also limit octo-fiesta lookups",
+    "appearance": "Appearance",
+    "season": "Season",
+    "seasonFollow": "Follow the calendar",
+    "seasonNext": "{{season}} now · {{next}} from {{date}}",
+    "theme": "Theme",
+    "seasons": {
+      "spring": "Spring",
+      "summer": "Summer",
+      "autumn": "Autumn",
+      "winter": "Winter"
+    },
+    "appearances": {
+      "system": "System",
+      "day": "Day",
+      "night": "Night",
+      "midnight": "Midnight"
+    }
   },
   "album": {
     "loadError": "Failed to load",

@@ -12,7 +12,7 @@ type Mode = 'login' | 'setup'
 type HintTone = 'dim' | 'warn' | 'error'
 
 const TONE_COLOR: Record<HintTone, string> = {
-  dim: 'text-white/45',
+  dim: 'text-quiet',
   warn: 'text-amber-300/85',
   error: 'text-rose-300',
 }
@@ -163,34 +163,28 @@ export function AuthScreen({
   return (
     <motion.div
       key={mode}
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
       className="min-h-dvh w-full flex items-center justify-center px-4 py-10"
     >
       <div className="w-full max-w-[26rem]">
         <motion.div
           layout
           transition={{ layout: { type: 'spring', stiffness: 380, damping: 32 } }}
-          className="overflow-hidden rounded-app border border-white/[0.08] bg-white/[0.04] backdrop-blur-md shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)]"
+          className="overflow-hidden rounded-sheet border-hair bg-surface"
         >
         <motion.div animate={shakeControls} className="p-8">
           <div className="flex flex-col items-center gap-3 mb-7">
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
-              className="h-14 w-14 rounded-2xl bg-[rgba(var(--accent),0.12)] border border-[rgba(var(--accent),0.25)] flex items-center justify-center text-[rgb(var(--accent))]"
-              aria-hidden
-            >
-              {isSetup ? <ShieldCheck size={26} strokeWidth={2} /> : <Lock size={24} strokeWidth={2} />}
-            </motion.div>
+            <div className="flex h-12 w-12 items-center justify-center text-quiet" aria-hidden>
+              {isSetup ? <ShieldCheck size={28} /> : <Lock size={26} />}
+            </div>
             <div className="text-center">
-              <h1 className="text-xl font-semibold tracking-tight text-white">
+              <h1 className="text-[27px] leading-8 text-white">
                 {isSetup ? t('authScreen.createAccountTitle') : t('authScreen.welcomeBackTitle')}
               </h1>
-              <p className="text-sm text-white/55 mt-1">
+              <p className="text-sm text-quiet mt-1">
                 {isSetup
                   ? t('authScreen.createAccountSubtitle')
                   : t('authScreen.signInSubtitle')}
@@ -201,7 +195,7 @@ export function AuthScreen({
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {isSetup && requiresSetupToken && (
               <div className="flex flex-col gap-1.5">
-                <label htmlFor={setupTokenId} className="text-xs uppercase tracking-wide text-white/45 ml-1">
+                <label htmlFor={setupTokenId} className="ml-1 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                   {t('authScreen.setupTokenLabel')}
                 </label>
                 <Input
@@ -220,14 +214,14 @@ export function AuthScreen({
                   disabled={submitting}
                   className={cx(
                     setupTokenMissing &&
-                      'border-rose-400/50 focus:border-rose-400/70 focus:shadow-[0_0_0_3px_rgba(244,63,94,0.18)]',
+                      '!border-rose-500/60',
                   )}
                 />
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor={usernameId} className="text-xs uppercase tracking-wide text-white/45 ml-1">
+              <label htmlFor={usernameId} className="ml-1 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                 {t('authScreen.usernameLabel')}
               </label>
               <Input
@@ -246,13 +240,13 @@ export function AuthScreen({
                 disabled={submitting}
                 className={cx(
                   (usernameInvalid || (!isSetup && !!error)) &&
-                    'border-rose-400/50 focus:border-rose-400/70 focus:shadow-[0_0_0_3px_rgba(244,63,94,0.18)]',
+                    '!border-rose-500/60',
                 )}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor={passwordId} className="text-xs uppercase tracking-wide text-white/45 ml-1">
+              <label htmlFor={passwordId} className="ml-1 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                 {t('authScreen.passwordLabel')}
               </label>
               <PasswordField
@@ -273,7 +267,7 @@ export function AuthScreen({
 
             {isSetup && (
               <div className="flex flex-col gap-1.5">
-                <label htmlFor={confirmId} className="text-xs uppercase tracking-wide text-white/45 ml-1">
+                <label htmlFor={confirmId} className="ml-1 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                   {t('authScreen.confirmPasswordLabel')}
                 </label>
                 <PasswordField
@@ -308,8 +302,9 @@ export function AuthScreen({
 
             <Button
               type="submit"
+              variant="primary"
               className={cx(
-                'mt-2 justify-center bg-[rgba(var(--accent),0.18)] border-[rgba(var(--accent),0.4)] text-white hover:bg-[rgba(var(--accent),0.28)] hover:text-white',
+                'mt-2 min-h-[46px] justify-center text-[15px]',
                 !canSubmit && 'opacity-50 cursor-not-allowed pointer-events-none',
               )}
               disabled={!canSubmit}
@@ -326,7 +321,7 @@ export function AuthScreen({
         </motion.div>
         </motion.div>
 
-        <p className="mt-5 text-center text-xs text-white/35">
+        <p className="mt-5 text-center text-xs text-quiet">
           {isSetup ? (
             t('authScreen.changeLaterHint')
           ) : (
@@ -336,7 +331,7 @@ export function AuthScreen({
                 href="https://github.com/sosjalapeno/alacarte/blob/main/README.md"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white/55 underline decoration-white/35 underline-offset-2 hover:text-white"
+                className="underline underline-offset-2 hover:text-white"
               >
                 {t('authScreen.readmeLinkText')}
               </a>
@@ -375,7 +370,7 @@ const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
         className={cx(
           'pr-12',
           hasError &&
-            'border-rose-400/50 focus:border-rose-400/70 focus:shadow-[0_0_0_3px_rgba(244,63,94,0.18)]',
+            '!border-rose-500/60',
         )}
       />
       <button
@@ -383,7 +378,7 @@ const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
         onClick={toggleShow}
         tabIndex={-1}
         aria-label={show ? t('authScreen.hidePassword') : t('authScreen.showPassword')}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/45 hover:text-white/80 transition-colors"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-quiet hover:text-white/80 transition-colors"
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.span

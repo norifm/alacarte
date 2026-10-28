@@ -13,7 +13,11 @@ type Props = {
 
 export function HealthPill({ health, loading, variant = 'default' }: Props) {
   const { t } = useTranslation()
-  const shellClass = variant === 'shell' ? 'h-10 px-3.5 text-[0.8125rem] leading-none group-hover:text-accent group-hover:border-[rgba(var(--accent),0.3)] group-hover:bg-[rgba(var(--accent),0.12)]' : ''
+  // In the chrome: quiet words with the state's dot, no plate of their own.
+  const shellClass =
+    variant === 'shell'
+      ? 'h-9 border-transparent !bg-transparent px-3 text-[13px] leading-none group-hover:!bg-[var(--hover)]'
+      : ''
   if (loading || !health) {
     return <Badge className={shellClass}>{t('healthPill.checking')}</Badge>
   }

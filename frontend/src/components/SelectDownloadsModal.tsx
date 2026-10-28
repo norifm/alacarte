@@ -162,11 +162,11 @@ export function SelectDownloadsModal({
       placement="center"
       className="!max-w-[44rem] max-h-[calc(100dvh-4rem)] overflow-hidden flex flex-col"
     >
-      <header className="shrink-0 flex items-start justify-between gap-4 p-5 border-b border-white/[0.06]">
+      <header className="shrink-0 flex items-start justify-between gap-4 p-5 border-b border-[var(--line)]">
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-wider text-white/55 mb-1">{t('selectDownloadsModal.queueAlbumsLabel')}</div>
-          <h2 className="text-lg md:text-xl font-semibold truncate">{artistName}</h2>
-          <div className="mt-1 text-sm text-white/55">
+          <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet mb-1">{t('selectDownloadsModal.queueAlbumsLabel')}</div>
+          <h2 className="truncate text-lg font-semibold md:text-xl">{artistName}</h2>
+          <div className="mt-1 text-sm text-quiet">
             {t('selectDownloadsModal.selectedCount', { selected: selected.size, total: albums.length })}
           </div>
         </div>
@@ -174,14 +174,14 @@ export function SelectDownloadsModal({
           type="button"
           onClick={onClose}
           aria-label={t('selectDownloadsModal.close')}
-          className="shrink-0 relative inline-flex items-center justify-center rounded-full border border-white/[0.12] bg-black/55 text-white/90 backdrop-blur-[10px] h-[30px] w-[30px]"
+          className="glyph quiet -mr-2 -mt-2 h-10 w-10"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </button>
       </header>
 
       <div
-        className="shrink-0 px-5 py-3 flex flex-wrap gap-2 border-b border-white/[0.06]"
+        className="shrink-0 px-5 py-3 flex flex-wrap gap-2 border-b border-[var(--line)]"
         role="group"
         aria-label={t('selectDownloadsModal.filterAlbumTypes')}
       >
@@ -194,7 +194,7 @@ export function SelectDownloadsModal({
 
       <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
         {albums.length === 0 ? (
-          <div className="p-8 text-center text-white/55 text-sm">{t('selectDownloadsModal.noAlbumsToQueue')}</div>
+          <div className="p-8 text-center text-quiet text-sm">{t('selectDownloadsModal.noAlbumsToQueue')}</div>
         ) : (
           <ul className="flex flex-col gap-1">
             {displayOrder.map((id) => {
@@ -221,10 +221,10 @@ export function SelectDownloadsModal({
       )}
 
       {appSettings?.promptForDownloadQuality && (
-        <div className="shrink-0 border-t border-white/[0.06] px-5 py-4">
+        <div className="shrink-0 border-t border-[var(--line)] px-5 py-4">
           <div className="mb-3">
-            <div className="text-xs uppercase tracking-wider text-white/55">{t('selectDownloadsModal.downloadQualityLabel')}</div>
-            <div className="mt-1 text-sm text-white/60">
+            <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">{t('selectDownloadsModal.downloadQualityLabel')}</div>
+            <div className="mt-1 text-sm text-quiet">
               {t('selectDownloadsModal.appliesToEveryAlbum')}
             </div>
           </div>
@@ -232,9 +232,9 @@ export function SelectDownloadsModal({
         </div>
       )}
 
-      <footer className="shrink-0 p-4 flex items-center justify-end gap-2 border-t border-white/[0.06]">
-        <Button onClick={onClose} disabled={submitting}>{t('selectDownloadsModal.cancel')}</Button>
-        <Button onClick={submit} disabled={submitting || selected.size === 0}>
+      <footer className="shrink-0 p-4 flex items-center justify-end gap-2 border-t border-[var(--line)]">
+        <Button variant="ghost" onClick={onClose} disabled={submitting}>{t('selectDownloadsModal.cancel')}</Button>
+        <Button variant="primary" onClick={submit} disabled={submitting || selected.size === 0}>
           <ListChecks className="h-4 w-4" />
           {submitting
             ? t('selectDownloadsModal.queuingButton')
@@ -264,13 +264,13 @@ function FilterPill({
       aria-pressed={active}
       onClick={onClick}
       className={cx(
-        'inline-flex select-none items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[0.8125rem] font-medium text-white/70 transition-[background,border-color,color,transform] duration-[160ms] ease-smooth hover:bg-white/[0.08] hover:text-white active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.30)]',
-        active && '!border-accent/50 !bg-accent/22 !text-white',
+        'chip select-none',
+        active && 'on',
       )}
     >
       <Icon className="h-3.5 w-3.5" />
       {label}
-      {count > 0 && <span className="text-white/50 text-[11px] font-normal">{count}</span>}
+      {count > 0 && <span className="text-quiet text-[11px] font-normal">{count}</span>}
     </button>
   )
 }
@@ -292,25 +292,25 @@ function AlbumRow({
   const KindIcon = kind === 'Single' ? Music2 : kind === 'EP' ? Disc3 : AlbumIcon
   return (
     <motion.li layout transition={{ type: 'spring', stiffness: 420, damping: 34 }}>
-      <div className="flex items-center gap-3 px-3 py-2 rounded-app hover:bg-white/[0.04] transition-colors">
+      <div className="flex items-center gap-3 rounded-card px-3 py-2 transition-colors hover:bg-[var(--hover)]">
         <input
           type="checkbox"
-          className="h-[22px] w-[22px] min-w-[22px] cursor-pointer rounded-md border border-white/20 bg-white/[0.04] accent-[rgb(var(--accent))] transition-colors duration-200 ease-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent),0.35)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="disabled:cursor-not-allowed disabled:opacity-60"
           checked={checked}
           disabled={blocked}
           onChange={onToggle}
           aria-label={t('selectDownloadsModal.selectAlbum', { name: album.name })}
         />
-        <Link to={`/album/${album.id}`} className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-black/50 block">
+        <Link to={`/album/${album.id}`} className="plate block h-10 w-10 shrink-0 overflow-hidden rounded-cover">
           {art && <img src={art} alt="" className="h-full w-full object-cover" />}
         </Link>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">
-            <Link to={`/album/${album.id}`} className="hover:text-accent transition-colors">
+          <div className="truncate text-[15px]">
+            <Link to={`/album/${album.id}`} className="hover:text-white transition-colors">
               {stripYear(album.name)}
             </Link>
           </div>
-          <div className="truncate text-xs text-white/55">
+          <div className="truncate text-[13px] text-quiet">
             {album.year ? `${album.year} · ` : ''}
             {album.trackCount ? t('selectDownloadsModal.trackCount', { count: album.trackCount }) : ''}
           </div>

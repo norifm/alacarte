@@ -8,10 +8,9 @@ import './i18n'
 import App from './App'
 import { LibraryPresenceProvider } from './hooks/useLibraryPresence'
 import { QueueProvider } from './hooks/useQueue'
+import { startSeasons } from './lib/seasons'
 
-const vinylWarm = new Image()
-vinylWarm.src = '/vinyl.webp'
-void vinylWarm.decode?.().catch(() => {})
+startSeasons()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

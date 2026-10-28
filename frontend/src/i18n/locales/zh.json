@@ -235,7 +235,24 @@
     "timeSeconds": "{{count}} 秒",
     "appleLimitLabel": "限制 Apple Music 请求",
     "cardIntegrations": "集成",
-    "appleLimitIntegrationLabel": "同时限制 octo-fiesta 查询"
+    "appleLimitIntegrationLabel": "同时限制 octo-fiesta 查询",
+    "appearance": "外观",
+    "season": "季节",
+    "seasonFollow": "跟随节气",
+    "seasonNext": "现在是{{season}} · {{date}}起为{{next}}",
+    "theme": "主题",
+    "seasons": {
+      "spring": "春",
+      "summer": "夏",
+      "autumn": "秋",
+      "winter": "冬"
+    },
+    "appearances": {
+      "system": "跟随系统",
+      "day": "白天",
+      "night": "夜间",
+      "midnight": "午夜"
+    }
   },
   "album": {
     "loadError": "加载失败",

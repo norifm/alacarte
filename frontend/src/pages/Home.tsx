@@ -1,40 +1,14 @@
 import { useState } from 'react'
 import { CheckCircle2, AlertCircle, Loader2, XCircle } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 
 import { api } from '../api/client'
 import { useQueue } from '../hooks/useQueue'
 import { QueueItem } from '../components/QueueItem'
-import { Card } from '../components/Card'
-import { StaggeredList, StaggeredItem } from '../components/StaggeredList'
-import { Badge } from '../components/Badge'
+import { PageTitle } from '../components/PageTitle'
+import { Dots } from '../components/Dots'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
-
-function SkeletonCard() {
-  return (
-    <Card className="flex items-center gap-3 p-3">
-      <motion.div
-        className="h-10 w-10 rounded-lg bg-white/10"
-        animate={{ opacity: [0.4, 1, 0.4] }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <div className="flex-1 min-w-0">
-        <motion.div
-          className="h-4 bg-white/10 rounded w-2/3 mb-2"
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
-        />
-        <motion.div
-          className="h-3 bg-white/10 rounded w-1/2"
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
-        />
-      </div>
-    </Card>
-  )
-}
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -44,106 +18,59 @@ export function HomePage() {
   const [abortingAll, setAbortingAll] = useState(false)
 
   return (
-    <div className="mx-auto w-full max-w-6xl pt-4 md:pt-6 space-y-8">
-      <section>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-          {t('home.title')}
-        </h1>
-      </section>
+    <div className="mx-auto w-full max-w-5xl">
+      <PageTitle>{t('home.title')}</PageTitle>
 
-      <AnimatePresence mode="wait">
-        {loading ? (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.15 } }}
-            className="space-y-8"
-          >
-            <section>
-              <div className="mb-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 text-accent" /> {t('home.active')}
-                </h2>
-              </div>
-              <div className="flex flex-col gap-2">
-                <SkeletonCard />
-              </div>
-            </section>
-            <section>
-              <div className="mb-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" /> {t('home.recentlyImported')}
-                </h2>
-              </div>
-              <div className="flex flex-col gap-2">
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </div>
-            </section>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-8"
-          >
-            <section>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 text-accent" /> {t('home.active')}
-                </h2>
-                {active.length > 0 && (
-                  <Button
-                    onClick={() => setConfirmAbortAll(true)}
-                    className="border-rose-400/35 bg-rose-500/[0.18] text-rose-300 hover:border-rose-400/50 hover:bg-rose-500/[0.28] hover:text-rose-200"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    {t('home.abortAll')}
-                  </Button>
-                )}
-              </div>
-              {active.length === 0 ? (
-                <Card className="p-6 text-sm text-white/55">
-                  {t('home.noActiveDownloads')}
-                </Card>
-              ) : (
-                <StaggeredList className="flex flex-col gap-2">
-                  {active.map((j) => (
-                    <StaggeredItem key={j.id}>
-                      <QueueItem job={j} />
-                    </StaggeredItem>
-                  ))}
-                </StaggeredList>
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Dots />
+        </div>
+      ) : (
+        <div className="space-y-[26px]">
+          <section>
+            <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+              <h2 className="section-title !mb-0">
+                <Loader2 /> {t('home.active')}
+              </h2>
+              {active.length > 0 && (
+                <Button variant="ghost" onClick={() => setConfirmAbortAll(true)} className="!text-rose-500">
+                  <XCircle />
+                  {t('home.abortAll')}
+                </Button>
               )}
-            </section>
+            </div>
+            {active.length === 0 ? (
+              <p className="grouped px-4 py-5 text-[15px] text-quiet">
+                {t('home.noActiveDownloads')}
+              </p>
+            ) : (
+              <div className="grouped rows [--row-text:74px]">
+                {active.map((j) => (
+                  <QueueItem key={j.id} job={j} />
+                ))}
+              </div>
+            )}
+          </section>
 
-            <section>
-              <div className="mb-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" /> {t('home.recentlyImported')}
-                </h2>
+          <section>
+            <h2 className="section-title">
+              <CheckCircle2 /> {t('home.recentlyImported')}
+            </h2>
+            {recentList.length === 0 ? (
+              <p className="grouped flex items-center gap-2 px-4 py-5 text-[15px] text-quiet">
+                <AlertCircle className="h-4 w-4" />
+                {t('home.noRecentDownloads')}
+              </p>
+            ) : (
+              <div className="grouped rows [--row-text:74px]">
+                {recentList.map((j) => (
+                  <QueueItem key={j.id} job={j} />
+                ))}
               </div>
-              {recentList.length === 0 ? (
-                <Card className="flex items-center gap-2 p-6 text-sm text-white/55">
-                  <AlertCircle className="h-4 w-4" />
-                  {t('home.noRecentDownloads')}
-                </Card>
-              ) : (
-                <StaggeredList className="flex flex-col gap-2">
-                  {recentList.map((j) => (
-                    <StaggeredItem key={j.id}>
-                      <QueueItem job={j} />
-                    </StaggeredItem>
-                  ))}
-                </StaggeredList>
-              )}
-            </section>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            )}
+          </section>
+        </div>
+      )}
 
       <Modal
         open={confirmAbortAll}
@@ -155,20 +82,18 @@ export function HomePage() {
         placement="center"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Badge variant="bad">
-              <XCircle className="h-3.5 w-3.5" />
-              {t('home.abortDownloadsBadge')}
-            </Badge>
+          <div className="flex items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-rose-500">
+            <XCircle className="h-3.5 w-3.5" />
+            {t('home.abortDownloadsBadge')}
           </div>
-          <h3 className="text-lg font-semibold leading-tight">
+          <h3 className="text-lg font-semibold leading-tight text-white">
             {t('home.abortConfirmTitle', { count: active.length })}
           </h3>
-          <p className="text-sm text-white/60">
+          <p className="text-sm text-quiet">
             {t('home.abortConfirmBody')}
           </p>
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setConfirmAbortAll(false)} disabled={abortingAll}>
+            <Button variant="ghost" onClick={() => setConfirmAbortAll(false)} disabled={abortingAll}>
               {t('home.cancel')}
             </Button>
             <Button
@@ -182,7 +107,7 @@ export function HomePage() {
                 }
               }}
               disabled={abortingAll || active.length === 0}
-              className="border-rose-400/35 bg-rose-500/[0.18] text-rose-300 hover:border-rose-400/50 hover:bg-rose-500/[0.28] hover:text-rose-200"
+              variant="ghost" className="!text-rose-500"
             >
               {abortingAll ? t('home.aborting') : t('home.abortAll')}
             </Button>

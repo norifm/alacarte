@@ -6,13 +6,13 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 
 import i18n from '../i18n'
 import type { HealthReport } from '../api/client'
 import { Badge } from '../components/Badge'
 import { Card } from '../components/Card'
+import { PageTitle } from '../components/PageTitle'
 import { ProgressBar } from '../components/ProgressBar'
 import { formatPercent } from '../lib/format'
 import {
@@ -54,14 +54,8 @@ export function StatusPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-8 pt-4 md:pt-6">
-      <section className="space-y-3">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            {t('status.title')}
-          </h1>
-        </div>
-      </section>
+    <div className="mx-auto w-full max-w-7xl space-y-[26px]">
+      <PageTitle>{t('status.title')}</PageTitle>
 
       <section className="grid gap-3 md:grid-cols-3">
         <MetricCard
@@ -101,32 +95,27 @@ export function StatusPage() {
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="space-y-6">
-          <Card className="overflow-hidden">
-            <div className="border-b border-white/[0.06] px-5 py-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-white/80">
-                <Activity className="h-4 w-4 text-accent" />
-                {t('status.systemHealth')}
-              </div>
+          <div>
+            <div className="group-label !mt-0 flex items-center gap-2">
+              <Activity className="h-3.5 w-3.5" />
+              {t('status.systemHealth')}
             </div>
-            <div className="grid gap-2 px-5 py-4">
+            <div className="grouped">
               {healthLoading || !health ? (
-                <div className="text-sm text-white/55">{t('status.checkingSystemStatus')}</div>
+                <div className="group-row text-quiet">{t('status.checkingSystemStatus')}</div>
               ) : (
                 healthRows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex items-center justify-between gap-3 rounded-[18px] border border-white/[0.05] bg-white/[0.025] px-4 py-3"
-                  >
-                    <div className="flex min-w-0 items-center gap-2.5">
+                  <div key={row.label} className="group-row justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
                       {row.ok ? (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-on" />
                       ) : (
-                        <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                        <AlertCircle className="h-5 w-5 shrink-0 text-rose-500" />
                       )}
-                      <span className="truncate text-sm text-white/80">{row.label}</span>
+                      <span className="truncate">{row.label}</span>
                     </div>
                     {!row.ok && (
-                      <span className="max-w-[48%] truncate text-right text-xs text-rose-300/90">
+                      <span className="max-w-[48%] truncate text-right text-[13px] text-rose-500">
                         {row.hint || row.error || t('status.unavailable')}
                       </span>
                     )}
@@ -134,34 +123,32 @@ export function StatusPage() {
                 ))
               )}
             </div>
-          </Card>
+          </div>
 
-          <Card className="overflow-hidden">
-            <div className="border-b border-white/[0.06] px-5 py-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-white/80">
-                <Loader2 className="h-4 w-4 text-accent" />
-                {t('status.activeWork')}
-              </div>
+          <div>
+            <div className="group-label flex items-center gap-2">
+              <Loader2 className="h-3.5 w-3.5" />
+              {t('status.activeWork')}
             </div>
-            <div className="space-y-3 px-5 py-4">
+            <div className="grouped">
               {loading ? (
-                <div className="text-sm text-white/55">{t('status.loadingRecentJobState')}</div>
+                <div className="group-row text-quiet">{t('status.loadingRecentJobState')}</div>
               ) : activeJobs.length === 0 ? (
-                <div className="rounded-[18px] border border-white/[0.05] bg-white/[0.025] px-4 py-4 text-sm text-white/55">
+                <div className="group-row text-quiet">
                   {t('status.noActiveJobsPeriod')}
                 </div>
               ) : (
                 activeJobs.slice(0, 6).map((job) => (
                   <div
                     key={job.id}
-                    className="rounded-[18px] border border-white/[0.05] bg-white/[0.025] px-4 py-4"
+                    className="group-row block py-3"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-white/85">
-                          {job.artist} — {job.albumTitle}
+                        <div className={`truncate ${job.status === 'running' ? 'text-accent' : ''}`}>
+                          {job.artist} – {job.albumTitle}
                         </div>
-                        <div className="mt-1 truncate text-xs text-white/55">
+                        <div className="truncate text-[13px] text-quiet">
                           {job.message || job.currentTrack || (job.status === 'queued' ? t('status.queued') : t('status.running'))}
                         </div>
                       </div>
@@ -176,13 +163,11 @@ export function StatusPage() {
                 ))
               )}
             </div>
-          </Card>
+          </div>
 
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-white">{t('status.activityFeed')}</h2>
-              </div>
+          <section>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="section-title !mb-0">{t('status.activityFeed')}</h2>
               <Badge
                 variant={feedItems[0]?.severity === 'error' ? 'bad' : 'accent'}
                 className="whitespace-nowrap text-[0.6875rem] md:text-xs"
@@ -192,44 +177,24 @@ export function StatusPage() {
             </div>
 
             {feedItems.length === 0 ? (
-              <Card className="p-6 text-sm text-white/55">
+              <Card className="px-4 py-5 text-[15px] text-quiet">
                 {t('status.noActivityYet')}
               </Card>
             ) : (
-              <AnimatePresence initial={false}>
-                <div className="space-y-3">
-                  {feedItems.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ type: 'spring', stiffness: 360, damping: 30 }}
-                    >
-                      <FeedCard item={item} />
-                    </motion.div>
-                  ))}
-                </div>
-              </AnimatePresence>
+              <div className="grouped rows [--row-text:34px]">
+                {feedItems.map((item) => (
+                  <FeedCard key={item.id} item={item} />
+                ))}
+              </div>
             )}
           </section>
         </div>
 
         <div className="self-start xl:sticky xl:top-24">
-          <Card className="overflow-hidden border-white/[0.08] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.025))]">
-            <div className="border-b border-white/[0.06] px-5 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-rose-400/90 shadow-[0_0_18px_rgba(251,113,133,0.35)]" />
-                    <span className="h-3 w-3 rounded-full bg-amber-300/90 shadow-[0_0_18px_rgba(252,211,77,0.32)]" />
-                    <span className="h-3 w-3 rounded-full bg-emerald-400/90 shadow-[0_0_18px_rgba(74,222,128,0.34)]" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-white/85">{t('status.backendLog')}</div>
-                  </div>
-                </div>
+          <Card>
+            <div className="border-b border-[var(--line)] px-3.5 py-2.5">
+              <div className="flex min-h-9 items-center justify-between gap-3">
+                <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">{t('status.backendLog')}</div>
                 <div className="flex items-center gap-2">
                   {!followLogs && (
                     <button
@@ -240,7 +205,7 @@ export function StatusPage() {
                           terminalRef.current.scrollTop = terminalRef.current.scrollHeight
                         }
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-white/75 transition-colors duration-[200ms] ease-smooth hover:border-[rgba(var(--accent),0.25)] hover:bg-[rgba(var(--accent),0.12)] hover:text-[rgb(var(--accent))]"
+                      className="chip on !h-8 !px-3 !text-xs"
                     >
                       <span className="md:hidden">{t('status.latest')}</span>
                       <span className="hidden md:inline">{t('status.jumpToLatest')}</span>
@@ -256,20 +221,20 @@ export function StatusPage() {
             <div
               ref={terminalRef}
               onScroll={handleTerminalScroll}
-              className="h-[min(68vh,760px)] overflow-y-auto bg-black/20 px-3 py-3 font-mono text-[0.8125rem] leading-6"
+              className="h-[min(68vh,760px)] overflow-y-auto px-1.5 py-1.5 font-mono text-[12.5px] leading-5"
             >
               {terminalLines.length === 0 ? (
-                <div className="flex h-full min-h-[320px] items-center justify-center px-6 text-center text-sm text-white/45">
+                <div className="flex h-full min-h-[320px] items-center justify-center px-6 text-center text-sm text-quiet">
                   {t('status.waitingForBackendEvents')}
                 </div>
               ) : (
-                <div className="space-y-1.5">
+                <div>
                   {terminalLines.map((line) => (
                     <div
                       key={line.id}
-                      className="rounded-[16px] border border-transparent px-3 py-2 transition-colors duration-200 hover:border-white/[0.05] hover:bg-white/[0.03]"
+                      className="rounded-[12px] px-2.5 py-1.5 transition-colors hover:bg-[var(--hover)]"
                     >
-                      <div className="mb-1 flex items-center gap-2 text-[0.6875rem] uppercase tracking-[0.08em] text-white/35">
+                      <div className="mb-0.5 flex items-center gap-2 font-sans text-[11px] font-semibold uppercase tracking-[0.06em] text-quiet">
                         <span>{formatClockTime(line.ts)}</span>
                         <span className={channelClassName(line)}>{line.channel}</span>
                         <span className={sourceClassName(line.source)}>{line.source}</span>
@@ -298,18 +263,16 @@ type MetricCardProps = {
 
 function MetricCard({ label, value, detail, tone, icon: Icon, spin = false }: MetricCardProps) {
   return (
-    <Card className="p-5">
+    <Card className="px-4 py-3.5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm text-white/50">{label}</div>
-          <div className="mt-2 text-2xl font-semibold tracking-tight text-white">
+        <div className="min-w-0">
+          <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">{label}</div>
+          <div className="mt-1 text-2xl font-bold tracking-[-0.5px] text-white">
             {value}
           </div>
-          <div className="mt-2 text-sm text-white/55">{detail}</div>
+          <div className="mt-0.5 truncate text-[13px] text-quiet">{detail}</div>
         </div>
-        <div className={metricIconClassName(tone)}>
-          <Icon className={spin ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-        </div>
+        <Icon className={`${metricIconClassName(tone)} ${spin ? 'animate-spin' : ''}`} />
       </div>
     </Card>
   )
@@ -317,28 +280,28 @@ function MetricCard({ label, value, detail, tone, icon: Icon, spin = false }: Me
 
 function FeedCard({ item }: { item: ActivityFeedItem }) {
   return (
-    <Card className={feedCardClassName(item.severity)}>
+    <div className="px-3.5 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <span className={feedDotClassName(item.severity)} />
-            <h3 className="truncate text-sm font-medium text-white/88">{item.title}</h3>
+            <h3 className="truncate font-normal">{item.title}</h3>
           </div>
           {item.detail && (
-            <div className="mt-2 text-sm text-white/60">{item.detail}</div>
+            <div className="ml-[18px] mt-0.5 break-words text-[13px] text-quiet">{item.detail}</div>
           )}
           {(item.jobStatus === 'queued' || item.jobStatus === 'running') &&
             typeof item.progress === 'number' &&
             item.progress > 0 &&
             item.progress < 100 && (
-            <div className="mt-3 max-w-sm">
+            <div className="ml-[18px] mt-2 max-w-sm">
               <ProgressBar value={item.progress} label={formatPercent(item.progress)} />
             </div>
           )}
         </div>
-        <div className="shrink-0 text-xs text-white/35">{formatRelativeTime(item.ts)}</div>
+        <div className="shrink-0 text-xs text-quiet tabular-nums">{formatRelativeTime(item.ts)}</div>
       </div>
-    </Card>
+    </div>
   )
 }
 
@@ -406,55 +369,32 @@ function streamTone(status: 'connecting' | 'open' | 'reconnecting'): ActivitySev
 }
 
 function metricIconClassName(tone: ActivitySeverity | 'success') {
-  if (tone === 'success') {
-    return 'flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/15 text-emerald-300'
-  }
-  if (tone === 'error') {
-    return 'flex h-10 w-10 items-center justify-center rounded-full border border-rose-400/30 bg-rose-500/15 text-rose-300'
-  }
-  if (tone === 'warning') {
-    return 'flex h-10 w-10 items-center justify-center rounded-full border border-amber-400/30 bg-amber-500/15 text-amber-200'
-  }
-  return 'flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(var(--accent),0.3)] bg-[rgba(var(--accent),0.14)] text-[rgb(var(--accent))]'
-}
-
-function feedCardClassName(severity: ActivitySeverity) {
-  if (severity === 'success') {
-    return 'border-emerald-400/15 bg-emerald-500/[0.06] p-4'
-  }
-  if (severity === 'error') {
-    return 'border-rose-400/15 bg-rose-500/[0.05] p-4'
-  }
-  if (severity === 'warning') {
-    return 'border-amber-400/15 bg-amber-500/[0.05] p-4'
-  }
-  return 'border-[rgba(var(--accent),0.16)] bg-[rgba(var(--accent),0.05)] p-4'
+  if (tone === 'success') return 'h-5 w-5 shrink-0 text-on'
+  if (tone === 'error') return 'h-5 w-5 shrink-0 text-rose-500'
+  if (tone === 'warning') return 'h-5 w-5 shrink-0 text-amber-500'
+  return 'h-5 w-5 shrink-0 text-accent'
 }
 
 function feedDotClassName(severity: ActivitySeverity) {
-  if (severity === 'success') return 'h-2.5 w-2.5 rounded-full bg-emerald-400'
-  if (severity === 'error') return 'h-2.5 w-2.5 rounded-full bg-rose-400'
-  if (severity === 'warning') return 'h-2.5 w-2.5 rounded-full bg-amber-300'
-  return 'h-2.5 w-2.5 rounded-full bg-[rgb(var(--accent))]'
+  if (severity === 'success') return 'h-2 w-2 shrink-0 rounded-full bg-on'
+  if (severity === 'error') return 'h-2 w-2 shrink-0 rounded-full bg-rose-500'
+  if (severity === 'warning') return 'h-2 w-2 shrink-0 rounded-full bg-amber-500'
+  return 'h-2 w-2 shrink-0 rounded-full bg-[var(--ink2)]'
 }
 
 function severityClassName(severity: ActivitySeverity) {
-  if (severity === 'success') return 'break-words text-emerald-200/95'
-  if (severity === 'error') return 'break-words text-rose-200/95'
-  if (severity === 'warning') return 'break-words text-amber-100/92'
-  return 'break-words text-white/82'
+  if (severity === 'error') return 'break-words text-rose-500'
+  if (severity === 'warning') return 'break-words text-amber-500'
+  return 'break-words text-white'
 }
 
 function channelClassName(line: ActivityTerminalLine) {
-  if (line.channel === 'stderr') return 'text-rose-300/80'
-  if (line.channel === 'stdout') return 'text-white/35'
-  return 'text-[rgb(var(--accent))]'
+  if (line.channel === 'stderr') return 'text-rose-500'
+  return 'text-quiet'
 }
 
-function sourceClassName(source: ActivityTerminalLine['source']) {
-  if (source === 'wrapper') return 'text-amber-100/70'
-  if (source === 'job') return 'text-white/45'
-  return 'text-white/35'
+function sourceClassName(_source: ActivityTerminalLine['source']) {
+  return 'text-quiet'
 }
 
 function formatRelativeTime(ts: number) {

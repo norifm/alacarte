@@ -1,8 +1,9 @@
-import { motion } from 'framer-motion'
 import { cx } from '../lib/cx'
 
 type Props = {
-  variant?: 'accent' | 'ghost'
+  // `primary`: the page's one main action, a pill in the ink. `accent` (the default): a pill on a veil of
+  // the ink. `ghost`: ink words that do something, as a dialog's.
+  variant?: 'primary' | 'accent' | 'ghost'
   active?: boolean
   className?: string
   children: React.ReactNode
@@ -16,21 +17,22 @@ export function Button({
   ...rest
 }: Props) {
   return (
-    <motion.button
+    <button
       type="button"
-      whileTap={{ scale: 0.95 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       className={cx(
-        'inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all',
+        'inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-[background,color,opacity] duration-150 disabled:cursor-default disabled:opacity-40 [&>.lucide]:h-[18px] [&>.lucide]:w-[18px]',
         active
-          ? 'border border-[rgba(var(--accent),0.35)] bg-[rgba(var(--accent),0.14)] text-[rgb(var(--accent))]'
-          : 'border border-white/10 bg-white/[0.06] text-white/80 hover:border-[rgba(var(--accent),0.3)] hover:bg-[rgba(var(--accent),0.12)] hover:text-[rgb(var(--accent))]',
+          ? 'border-hair border-[var(--hair)] bg-surface text-white'
+          : variant === 'primary'
+            ? 'bg-[var(--ink)] text-[var(--page)] hover:opacity-90'
+            : variant === 'ghost'
+              ? 'text-white hover:bg-[var(--hover)]'
+              : 'bg-[var(--veil)] text-white hover:bg-white/[0.1]',
         className,
       )}
-      {...(rest as any)}
+      {...rest}
     >
       {children}
-    </motion.button>
+    </button>
   )
 }
-

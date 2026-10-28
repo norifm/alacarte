@@ -1,58 +1,52 @@
 import type { Config } from 'tailwindcss'
 
+// Every color is one of the season's roles (src/lib/seasons.ts), or a share of one: `white/60` is the ink
+// at 60 % over whatever it sits on, so the same classes read on a paper and on a night.
+const share = (role: string) => `color-mix(in srgb, var(${role}) calc(<alpha-value> * 100%), transparent)`
+const all = (role: string) =>
+  Object.fromEntries([50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((n) => [n, share(role)]))
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        accent: 'rgb(var(--accent) / <alpha-value>)',
-        indicator: 'rgb(var(--indicator) / <alpha-value>)',
-        app: {
-          bg: 'var(--bg)',
-          text: 'var(--text)',
-          dim: 'var(--text-dim)',
-          faint: 'var(--text-faint)',
-          border: 'var(--border-color)',
-        },
-        surface: {
-          0: 'rgba(0, 0, 0, 0.9)',
-          1: 'rgba(0, 0, 0, 0.5)',
-          2: 'rgba(0, 0, 0, 0.3)',
-        },
+        white: share('--ink'),
+        ink: share('--ink'),
+        quiet: share('--ink2'),
+        page: share('--page'),
+        surface: share('--surface'),
+        hair: share('--hair'),
+        outline: share('--outline'),
+        accent: share('--accent'),
+        on: share('--on'),
+        'on-accent': share('--on-accent'),
+        rose: all('--error'),
+        red: all('--error'),
+        emerald: all('--on'),
+        green: all('--on'),
+        amber: all('--warn'),
+        yellow: all('--warn'),
+        sky: all('--ink'),
+        zinc: all('--surface'),
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'Arial', 'sans-serif'],
+        display: ['Literata', 'Georgia', '"Iowan Old Style"', 'serif'],
       },
       borderRadius: {
-        app: 'var(--radius)',
+        app: 'var(--r-tile)',
+        cover: 'var(--r-cover)',
+        card: 'var(--r-card)',
+        tile: 'var(--r-tile)',
+        sheet: 'var(--r-sheet)',
+      },
+      borderWidth: {
+        hair: 'var(--hairline)',
       },
       transitionTimingFunction: {
         smooth: 'cubic-bezier(0.16, 1, 0.3, 1)',
         snappy: 'cubic-bezier(0.4, 0, 0.2, 1)',
-      },
-      keyframes: {
-        'drawer-fade': {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
-        },
-        'drawer-slide': {
-          from: {
-            transform: 'translateX(calc(-100% - 16px))',
-            opacity: '0.4',
-          },
-          to: { transform: 'translateX(0)', opacity: '1' },
-        },
-        'modal-fade': {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
-        },
-        'modal-rise': {
-          from: { opacity: '0', transform: 'translateY(8px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
-      },
-      animation: {
-        'drawer-fade': 'drawer-fade 180ms var(--ease)',
-        'drawer-slide': 'drawer-slide 220ms var(--ease)',
-        'modal-fade': 'modal-fade 180ms var(--ease)',
-        'modal-rise': 'modal-rise 200ms var(--ease)',
       },
     },
   },

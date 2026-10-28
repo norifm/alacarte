@@ -21,7 +21,9 @@ import { AdmChip } from '../components/AdmChip'
 import { Badge } from '../components/Badge'
 import { ResolvedMediaLink } from '../components/ResolvedMediaLink'
 import { formatPercent } from '../lib/format'
-import { StaggeredList, StaggeredItem } from '../components/StaggeredList'
+import { CoverWash } from '../components/CoverWash'
+import { useCoverTint } from '../hooks/useSeasons'
+import { cx } from '../lib/cx'
 import { ProgressBar } from '../components/ProgressBar'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
@@ -126,7 +128,7 @@ export function PlaylistPage() {
   }, [catalogId, libraryId])
 
   const coverBig = artworkUrl(playlist?.artworkTemplate, 600)
-  const bgColor = playlist?.artworkColor ? `#${playlist.artworkColor}` : '#1a1a1a'
+  useCoverTint(playlist?.artworkColor)
 
   const activePlaylistTrackJobs = useMemo(
     () =>
@@ -223,18 +225,20 @@ export function PlaylistPage() {
     : true
 
   return (
-    <div className="mx-auto w-full max-w-6xl pt-4 md:pt-6">
+    <div className="mx-auto w-full max-w-6xl">
+      <CoverWash template={playlist?.artworkTemplate} />
       {error && <Badge variant="bad">{error}</Badge>}
 
+      <div className="messages">
       <AnimatePresence>
         {(followBanner || followQueuedCount > 0) && (
           <motion.div
             key="follow-banner"
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-            className="mb-4 flex items-center justify-between gap-3 rounded-app border border-[rgba(var(--accent),0.35)] bg-[rgba(var(--accent),0.10)] px-4 py-2.5 text-sm text-white/90 backdrop-blur-[10px]"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="message"
           >
             <div>
               {followBanner === 'unfollowed'
@@ -248,7 +252,6 @@ export function PlaylistPage() {
               {followBanner !== 'unfollowed' && (
                 <Link
                   to="/following"
-                  className="font-medium text-[rgb(var(--accent))] underline underline-offset-2 transition-colors hover:text-white"
                 >
                   {t('playlist.openFollowing')}
                 </Link>
@@ -261,187 +264,174 @@ export function PlaylistPage() {
                 setFollowQueuedCount(0)
               }}
               aria-label={t('playlist.dismiss')}
-              className="shrink-0 inline-flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.08)] text-white/75 transition-[background,border-color,color] duration-[250ms] ease-smooth hover:border-[rgba(var(--accent),0.45)] hover:bg-[rgba(var(--accent),0.18)] hover:text-white"
+              className="glyph h-9 w-9"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       {playlist && (
-        <StaggeredList
-          className="rounded-app overflow-hidden relative"
-          style={{
-            background: `linear-gradient(180deg, ${bgColor}99, transparent 300px)`,
-          }}
-        >
-          <StaggeredItem className="p-4 md:p-8 flex flex-col md:flex-row gap-6">
-            <div className="shrink-0 mx-auto md:mx-0 w-[min(280px,70vw)]">
-              <div className="w-full aspect-square rounded-app overflow-hidden bg-black/50 shadow-2xl">
-                {coverBig ? (
-                  <img
-                    src={coverBig}
-                    srcSet={artworkSrcSet(playlist.artworkTemplate)}
-                    sizes="(max-width: 768px) 70vw, 280px"
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-white/20 text-5xl">
-                    ♫
-                  </div>
-                )}
-              </div>
+        <>
+          <div className="mb-7 flex flex-col items-center gap-[18px] text-center md:flex-row md:items-end md:gap-8 md:text-left">
+            <div className="plate aspect-square w-[min(260px,70vw)] shrink-0 overflow-hidden rounded-card md:w-60">
+              {coverBig ? (
+                <img
+                  src={coverBig}
+                  srcSet={artworkSrcSet(playlist.artworkTemplate)}
+                  sizes="(max-width: 768px) 70vw, 240px"
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-5xl">♫</div>
+              )}
             </div>
-            <div className="min-w-0 flex-1 flex flex-col">
-              <div className="text-xs uppercase tracking-wider text-white/55 mb-1">
-                {isUserCreated ? t('playlist.yourPlaylist') : t('playlist.playlist')}
-              </div>
-              <h1 className="text-2xl md:text-4xl font-bold tracking-tight">{playlist.name}</h1>
-              <div className="mt-1 text-white/70">
-                {playlist.curatorName}
-                {playlist.trackCount ? ` · ${t('playlist.trackCount', { count: playlist.trackCount })}` : ''}
+            <div className="flex min-w-0 flex-1 flex-col gap-1 self-stretch md:self-auto">
+              <h1 className="text-[27px] leading-[1.15] md:text-[34px]">{playlist.name}</h1>
+              <div className="text-[17px] font-medium text-quiet md:text-xl">{playlist.curatorName}</div>
+              <div className="caption mt-1">
+                {[
+                  isUserCreated ? t('playlist.yourPlaylist') : t('playlist.playlist'),
+                  playlist.trackCount ? t('playlist.trackCount', { count: playlist.trackCount }) : null,
+                  playlist.hasHiRes ? t('playlist.hiResLossless') : playlist.hasLossless ? t('playlist.lossless') : null,
+                  playlist.hasAtmos ? t('playlist.dolbyAtmos') : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                {undownloadable > 0 && (
+                  <span className="text-amber-500">
+                    {' · '}
+                    {t('playlist.notOnAppleMusic', { count: undownloadable })}
+                  </span>
+                )}
               </div>
               {playlist.description && (
-                <p className="mt-2 text-sm text-white/50 line-clamp-3">{playlist.description}</p>
+                <p className="mt-1 line-clamp-3 text-[13px] text-quiet">{playlist.description}</p>
               )}
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {playlist.hasHiRes && <Badge>{t('playlist.hiResLossless')}</Badge>}
-                {playlist.hasLossless && !playlist.hasHiRes && <Badge>{t('playlist.lossless')}</Badge>}
-                {playlist.hasAtmos && <Badge>{t('playlist.dolbyAtmos')}</Badge>}
-                {undownloadable > 0 && (
-                  <Badge variant="warn">
-                    {t('playlist.notOnAppleMusic', { count: undownloadable })}
-                  </Badge>
-                )}
-              </div>
               {(existingPlaylistJob?.status === 'queued' ||
                 existingPlaylistJob?.status === 'running') && (
-                <div className="mt-4">
+                <div className="mt-3">
                   <ProgressBar
                     value={existingPlaylistJob.progress}
                     label={`${formatPercent(existingPlaylistJob.progress)} · ${existingPlaylistJob.message || existingPlaylistJob.status}`}
                   />
                 </div>
               )}
-              <div className="mt-4 md:mt-6 flex flex-col gap-3">
-                <div className="flex flex-wrap gap-2 md:sticky md:top-20">
+              <div className="mt-[18px] flex flex-wrap justify-center gap-2.5 md:justify-start">
+                <Button
+                  variant="primary"
+                  onClick={onDownload}
+                  disabled={
+                    enqueueing ||
+                    !downloadable ||
+                    (existingPlaylistJob && existingPlaylistJob.status !== 'failed')
+                  }
+                  className="min-h-[46px] min-w-[150px] px-5 text-[15px]"
+                >
+                  <Download />
+                  {existingPlaylistJob?.status === 'done'
+                    ? t('playlist.alreadyImported')
+                    : existingPlaylistJob?.status === 'queued'
+                      ? t('playlist.queued')
+                      : existingPlaylistJob?.status === 'running'
+                        ? t('playlist.downloading')
+                        : !downloadable
+                          ? t('playlist.noDownloadableTracks')
+                          : t('playlist.downloadPlaylist')}
+                </Button>
+                {followed ? (
                   <Button
-                    onClick={onDownload}
-                    disabled={
-                      enqueueing ||
-                      !downloadable ||
-                      (existingPlaylistJob && existingPlaylistJob.status !== 'failed')
-                    }
-                    className="flex-1 md:min-w-[200px] md:flex-none disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => setUnfollowModalOpen(true)}
+                    disabled={followSubmitting}
+                    className="min-h-[46px] px-5 text-[15px]"
                   >
-                    <Download className="h-4 w-4" />
-                    {existingPlaylistJob?.status === 'done'
-                      ? t('playlist.alreadyImported')
-                      : existingPlaylistJob?.status === 'queued'
-                        ? t('playlist.queued')
-                        : existingPlaylistJob?.status === 'running'
-                          ? t('playlist.downloading')
-                          : !downloadable
-                            ? t('playlist.noDownloadableTracks')
-                            : t('playlist.downloadPlaylist')}
+                    <ListX className="text-accent" />
+                    {t('playlist.unfollow')}
                   </Button>
-                  {followed ? (
-                    <Button
-                      onClick={() => setUnfollowModalOpen(true)}
-                      disabled={followSubmitting}
-                      variant="ghost"
-                      className="border-rose-300/30 bg-rose-500/10 text-rose-200 hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
-                    >
-                      <ListX className="h-4 w-4" />
-                      {t('playlist.unfollow')}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={openFollowModal}
-                      disabled={followSubmitting}
-                      variant="ghost"
-                    >
-                      <ListPlus className="h-4 w-4" />
-                      {t('playlist.follow')}
-                    </Button>
-                  )}
-                </div>
+                ) : (
+                  <Button
+                    onClick={openFollowModal}
+                    disabled={followSubmitting}
+                    className="min-h-[46px] px-5 text-[15px]"
+                  >
+                    <ListPlus />
+                    {t('playlist.follow')}
+                  </Button>
+                )}
               </div>
-
               {activePlaylistTrackJobs.length > 0 && (
-                <div className="mt-4 text-sm text-white/50">
+                <div className="mt-3 text-[13px] text-quiet">
                   {t('playlist.tracksDownloading', { count: activePlaylistTrackJobs.length })}
                 </div>
               )}
             </div>
-          </StaggeredItem>
+          </div>
 
-          <div className="px-4 md:px-8 pb-8">
-            <div className="mt-2 border-t border-white/10 pt-4">
-              <div className="grid grid-cols-[2rem_1fr_auto] md:grid-cols-[2rem_1fr_8rem_5rem] gap-x-3 gap-y-0 text-xs uppercase tracking-wider text-white/40 border-b border-white/5 py-2">
-                <div>#</div>
-                <div>{t('playlist.title')}</div>
-                <div className="hidden md:block">{t('playlist.artist')}</div>
-                <div className="text-right"><Clock3 className="h-3.5 w-3.5 inline" /></div>
-              </div>
-              {playlist.tracks.map((track, i) => {
-                const matchingJob = jobs.find(
-                  (j) => j.songId === track.id && (j.status === 'queued' || j.status === 'running'),
-                )
-                return (
-                  <StaggeredItem
-                    key={track.id}
-                    className="grid grid-cols-[2rem_1fr_auto] md:grid-cols-[2rem_1fr_8rem_5rem] gap-x-3 py-2.5 items-center border-b border-white/5 hover:bg-accent/[0.05] transition-colors rounded-[6px]"
-                  >
-                    <div className="text-white/45 tabular-nums text-sm">{i + 1}</div>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">
-                        {track.name}
-                        {track.hasHiRes && (
-                          <BadgeIcon className="h-3.5 w-3.5 text-accent inline ml-1.5" aria-label={t('playlist.hiRes')} />
-                        )}
-                        {track.isAppleDigitalMaster && <AdmChip />}
-                      </div>
-                      <div className="md:hidden truncate text-xs text-white/50">
-                        <ResolvedMediaLink
-                          kind="artist"
-                          artistId={track.artistId}
-                          artistName={track.artistName}
-                          className="hover:text-accent transition-colors"
-                        >
-                          {track.artistName}
-                        </ResolvedMediaLink>
-                        {track.albumName && ` · ${track.albumName}`}
-                      </div>
+          <div className="mb-2 grid grid-cols-[1.75rem_1fr_auto] gap-x-3 pl-3.5 pr-3.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet md:grid-cols-[1.75rem_1fr_10rem_5rem]">
+            <div className="text-center">#</div>
+            <div>{t('playlist.title')}</div>
+            <div className="hidden md:block">{t('playlist.artist')}</div>
+            <div className="text-right"><Clock3 className="inline h-3.5 w-3.5" /></div>
+          </div>
+          <div className="grouped rows [--row-text:54px]">
+            {playlist.tracks.map((track, i) => {
+              const matchingJob = jobs.find(
+                (j) => j.songId === track.id && (j.status === 'queued' || j.status === 'running'),
+              )
+              return (
+                <div
+                  key={track.id}
+                  className="grid min-h-[52px] grid-cols-[1.75rem_1fr_auto] items-center gap-x-3 px-3.5 py-1.5 transition-colors hover:bg-[var(--hover)] md:grid-cols-[1.75rem_1fr_10rem_5rem]"
+                >
+                  <div className="text-center text-quiet tabular-nums">{i + 1}</div>
+                  <div className="min-w-0">
+                    <div className={cx('truncate text-base leading-[21px]', matchingJob && 'text-accent')}>
+                      {track.name}
+                      {track.hasHiRes && (
+                        <BadgeIcon className="ml-1.5 inline h-3.5 w-3.5 text-quiet" aria-label={t('playlist.hiRes')} />
+                      )}
+                      {track.isAppleDigitalMaster && <AdmChip />}
                     </div>
-                    <div className="hidden md:block truncate text-sm text-white/60">
+                    <div className="truncate text-[13px] text-quiet md:hidden">
                       <ResolvedMediaLink
                         kind="artist"
                         artistId={track.artistId}
                         artistName={track.artistName}
-                        className="hover:text-accent transition-colors"
+                        className="transition-colors hover:text-white"
                       >
                         {track.artistName}
                       </ResolvedMediaLink>
+                      {track.albumName && ` · ${track.albumName}`}
                     </div>
-                    <div className="text-right text-sm text-white/55 tabular-nums flex items-center justify-end gap-1.5">
-                      {matchingJob && (
-                        <span className="text-[10px] text-accent font-semibold uppercase tracking-wide">
-                          {matchingJob.status === 'running'
-                            ? `${formatPercent(matchingJob.progress)}`
-                            : t('playlist.queued')}
-                        </span>
-                      )}
-                      {formatDur(track.durationMs)}
-                    </div>
-                  </StaggeredItem>
-                )
-              })}
-            </div>
+                  </div>
+                  <div className="hidden truncate text-quiet md:block">
+                    <ResolvedMediaLink
+                      kind="artist"
+                      artistId={track.artistId}
+                      artistName={track.artistName}
+                      className="transition-colors hover:text-white"
+                    >
+                      {track.artistName}
+                    </ResolvedMediaLink>
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5 text-right text-[13px] text-quiet tabular-nums">
+                    {matchingJob && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-accent">
+                        {matchingJob.status === 'running'
+                          ? `${formatPercent(matchingJob.progress)}`
+                          : t('playlist.queued')}
+                      </span>
+                    )}
+                    {formatDur(track.durationMs)}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        </StaggeredList>
+        </>
       )}
       {qualityPrompt}
       <Modal
@@ -453,17 +443,17 @@ export function PlaylistPage() {
       >
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[rgba(var(--accent),0.25)] bg-[rgba(var(--accent),0.12)] text-[rgb(var(--accent))]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
               <ListMusic className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wider text-white/55">
+              <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                 {t('playlist.followPlaylist')}
               </div>
               <h2 className="mt-1 text-lg font-semibold text-white">
                 {playlist?.name || t('playlist.playlist')}
               </h2>
-              <p className="mt-2 text-sm text-white/60">
+              <p className="mt-2 text-sm text-quiet">
                 {t('playlist.followModalDescription')}
               </p>
             </div>
@@ -471,10 +461,10 @@ export function PlaylistPage() {
           {appSettings?.promptForDownloadQuality && (
             <div className="mt-5">
               <div className="mb-3">
-                <div className="text-xs uppercase tracking-wider text-white/55">
+                <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                   {t('playlist.downloadQuality')}
                 </div>
-                <div className="mt-1 text-sm text-white/60">
+                <div className="mt-1 text-sm text-quiet">
                   {t('playlist.appliesIfDownloadNow')}
                 </div>
               </div>
@@ -496,6 +486,7 @@ export function PlaylistPage() {
               {t('playlist.futureAdditionsOnly')}
             </Button>
             <Button
+              variant="primary"
               onClick={() => submitFollow(true)}
               disabled={followSubmitting}
             >
@@ -513,17 +504,17 @@ export function PlaylistPage() {
       >
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-rose-300/30 bg-rose-500/10 text-rose-200">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
               <ListX className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wider text-white/55">
+              <div className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet">
                 {t('playlist.unfollowPlaylist')}
               </div>
               <h2 className="mt-1 text-lg font-semibold text-white">
                 {playlist?.name || t('playlist.playlist')}
               </h2>
-              <p className="mt-2 text-sm text-white/60">
+              <p className="mt-2 text-sm text-quiet">
                 {t('playlist.unfollowModalDescription')}
               </p>
             </div>
@@ -539,7 +530,7 @@ export function PlaylistPage() {
             <Button
               onClick={submitUnfollow}
               disabled={followSubmitting}
-              className="border-rose-300/30 bg-rose-500/10 text-rose-200 hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
+              variant="ghost" className="!text-rose-500"
             >
               <ListX className="h-4 w-4" />
               {t('playlist.unfollow')}
