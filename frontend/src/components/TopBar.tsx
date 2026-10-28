@@ -29,9 +29,7 @@ type Tab = { to: string; end?: boolean; icon: React.ComponentType<{ className?: 
 // the same outline.
 export function TopBar({ health, loading }: Props) {
   const { t } = useTranslation()
-  const location = useLocation()
 
-  const showHealth = location.pathname !== '/settings' && location.pathname !== '/status'
 
   const tabs: Tab[] = [
     { to: '/', end: true, icon: HomeIcon, label: t('nav.home') },
@@ -85,12 +83,9 @@ export function TopBar({ health, loading }: Props) {
 
       {/* A phone: the dock at the bottom. */}
       <div className="chrome fixed inset-x-2.5 bottom-[max(6px,env(safe-area-inset-bottom))] z-30 overflow-visible rounded-tile md:hidden">
-        {showHealth && (
-          <>
-            <HealthRow health={health} loading={loading} />
-            <hr className="mx-0 border-0 border-t border-[var(--line)]" />
-          </>
-        )}
+        {/* The status rides on every page, so the dock keeps one shape. */}
+        <HealthRow health={health} loading={loading} />
+        <hr className="mx-0 border-0 border-t border-[var(--line)]" />
         <nav className="flex h-[50px] items-center px-1.5" aria-label={t('nav.browse')}>
           {([tabs[0], { to: '/search', icon: SearchIcon, label: t('nav.search') }, ...tabs.slice(1)] as Tab[]).map((tab) => (
             <NavLink
