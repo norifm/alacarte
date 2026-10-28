@@ -559,6 +559,24 @@ input[type='range']::-moz-range-thumb {
     color: var(--ink2);
   }
 
+  /* A page with nothing to show: its glyph in a soft disc, the words, maybe a way to add something, in the
+     middle of the room the page has between the top and the dock. */
+  .empty-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px 20px;
+    min-height: calc(100dvh - 300px);
+  }
+
+  @media (min-width: 768px) {
+    .empty-note {
+      min-height: calc(100dvh - 260px);
+    }
+  }
+
   /* Message pills float over the page on the surface with a hairline, above the dock on a phone; words and
      action in ink, the × quiet. */
   .messages {

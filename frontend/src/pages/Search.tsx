@@ -189,8 +189,8 @@ export function SearchPage() {
       {error && <Badge variant="bad">{error}</Badge>}
 
       {!trimmed && (
-        <div className="flex flex-col items-center px-5 text-center font-medium text-quiet">
-          <SearchIcon className="mb-3.5 mt-6 box-content h-7 w-7 rounded-full bg-[var(--veil)] p-[18px]" />
+        <div className="empty-note font-medium text-quiet">
+          <SearchIcon className="mb-3.5 box-content h-7 w-7 rounded-full bg-[var(--veil)] p-[18px]" />
           {t('search.emptyStateHint')}
         </div>
       )}

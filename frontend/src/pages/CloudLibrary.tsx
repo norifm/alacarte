@@ -423,7 +423,7 @@ export function CloudLibraryPage() {
       {showSkeleton ? (
         activeTab === 'songs' ? <SongSkeletonList /> : <SkeletonGrid />
       ) : !hasItems ? (
-        <div className="flex flex-col items-center px-5 py-8 text-center">
+        <div className="empty-note">
           <div className="flex max-w-md flex-col items-center gap-2">
             <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_svg]:h-7 [&_svg]:w-7">
               <Cloud className="h-5 w-5" />
@@ -530,7 +530,7 @@ function NotConnectedScreen({
         : t('cloudLibrary.connectAccountBody')
   return (
     <div className="w-full">
-      <div className="flex flex-col items-center px-5 py-8 text-center">
+      <div className="empty-note">
         <div className="flex max-w-md flex-col items-center gap-2">
           <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_svg]:h-7 [&_svg]:w-7">
             <Cloud className="h-5 w-5" />

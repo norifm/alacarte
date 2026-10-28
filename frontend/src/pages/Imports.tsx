@@ -135,7 +135,7 @@ export function ImportsPage() {
                     <Dots />
                 </div>
             ) : files.length === 0 ? (
-                <div className="flex flex-col items-center px-5 py-10 text-center">
+                <div className="empty-note">
                     <div className="mb-3.5 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet">
                         <FileUp className="h-7 w-7" />
                     </div>
