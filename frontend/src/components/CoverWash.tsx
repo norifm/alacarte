@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 
 import { artworkUrl } from '../api/client'
 import { useLook } from '../hooks/useSeasons'
-import { dyeWash } from '../lib/seasons'
+import { coverWash } from '../lib/seasons'
 
 const SIDE = 32
 
-// Across the top of a page about one cover, behind its head: the cover drawn tiny and dyed as the page is
-// (nori's wash, each color brought to the season's paper), stretched so it is soft, under the page's paper
-// growing from 15 % to whole. Not in Midnight, which wears no cover colors.
+// Across the top of a page about one cover, behind its head, as nori's desktop draws it: the cover's own
+// wash in its own colors, stretched so it is soft, under the page's dyed paper growing from 15 % to whole,
+// so the head wears the cover and the foot the season's paper blended with it. Not in Midnight.
 export function CoverWash({ template, color, height = 440 }: { template?: string | null; color?: string | null; height?: number }) {
   const look = useLook()
   const canvas = useRef<HTMLCanvasElement | null>(null)
@@ -28,7 +28,7 @@ export function CoverWash({ template, color, height = 440 }: { template?: string
       g.drawImage(img, 0, 0, SIDE, SIDE)
       let washed: Uint8ClampedArray | null = null
       try {
-        washed = dyeWash(g.getImageData(0, 0, SIDE, SIDE).data, color)
+        washed = coverWash(g.getImageData(0, 0, SIDE, SIDE).data, SIDE, color)
       } catch {
         /* a cover that cannot be read: no wash */
       }
@@ -49,7 +49,7 @@ export function CoverWash({ template, color, height = 440 }: { template?: string
       className={`pointer-events-none absolute inset-x-0 top-0 -z-10 overflow-hidden transition-opacity duration-[400ms] ease-out ${shown ? 'opacity-100' : 'opacity-0'}`}
       style={{ height }}
     >
-      <canvas ref={canvas} width={SIDE} height={SIDE} className="h-full w-full scale-110 blur-xl" />
+      <canvas ref={canvas} width={SIDE} height={SIDE} className="h-full w-full scale-110 blur-lg" />
       <div
         className="absolute inset-0"
         style={{

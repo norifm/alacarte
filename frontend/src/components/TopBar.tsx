@@ -51,7 +51,7 @@ export function TopBar({ health, loading }: Props) {
   return (
     <>
       {/* A wide window: the bar along the top. */}
-      <header className="chrome fixed left-1/2 top-3 z-30 hidden h-12 w-[min(1040px,calc(100%-32px))] -translate-x-1/2 items-center gap-0.5 rounded-full px-1.5 md:flex">
+      <header className="chrome fixed left-[calc(50%-var(--scrollbar,0px)/2)] top-3 z-30 hidden h-12 w-[min(1040px,calc(100%-32px-var(--scrollbar,0px)))] -translate-x-1/2 items-center gap-0.5 rounded-full px-1.5 md:flex">
         <nav className="flex min-w-0 flex-1 items-center gap-0.5" aria-label={t('nav.browse')}>
           {tabs.map((tab, i) => (
             <span key={tab.to} className="contents">

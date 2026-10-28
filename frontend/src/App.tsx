@@ -153,6 +153,19 @@ function AuthedApp() {
     if (settings) setLook({ season: settings.season, appearance: settings.appearance })
   }, [settings?.season, settings?.appearance])
 
+  const detail = DETAIL.test(location.pathname)
+
+  // The bar is centred over the page's column, which a classic scrollbar narrows: half its width.
+  useEffect(() => {
+    const main = mainRef.current
+    if (!main) return
+    const measure = () =>
+      document.documentElement.style.setProperty('--scrollbar', `${main.offsetWidth - main.clientWidth}px`)
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
   // Each page opens at its top.
   const mainRef = useRef<HTMLElement | null>(null)
   useEffect(() => {
@@ -166,10 +179,22 @@ function AuthedApp() {
       {/* The page scrolls inside here, under the chrome, as nori's does: the document itself never scrolls,
           so a phone's toolbars stay put and the dock never moves. The column is the top bar's width. */}
       <main ref={mainRef} id="main" className="fixed inset-0 isolate overflow-y-auto overscroll-contain">
-        <div className="mx-auto w-full max-w-[calc(1040px+2*var(--gutter))] px-[var(--gutter)] pb-[calc(140px+env(safe-area-inset-bottom))] pt-[max(20px,env(safe-area-inset-top))] md:pb-12 md:pt-[84px]">
-          {DETAIL.test(location.pathname) && (
-            <button type="button" onClick={() => navigate(-1)} className="glyph -ml-3 -mt-1.5 mb-1.5" aria-label="Back">
-              <ArrowLeft className="h-[22px] w-[22px]" />
+        <div
+          className={`mx-auto w-full max-w-[calc(1040px+2*var(--gutter))] px-[var(--gutter)] pb-[calc(140px+env(safe-area-inset-bottom))] md:pb-12 ${
+            detail ? 'pt-[max(8px,env(safe-area-inset-top))] md:pt-[60px]' : 'pt-[max(20px,env(safe-area-inset-top))] md:pt-[84px]'
+          }`}
+        >
+          {/* The way back fills the band between the bar and what the page is about, its arrow at the left. */}
+          {detail && (
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="group/back -ml-3 flex h-14 w-[calc(100%+12px)] items-center md:h-[72px]"
+              aria-label="Back"
+            >
+              <span className="glyph group-hover/back:before:scale-100 group-hover/back:before:opacity-[0.06]">
+                <ArrowLeft className="h-[22px] w-[22px]" />
+              </span>
             </button>
           )}
           <AnimatePresence mode="wait">

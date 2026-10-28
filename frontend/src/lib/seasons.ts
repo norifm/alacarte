@@ -80,7 +80,12 @@ function fromHsl([h, s, l]: [number, number, number]): Rgb {
 }
 
 /** Oklab chroma. */
-function chroma([r, g, b]: Rgb) {
+function chroma(c: Rgb) {
+  return oklab(c)[1]
+}
+
+/** Oklab lightness and chroma. */
+function oklab([r, g, b]: Rgb): [number, number] {
   const [R, G, B] = [r, g, b].map((v) => {
     const c = v / 255
     return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
@@ -90,7 +95,7 @@ function chroma([r, g, b]: Rgb) {
   const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
   const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
   const Bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
-  return Math.hypot(A, Bb)
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, Math.hypot(A, Bb)]
 }
 
 // ---- the calendar ----
@@ -326,24 +331,55 @@ export function setCoverTint(color: string | null | undefined) {
   apply(true)
 }
 
-/** A cover's wash (`rgba`, its pixels) dyed as the page it lies on is: each color brought to the depth of
- *  the season's paper and mixed into it, or the page itself where quiet text would not read on it. Null in
- *  Midnight, which wears no cover colors. */
-export function dyeWash(rgba: Uint8ClampedArray, cover: string): Uint8ClampedArray | null {
+/** A cover's own wash, as nori's page wears it over its head (cover.rs's `wash_of`): the cover (`rgba`, a
+ *  32 x 32 copy) blurred, its lightness held near its page's and its saturation capped so text reads on it,
+ *  then mostly mixed back into that page so its hues read as a glow. Its page is Apple's `bgColor` for the
+ *  cover. Null in Midnight, which wears no cover colors. */
+export function coverWash(rgba: Uint8ClampedArray, side: number, cover: string): Uint8ClampedArray | null {
   if (look.appearance === 'midnight' || !/^[0-9a-f]{6}$/i.test(cover)) return null
-  const darkTheme = isDark(look)
-  const light = palette(look.season, false, false)
-  const night = palette(look.season, true, false)
-  const deep = darkTheme || luminance(hex(cover)) < 0.18
-  const paper = (deep ? night : light).page
-  const page = dyedPalette(hex(cover), light, night, darkTheme)
-  const quiet = veil(page.ink, QUIET, page.page)
-  const out = new Uint8ClampedArray(rgba.length)
-  for (let i = 0; i < rgba.length; i += 4) {
-    const w = dyed([rgba[i], rgba[i + 1], rgba[i + 2]], paper, deep)
-    const c = contrast(quiet, w) >= 4.5 ? w : page.page
-    out.set([c[0], c[1], c[2], 255], i)
+  const bg = hex(cover)
+  const [bgLight, bgChroma] = oklab(bg)
+  const paper = bgChroma < 0.045 && bgLight >= 0.79
+  const ink = bgChroma < 0.015 && bgLight < 0.21
+  const on = contrast(WHITE, bg) >= contrast(hex('0d0d0d'), bg) ? WHITE : hex('0d0d0d')
+  const dark = on === WHITE
+  let px: Rgb[] = []
+  for (let i = 0; i < side * side; i++) px.push([rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2]])
+  // Five passes of a 3-tap blur: at three, strong central shapes still showed.
+  const at = (v: number) => Math.min(side - 1, Math.max(0, v))
+  for (let pass = 0; pass < 5; pass++) {
+    for (const across of [true, false]) {
+      px = px.map((_, i) => {
+        const x = i % side
+        const y = Math.floor(i / side)
+        const sum = [0, 0, 0]
+        for (let d = -1; d <= 1; d++) {
+          const q = px[across ? y * side + at(x + d) : at(y + d) * side + x]
+          for (let k = 0; k < 3; k++) sum[k] += q[k]
+        }
+        return sum.map((v) => Math.floor(v / 3)) as Rgb
+      })
+    }
   }
+  const page = toHsl(bg)
+  const mean = px.reduce((a, p) => a + toHsl(p)[2], 0) / px.length
+  const spread = paper ? 0.04 : dark ? 0.11 : 0.055
+  const pull = dark && !paper ? 1 : 0.85
+  const maxSat = paper || ink ? 0.04 : dark ? 0.62 : 0.4
+  const mute = paper || ink ? 0.78 : 0.38
+  const out = new Uint8ClampedArray(side * side * 4)
+  px.forEach((p, i) => {
+    const hsl = toHsl(p)
+    if (paper || ink) {
+      hsl[0] = page[0]
+      hsl[1] = page[1]
+    } else hsl[1] = Math.min(hsl[1] * pull, maxSat)
+    const floor = ink ? page[2] : page[2] - spread
+    hsl[2] = Math.min(1, Math.max(0, Math.min(page[2] + spread, Math.max(floor, page[2] + (hsl[2] - mean) * spread * 2.5))))
+    let c = blend(fromHsl(hsl), bg, mute)
+    if (contrast(on, c) < 4.5) c = bg
+    out.set([c[0], c[1], c[2], 255], i * 4)
+  })
   return out
 }
 
