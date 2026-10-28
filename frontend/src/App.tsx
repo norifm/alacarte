@@ -180,12 +180,13 @@ function AuthedApp() {
           so a phone's toolbars stay put and the dock never moves. The column is the top bar's width. */}
       <main ref={mainRef} id="main" className="fixed inset-0 isolate overflow-y-auto overscroll-contain">
         {/* The way back, as nori's desktop has it: a disc beside what the page is about, left of the column
-            where there is room (over its corner where there is not); it scrolls with the page. */}
+            where there is room (over its corner where there is not). It stays where it is while a long list
+            scrolls under it. */}
         {detail && (
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="glyph chrome absolute left-[max(8px,calc((100%-1040px)/2-56px))] top-[max(20px,env(safe-area-inset-top))] z-10 !h-10 !w-10 md:top-[84px]"
+            className="glyph chrome fixed left-[max(8px,calc((100%-var(--scrollbar,0px)-1040px)/2-56px))] top-[max(20px,env(safe-area-inset-top))] z-20 !h-10 !w-10 md:top-[84px]"
             aria-label="Back"
           >
             <ArrowLeft className="h-5 w-5" />
