@@ -1,6 +1,6 @@
 # alacarte
 
-Self-hosted Apple Music downloader with a polished web UI.
+Self-hosted Apple Music downloader with a web UI that wears [nori](https://github.com/norifm/nori)'s seasons.
 
 <div align="center">
   <img src="./assets/hero-album.png" alt="alacarte Album Detail View" width="100%" />
@@ -10,20 +10,23 @@ Self-hosted Apple Music downloader with a polished web UI.
 
 alacarte is a browser-based tool that downloads lossless audio from Apple Music, converts it to FLAC, and organizes it into a clean library structure you can point any media server at.
 
-- **Search & Discover:** Full access to the Apple Music catalog (albums, artists, songs, playlists).
-- **Lossless & Hi-Res:** Download ALAC streams and auto-convert to FLAC with embedded artwork and metadata.
-- **Artist credits:** Songs and albums with several artists get one ARTISTS / ALBUMARTISTS tag per artist and one COMPOSER tag per composer (from Apple Music), so Navidrome links each real artist instead of a combined "A & B" one. Settings → Artist credits fixes tracks already in your library.
-- **Lyrics Support:** Fetch embedded lyrics and sidecar `.lrc` files (requires `media-user-token`). Settings → Lyrics fetches them for tracks already in your library that have none.
-- **Smart Queuing:** Queue individual tracks, whole albums, playlists, or bulk-select entire artist discographies (filtered by LPs/EPs/Singles).
-- **Library Awareness:** Duplicate prevention visually flags what is already in your library so you don't re-download.
-- **Explicit / clean filtering:** Apple lists explicit and clean masters as separate albums. Pick your preference in Settings (or show both) to keep search results tidy.
-- **Follow Artists:** Follow an artist to auto-download new releases as they drop. Choose to grab their current discography on follow or only watch for future releases. alacarte checks on a self-tuning schedule (configurable in Settings) that scales with your roster size to stay well under Apple's daily API limits.
+- **Search & discover:** the whole Apple Music catalog (albums, artists, songs, playlists), plus your own Apple Music library.
+- **Lossless & hi-res:** ALAC streams converted to FLAC with embedded artwork and metadata.
+- **Artist credits:** one ARTISTS / ALBUMARTISTS tag per artist and one COMPOSER tag per composer, so Navidrome links each real artist instead of a combined "A & B".
+- **Lyrics:** embedded lyrics and sidecar `.lrc` files (needs a `media-user-token`).
+- **Queuing:** single tracks, whole albums, playlists, or a bulk pick of an artist's discography (LPs / EPs / Singles).
+- **Library awareness:** what's already in your library is marked, so nothing is downloaded twice.
+- **Explicit / clean:** Apple lists both as separate albums; pick one in Settings, or show both.
+- **Following:** follow an artist to download new releases as they drop, or a playlist to download what's added to it. The check runs on a schedule that scales with how many you follow, to stay under Apple's limits.
+- **Seasons:** the look follows the old Japanese calendar through spring, summer, autumn and winter, in day, night or midnight. Pages about an album, artist or playlist wear its cover's colors.
+
+Settings → Library maintenance fixes artist credits, lyrics and tags for tracks that are already in your library.
 
 Output lands in `/music/<Artist>/<Album>/01. Track.flac` (or `/music/<Artist>/Singles/` for individual songs). Playlist downloads are merged into the same artist/album library structure and also emit `/music/Playlists/<Playlist>.m3u8` with relative paths so Jellyfin/Navidrome can import playlist order.
 
 ---
 
-## Beautiful and functional. Not just on the desktop.
+## On the desktop and on your phone
 
 <table style="border: none;">
   <tr>
@@ -31,13 +34,13 @@ Output lands in `/music/<Artist>/<Album>/01. Track.flac` (or `/music/<Artist>/Si
       <img src="./assets/mobile-showcase.png" alt="Mobile UI Showcase" />
       <br />
       <b>Fully responsive design</b><br />
-      Search, queue, and manage your library effortlessly from your phone.
+      Search, queue and manage your library from your phone.
     </td>
     <td width="50%" align="center">
       <img src="./assets/status-dashboard.png" alt="Status Dashboard" />
       <br />
       <b>Complete system visibility</b><br />
-      Watch your server work in real-time with an SSE-backed console, live job tracking, and granular health metrics.
+      Live job tracking, health checks and the backend's log as it happens.
     </td>
   </tr>
 </table>
@@ -61,24 +64,16 @@ Output lands in `/music/<Artist>/<Album>/01. Track.flac` (or `/music/<Artist>/Si
 2. Copy `.env.example` to `.env` and set `MUSIC_PATH` to your music library folder
 3. Run `docker compose up -d --build`
 4. Open `http://<your-host>:7373`
-5. Grab the one-time setup token from logs (`docker compose logs alacarte-web`) and use it on the welcome screen with your new username/password
-6. Go to Settings → enter your Apple ID email, password, and preferred storefront
+5. Grab the one-time setup token from the logs (`docker compose logs web`) and use it on the welcome screen with your new username and password
+6. In Settings, enter your Apple ID email and password (the storefront is detected from your account)
 
-## Upgrade notes
+## Upgrading
 
-Upgrading an existing deployment:
-
-1. Pull latest changes and rebuild: `docker compose up -d --build`
-2. If your current install has no auth configured yet, open the UI and complete first-time setup with the one-time setup token from logs.
-3. If you already have auth configured, sign in normally.
-
-No manual data migration is required for `data/web/settings.json` or existing encrypted Apple credentials.
+Pull and rebuild with `docker compose up -d --build`. Settings and the saved Apple credentials carry over; an install without a password yet asks for the setup token from the logs once.
 
 ## Security
 
-alacarte ships with a built-in single-password gate. The first time you visit the UI, you'll be prompted to set a username/password and the one-time setup token from server logs — every API endpoint and page is then locked behind it.
-
-A few things to keep in mind:
+alacarte ships with a built-in password gate: the first visit asks for a username, a password and the one-time setup token from the logs, and every page and API endpoint is locked behind it.
 
 - **Don't expose this directly to the public internet.** Several cloud providers ship hosts with permissive default firewalls. Verify your firewall, and put a reverse proxy / VPN / mesh network in front of the UI before opening it up to anything beyond your LAN.
 - **No Docker socket is mounted.** First-time Apple login goes through a small supervisor inside the wrapper container (port 40020, internal network only), so the web container has no control over the host's container engine. Its sign-in endpoints need a token the supervisor creates in `data/supervisor/token` on first start, so other containers on a shared `DOCKER_NETWORK` can't drive the Apple sign-in.
@@ -88,7 +83,6 @@ A few things to keep in mind:
 - **Sessions support revoke-all** from Settings → Account ("Sign out on all devices").
 - **Password hashing uses memory-hard scrypt** (`N=131072, r=8, p=1`).
 - **Trust proxy and secure cookies:** set `TRUST_PROXY` correctly when running behind a reverse proxy so HTTPS detection and cookie security are accurate.
-- **Existing users are preserved:** current encrypted Apple credentials in `data/web/settings.json` continue to decrypt after upgrading.
 - **Change or reset:** the password lives at `data/web/auth.json`. Change it from Settings → Account, or reset by deleting that file and restarting the container — the next visit will prompt for a new one.
 
 ## First login flow
@@ -110,13 +104,13 @@ If Apple sign-in fails, check these first:
 4. Confirm the storefront in Settings matches the Apple ID's region.
 5. Confirm you're running the latest image/build (newer builds include login parser fixes and richer wrapper diagnostics).
 
-Wrapper response type 4 is a generic StoreServices failure, not a credential diagnosis. Use the server message and StoreServices error in the failure log to narrow it down before retrying; repeated attempts can trigger an Apple account lockout. If the failure log shows a `StoreServices error` with a very large negative number, that came from an older wrapper build — rebuild with `docker compose build --no-cache wrapper` to get the real error code.
+Wrapper response type 4 is a generic StoreServices failure, not a wrong password. Read the server message and StoreServices error in the failure log before retrying, as repeated attempts can lock the Apple account. A very large negative StoreServices error comes from an older wrapper build: rebuild it with `docker compose build --no-cache wrapper`.
 
 ## How downloads behave
 
 - Jobs run **one at a time** — queuing many items won't speed things up, it just lines them up.
 - Download speed is throttled by Apple and varies by time of day.
-- After a download completes, each track is converted from ALAC to FLAC and moved into your library (although you can disable this in the settings).
+- After a download, each track is converted from ALAC to FLAC (unless you turn that off in Settings) and moved into your library.
 - The queue survives page refreshes and container restarts; a download that was running when the container stopped starts again from the beginning.
 - If a job fails (network hiccup, decryption glitch), you can re-queue it manually.
 
@@ -134,10 +128,7 @@ The "original" name is what Apple shows in your storefront's own language, so th
 
 ## Notes and limits
 
-**IP rate-limiting and proxies** Apple appears to rate-limit by IP if you query huge amounts of data at once. In my experience, this isn't a permanent ban, I got soft-blocked for about a day after downloading ~1500 songs. If you plan to archive massive collections, consider:
-- Spreading large jobs across multiple days
-- Running behind a VPN or proxy
-- Using a container with separate networking
+**IP rate-limiting** Apple rate-limits by IP when you pull a lot at once. It isn't a permanent ban: I was soft-blocked for about a day after ~1500 songs. alacarte paces its own requests (Settings → Apple Music API); for very large archives, spread jobs over a few days or run behind a VPN.
 
 **Storage** - Lossless albums are ~300–600 MB each.
 - By default, temporary staging is written to `/tmp/alacarte-staging` while jobs run.
@@ -150,9 +141,9 @@ The "original" name is what Apple shows in your storefront's own language, so th
 
 **Local compose tweaks** If you need to change things the `.env` variables don't cover (extra volumes, additional environment, etc.), drop a `docker-compose.override.yml` next to the main compose file. Docker Compose auto-merges it and it's gitignored, so you can run `docker compose up` normally without polluting the committed config.
 
-**Navidrome Integration** alacarte includes built-in support for triggering Subsonic API scans in Navidrome. Once you configure your Navidrome credentials in the Settings panel, alacarte will instantly instruct your server to quick-scan the library the exact moment a download completes. No more waiting for hourly cron jobs!
+**Navidrome** With your Navidrome login in Settings → Integrations, alacarte asks Navidrome for a quick scan the moment a download finishes.
 
-**Apple Music in Subsonic clients (octo-fiesta)** [filipton's octo-fiesta](https://github.com/filipton/octo-fiesta) is a Subsonic proxy for Navidrome that adds streaming catalogues to your music apps' search and downloads what you play. It can use alacarte for Apple Music: turn on **Settings → octo-fiesta Integration**, then give octo-fiesta the `AppleMusic__AlacarteUrl` and `AppleMusic__ApiToken` shown there. Both must mount the same music folder. The token only opens `/api/integration/v1`, and the integration stays off until you turn it on.
+**Apple Music in Subsonic clients (octo-fiesta)** [filipton's octo-fiesta](https://github.com/filipton/octo-fiesta) is a Subsonic proxy for Navidrome that adds streaming catalogues to your music apps' search and downloads what you play. It can use alacarte for Apple Music: turn it on in **Settings → Integrations**, then give octo-fiesta the `AppleMusic__AlacarteUrl` and `AppleMusic__ApiToken` shown there. Both must mount the same music folder. The token only opens `/api/integration/v1`, and the integration stays off until you turn it on.
 
 ## Troubleshooting
 
@@ -177,7 +168,7 @@ Built upon:
 - [zhaarey/apple-music-downloader](https://github.com/zhaarey/apple-music-downloader)
 - [WorldObservationLog/wrapper](https://github.com/WorldObservationLog/wrapper)
 
-The UI design was heavily inspired by the beautiful [Abyss theme](https://github.com/AumGupta/abyss-jellyfin), which was then customized and expanded from the ground up for this project.
+The UI wears Nori Seasons, the look of [nori](https://github.com/norifm/nori), alacarte's sibling under norifm.
 
 ## License
 
