@@ -467,11 +467,6 @@ input[type='range']::-moz-range-thumb {
     transition: opacity 380ms ease-out, transform 380ms ease-out;
   }
 
-  .glyph:hover:not(:disabled)::before {
-    opacity: 0.05;
-    transform: scale(1);
-  }
-
   .glyph:active:not(:disabled)::before {
     opacity: 0.14;
     transform: scale(1);

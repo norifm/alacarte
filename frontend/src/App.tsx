@@ -179,24 +179,23 @@ function AuthedApp() {
       {/* The page scrolls inside here, under the chrome, as nori's does: the document itself never scrolls,
           so a phone's toolbars stay put and the dock never moves. The column is the top bar's width. */}
       <main ref={mainRef} id="main" className="fixed inset-0 isolate overflow-y-auto overscroll-contain">
+        {/* The way back, as nori's desktop has it: a disc beside what the page is about, left of the column
+            where there is room (over its corner where there is not); it scrolls with the page. */}
+        {detail && (
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="glyph chrome absolute left-[max(8px,calc((100%-1040px)/2-56px))] top-[max(20px,env(safe-area-inset-top))] z-10 !h-10 !w-10 md:top-[84px]"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        )}
         <div
           className={`mx-auto w-full max-w-[calc(1040px+2*var(--gutter))] px-[var(--gutter)] pb-[calc(140px+env(safe-area-inset-bottom))] md:pb-12 ${
-            detail ? 'pt-[max(8px,env(safe-area-inset-top))] md:pt-[60px]' : 'pt-[max(20px,env(safe-area-inset-top))] md:pt-[84px]'
+            'pt-[max(20px,env(safe-area-inset-top))] md:pt-[84px]'
           }`}
         >
-          {/* The way back fills the band between the bar and what the page is about, its arrow at the left. */}
-          {detail && (
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="group/back -ml-3 flex h-14 w-[calc(100%+12px)] items-center md:h-[72px]"
-              aria-label="Back"
-            >
-              <span className="glyph group-hover/back:before:scale-100 group-hover/back:before:opacity-[0.06]">
-                <ArrowLeft className="h-[22px] w-[22px]" />
-              </span>
-            </button>
-          )}
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<PageWrapper><HomePage /></PageWrapper>} />

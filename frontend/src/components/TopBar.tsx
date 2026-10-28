@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Cloud,
-  PageUp as FileUp,
+  PagePlus as FileUp,
   HomeSimple as HomeIcon,
   AlbumList as LibraryIcon,
   Search as SearchIcon,
