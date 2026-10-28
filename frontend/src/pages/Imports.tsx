@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
   Clock,
-  PageUp as FileUp,
+  PagePlus as FileUp,
   RefreshDouble as Loader2,
   Refresh as RefreshCw,
   Xmark as X,
@@ -106,30 +106,18 @@ export function ImportsPage() {
         }
     };
 
+    const addButton = (
+        <Button onClick={pickFiles} disabled={uploading} className="whitespace-nowrap">
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
+            {uploading ? t("imports.adding") : t("imports.add")}
+        </Button>
+    );
+
     return (
         <div className="flex w-full flex-col gap-[26px]">
             {error && <Badge variant="bad">{error}</Badge>}
 
-            <PageTitle
-                aside={
-                    <>
-                    <Button
-                        onClick={pickFiles}
-                        disabled={uploading}
-                        className="whitespace-nowrap"
-                    >
-                        {uploading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <FileUp className="h-4 w-4" />
-                        )}
-                        {uploading
-                            ? t("imports.adding")
-                            : t("imports.add")}
-                    </Button>
-                    </>
-                }
-            >
+            <PageTitle aside={!loading && files.length > 0 && addButton}>
                 {t("imports.title")}
             </PageTitle>
 
@@ -147,9 +135,15 @@ export function ImportsPage() {
                     <Dots />
                 </div>
             ) : files.length === 0 ? (
-                <p className="px-2 py-2 text-[15px] text-quiet">
-                    {t("imports.empty")}
-                </p>
+                <div className="flex flex-col items-center px-5 py-10 text-center">
+                    <div className="mb-3.5 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet">
+                        <FileUp className="h-7 w-7" />
+                    </div>
+                    <p className="text-[15px] font-medium text-quiet">
+                        {t("imports.empty")}
+                    </p>
+                    <div className="mt-4">{addButton}</div>
+                </div>
             ) : (
                 <StaggeredList className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence initial={false}>
