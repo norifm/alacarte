@@ -15,6 +15,7 @@ import { api, artworkUrl, type Album, type Artist, type Song, type Playlist } fr
 import { AlbumCard } from '../components/AlbumCard'
 import { PlaylistCard } from '../components/PlaylistCard'
 import { Badge } from '../components/Badge'
+import { PageTitle } from '../components/PageTitle'
 import { DownloadButton } from '../components/DownloadButton'
 import { ResolvedMediaLink } from '../components/ResolvedMediaLink'
 import { StaggeredList, StaggeredItem } from '../components/StaggeredList'
@@ -55,7 +56,18 @@ export function SearchPage() {
   const cats = useMemo(() => parseCats(params.get('cats')), [params])
   const catSet = useMemo(() => new Set(cats), [cats])
 
-  const [q, setQ] = useState(urlQ)
+  // The query is the address's: the top bar's search pill writes it, and on a phone the field here does.
+  const q = urlQ
+  const setQ = (value: string) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (value) next.set('q', value)
+        else next.delete('q')
+        return next
+      },
+      { replace: true },
+    )
   const [results, setResults] = useState<Results>(
     () => resultCache.get(urlQ.trim()) ?? EMPTY,
   )
@@ -63,30 +75,8 @@ export function SearchPage() {
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (urlQ !== q && !urlQ.startsWith(q)) {
-      setQ(urlQ)
-    }
-    setResults(resultCache.get(urlQ.trim()) ?? EMPTY)
-  }, [urlQ])
-
   const trimmed = useMemo(() => q.trim(), [q])
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setParams(
-        (prev) => {
-          const next = new URLSearchParams(prev)
-          if (q) next.set('q', q)
-          else next.delete('q')
-          return next
-        },
-        { replace: true },
-      )
-    }, 250)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q])
 
   useEffect(() => {
     if (!trimmed) {
@@ -129,7 +119,7 @@ export function SearchPage() {
   }, [trimmed, navigate])
 
   useEffect(() => {
-    inputRef.current?.focus()
+    if (!matchMedia('(min-width: 768px)').matches) inputRef.current?.focus()
   }, [])
 
   const allCatsSelected = cats.length === ALL_CATS.length
@@ -170,7 +160,8 @@ export function SearchPage() {
 
   return (
     <div className="flex w-full flex-col gap-[26px]">
-      <label className="field flex items-center gap-2 !px-3.5 text-quiet">
+      <PageTitle>{t('nav.search')}</PageTitle>
+      <label className="field -mt-1.5 flex items-center gap-2 !px-3.5 text-quiet md:hidden">
         <SearchIcon className="h-[19px] w-[19px] shrink-0" />
         <input
           ref={inputRef}
@@ -206,7 +197,7 @@ export function SearchPage() {
 
       {trimmed && (
         <>
-          <div className="-mt-3 flex flex-wrap gap-1" role="group" aria-label={t('search.filterResultsAriaLabel')}>
+          <div className="-mt-3.5 flex flex-wrap gap-1" role="group" aria-label={t('search.filterResultsAriaLabel')}>
             <CatPill label={t('search.showAll')} icon={ListChecks} active={allCatsSelected} onClick={selectAllCats} />
             <CatPill label={t('search.albums')} icon={Disc3} active={!allCatsSelected && catSet.has('albums')} onClick={() => toggleCat('albums')} count={results.albums.length} />
             <CatPill label={t('search.artists')} icon={UserRound} active={!allCatsSelected && catSet.has('artists')} onClick={() => toggleCat('artists')} count={results.artists.length} />

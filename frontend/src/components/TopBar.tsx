@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Activity,
   Cloud,
@@ -10,6 +10,7 @@ import {
   Search as SearchIcon,
   Settings2,
   UserRoundCheck,
+  X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -83,27 +84,27 @@ export function TopBar({ health, loading }: Props) {
               <NavLink
                 to={tab.to}
                 end={tab.end}
+                aria-label={tab.label}
                 className={({ isActive }) =>
                   cx(
-                    'group flex h-9 items-center gap-[7px] whitespace-nowrap rounded-full px-3 text-[13px] font-medium text-quiet transition-colors duration-200 hover:bg-[var(--hover)] hover:text-white',
-                    isActive && '!text-accent font-semibold is-on',
+                    'flex h-9 items-center gap-[7px] whitespace-nowrap rounded-full px-3 text-[13px] font-medium text-quiet transition-colors duration-200 hover:bg-[var(--hover)] hover:text-white',
+                    isActive && '!text-accent [&>span>span:last-child]:font-semibold',
                   )
                 }
               >
                 <tab.icon className="h-5 w-5 shrink-0" />
-                <span className="hidden lg:inline group-[.is-on]:inline">{tab.label}</span>
+                {/* Named while there is room, all of them or none; the bold name's width is kept for every
+                    tab, so lighting one moves nothing. */}
+                <span className="hidden lg:grid">
+                  <span aria-hidden className="invisible col-start-1 row-start-1 font-semibold">{tab.label}</span>
+                  <span className="col-start-1 row-start-1">{tab.label}</span>
+                </span>
               </NavLink>
               {i === 0 && <span className="mx-1 h-5 w-px shrink-0 bg-[var(--hair)]" />}
             </span>
           ))}
         </nav>
-        <NavLink
-          to="/search"
-          className={({ isActive }) => cx('glyph quiet h-9 w-9', isActive && 'on')}
-          aria-label={t('topbar.search')}
-        >
-          <SearchIcon className="h-5 w-5" />
-        </NavLink>
+        <SearchPill />
         <Link
           to={getHealthPillTarget(health)}
           aria-label={getHealthPillAriaLabel(health)}
@@ -166,6 +167,56 @@ export function TopBar({ health, loading }: Props) {
         </div>
       </Modal>
     </>
+  )
+}
+
+// The bar's search, as nori's: a pill of a fixed width (so nothing beside it moves), its edge in the accent
+// while focused. What is typed is the search page's query; the answer shows on that page, under the bar.
+function SearchPill() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [params] = useSearchParams()
+  const onSearch = location.pathname === '/search'
+  const urlQ = onSearch ? params.get('q') ?? '' : ''
+  const [q, setQ] = useState(urlQ)
+  useEffect(() => setQ(urlQ), [urlQ])
+
+  const change = (value: string) => {
+    setQ(value)
+    const next = new URLSearchParams(onSearch ? params : undefined)
+    if (value) next.set('q', value)
+    else next.delete('q')
+    const query = next.toString()
+    navigate(`/search${query ? `?${query}` : ''}`, { replace: onSearch })
+  }
+
+  return (
+    <label className="field mx-1 flex !min-h-9 w-44 shrink-0 cursor-text items-center gap-2 !bg-[var(--veil)] !px-3 text-quiet lg:w-60 [&:not(:focus-within)]:!border-transparent">
+      <SearchIcon className="h-[17px] w-[17px] shrink-0" />
+      <input
+        type="search"
+        value={q}
+        onChange={(e) => change(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            if (q) change('')
+            else e.currentTarget.blur()
+          }
+        }}
+        placeholder={t('topbar.search')}
+        aria-label={t('topbar.search')}
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-quiet [&::-webkit-search-cancel-button]:hidden"
+      />
+      {q && (
+        <button type="button" onClick={() => change('')} className="-mr-1.5 grid h-6 w-6 place-items-center rounded-full hover:text-white" aria-label={t('search.clearAriaLabel')}>
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </label>
   )
 }
 
