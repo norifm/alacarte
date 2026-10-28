@@ -32,7 +32,7 @@ export function QualityPicker({ value, onChange, className }: Props) {
             className={cx(
               'flex w-full items-start gap-3 rounded-card border-hair px-3 py-2.5 text-left transition-colors',
               selected
-                ? 'border-[var(--hair)] bg-[var(--veil)] text-white'
+                ? 'border-[var(--hair)] bg-[var(--chosen)] text-white'
                 : 'border-transparent text-white hover:bg-[var(--hover)]',
             )}
           >

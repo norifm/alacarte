@@ -142,9 +142,9 @@ export function ImportsPage() {
                     <Dots />
                 </div>
             ) : files.length === 0 ? (
-                <Card className="px-4 py-8 text-center text-[15px] text-quiet">
+                <p className="px-2 py-2 text-[15px] text-quiet">
                     {t("imports.empty")}
-                </Card>
+                </p>
             ) : (
                 <StaggeredList className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence initial={false}>
@@ -304,7 +304,7 @@ function ImportedFileCard({
                                 type="button"
                                 onClick={onRerun}
                                 disabled={running || removing}
-                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--veil)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.1] disabled:opacity-40"
+                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--plate)] px-3 text-[13px] font-medium text-[var(--plate-ink)] transition-opacity hover:opacity-85 disabled:opacity-40"
                             >
                                 <RefreshCw
                                     className={

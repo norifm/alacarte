@@ -30,6 +30,8 @@
 @property --accent { syntax: '<color>'; inherits: true; initial-value: #e8743b; }
 @property --on { syntax: '<color>'; inherits: true; initial-value: #7fa27f; }
 @property --on-accent { syntax: '<color>'; inherits: true; initial-value: #ffffff; }
+@property --plate { syntax: '<color>'; inherits: true; initial-value: #35322d; }
+@property --plate-ink { syntax: '<color>'; inherits: true; initial-value: #e8743b; }
 
 :root {
   --scrim: rgb(0 0 0 / 0.32);
@@ -48,7 +50,8 @@
 /* Fixed shares of ink over the page, and the chrome: the page blurred inside an outline of ink. */
 :root {
   --line: color-mix(in srgb, var(--ink) 10%, transparent);
-  --hover: color-mix(in srgb, var(--ink) 5%, transparent);
+  --hover: color-mix(in srgb, var(--ink) 6%, transparent);
+  --chosen: color-mix(in srgb, var(--ink) 10%, transparent);
   --veil: color-mix(in srgb, var(--ink) 6%, transparent);
   --field: color-mix(in srgb, var(--ink) 7%, transparent);
   --plate: linear-gradient(135deg, color-mix(in srgb, var(--ink) 13%, var(--page)), color-mix(in srgb, var(--ink) 6%, var(--page)));
@@ -61,7 +64,7 @@
 /* A page about one cover fades into its colors and back out. */
 :root.tinting,
 :root.tinting body {
-  transition: --page 340ms, --surface 340ms, --ink 340ms, --ink2 340ms, --hair 340ms, --outline 340ms, --accent 340ms, --on-accent 340ms;
+  transition: --page 340ms, --surface 340ms, --ink 340ms, --ink2 340ms, --hair 340ms, --outline 340ms, --accent 340ms, --on-accent 340ms, --plate 340ms, --plate-ink 340ms;
 }
 
 /* The side margin every page shares: the top bar's on a wide window, so the column below it is its width. */
@@ -364,16 +367,18 @@ input[type='range']::-moz-range-thumb {
     display: none;
   }
 
-  /* A list of rows on the surface (tracks, downloads): dividers from the text, none after the last. */
+  /* A list of rows on the page itself (tracks, downloads), as nori's: no card, a soft plate under the
+     pointer, a hairline from where the text starts, none after the last. */
   .rows > * {
     position: relative;
+    border-radius: 7px;
   }
 
   .rows > *:not(:last-child)::after {
     content: '';
     position: absolute;
     left: var(--row-text, 14px);
-    right: 0;
+    right: 8px;
     bottom: 0;
     height: 1px;
     background: var(--line);
@@ -423,8 +428,8 @@ input[type='range']::-moz-range-thumb {
   }
 
   .pill.quiet {
-    background: var(--veil);
-    color: var(--ink);
+    background: var(--plate);
+    color: var(--plate-ink);
   }
 
   .pill.small {
@@ -611,13 +616,10 @@ input[type='range']::-moz-range-thumb {
     color: color-mix(in srgb, var(--ink2) 75%, transparent);
   }
 
-  /* Small grey capitals under a title: "2019 · ALTERNATIVE · LOSSLESS". */
+  /* What a list holds, quiet under its title: "2019 · 8 songs · 36:28 · FLAC". */
   .caption {
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-size: 13px;
+    line-height: 17px;
     color: var(--ink2);
   }
 

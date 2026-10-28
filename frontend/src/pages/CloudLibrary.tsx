@@ -31,7 +31,6 @@ import { AlbumCard } from '../components/AlbumCard'
 import { PlaylistCard } from '../components/PlaylistCard'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
-import { Card } from '../components/Card'
 import { PageTitle } from '../components/PageTitle'
 import { Dots } from '../components/Dots'
 import { DownloadButton } from '../components/DownloadButton'
@@ -423,17 +422,17 @@ export function CloudLibraryPage() {
       {showSkeleton ? (
         activeTab === 'songs' ? <SongSkeletonList /> : <SkeletonGrid />
       ) : !hasItems ? (
-        <Card className="p-8 md:p-10">
-          <div className="max-w-xl space-y-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
+        <div className="flex flex-col items-center px-5 py-8 text-center">
+          <div className="flex max-w-md flex-col items-center gap-2">
+            <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_.lucide]:h-7 [&_.lucide]:w-7">
               <Cloud className="h-5 w-5" />
             </div>
-            <h2 className="text-xl font-semibold tracking-[-0.4px] text-white">{t('cloudLibrary.emptyTitle')}</h2>
+            <h2 className="text-[19px] font-semibold tracking-[-0.2px] text-white">{t('cloudLibrary.emptyTitle')}</h2>
             <p className="text-sm text-quiet">
               {t('cloudLibrary.emptyBody', { kind: kindLowerLabel(t, activeTab) })}
             </p>
           </div>
-        </Card>
+        </div>
       ) : activeTab === 'albums' ? (
         <AlbumGrid items={tabs.albums.items} />
       ) : activeTab === 'playlists' ? (
@@ -530,14 +529,14 @@ function NotConnectedScreen({
         : t('cloudLibrary.connectAccountBody')
   return (
     <div className="w-full">
-      <Card className="p-8 md:p-10">
-        <div className="space-y-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
+      <div className="flex flex-col items-center px-5 py-8 text-center">
+        <div className="flex max-w-md flex-col items-center gap-2">
+          <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_.lucide]:h-7 [&_.lucide]:w-7">
             <Cloud className="h-5 w-5" />
           </div>
-          <h2 className="text-xl font-semibold tracking-[-0.4px] text-white">{headline}</h2>
+          <h2 className="text-[19px] font-semibold tracking-[-0.2px] text-white">{headline}</h2>
           <p className="text-sm text-quiet">{body}</p>
-          <div className="flex flex-wrap gap-2 pt-2">
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
             <Link
               to="/settings"
               className="pill small quiet"
@@ -550,7 +549,7 @@ function NotConnectedScreen({
             </Button>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   )
 }
@@ -600,9 +599,9 @@ function SkeletonGrid() {
 
 function SongSkeletonList() {
   return (
-    <div className="grouped rows [--row-text:66px]">
+    <div className="rows [--row-text:60px]">
       {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="flex min-h-[60px] items-center gap-3 py-2 pl-3.5 pr-2">
+        <div key={i} className="flex min-h-[60px] items-center gap-3 py-2 pl-2 pr-1">
           <div className="plate h-10 w-10 shrink-0 rounded-cover" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="h-3.5 w-[55%] rounded-full bg-[var(--veil)]" />
@@ -688,7 +687,7 @@ function PlaylistGrid({ items }: { items: CloudLibraryPlaylist[] }) {
 
 function SongList({ items }: { items: CloudLibrarySong[] }) {
   return (
-    <StaggeredList className="grouped rows [--row-text:66px]">
+    <StaggeredList className="rows [--row-text:60px]">
       {items.map((it) => (
         <StaggeredItem key={it.libraryId}>
           <CloudSongRow song={it} />
@@ -742,7 +741,7 @@ function CloudSongRow({ song }: { song: CloudLibrarySong }) {
     isSongInLibrary(songLookup) || (albumLookup ? isAlbumInLibrary(albumLookup) : false)
 
   return (
-    <div className="group relative flex min-h-[60px] items-center gap-3 py-2 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)]">
+    <div className="group relative flex min-h-[60px] items-center gap-3 py-2 pl-2 pr-1 transition-colors hover:bg-[var(--hover)]">
       <div className="plate relative h-10 w-10 shrink-0 overflow-hidden rounded-cover">
         {thumb && (
           <img src={thumb} alt="" className="h-full w-full object-cover" />

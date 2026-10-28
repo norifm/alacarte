@@ -1,8 +1,8 @@
 import { cx } from '../lib/cx'
 
 type Props = {
-  // `primary`: the page's one main action, a pill in the ink. `accent` (the default): a pill on a veil of
-  // the ink. `ghost`: ink words that do something, as a dialog's.
+  // `primary`: the page's one main action, a pill in the ink. `accent` (the default): a quieter pill on
+  // nori's plate, in its ink. `ghost`: ink words that do something, as a dialog's.
   variant?: 'primary' | 'accent' | 'ghost'
   active?: boolean
   className?: string
@@ -27,7 +27,7 @@ export function Button({
             ? 'bg-[var(--ink)] text-[var(--page)] hover:opacity-90'
             : variant === 'ghost'
               ? 'text-white hover:bg-[var(--hover)]'
-              : 'bg-[var(--veil)] text-white hover:bg-white/[0.1]',
+              : 'bg-[var(--plate)] text-[var(--plate-ink)] hover:opacity-85',
         className,
       )}
       {...rest}

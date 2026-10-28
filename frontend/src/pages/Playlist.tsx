@@ -23,7 +23,6 @@ import { ResolvedMediaLink } from '../components/ResolvedMediaLink'
 import { formatPercent } from '../lib/format'
 import { CoverWash } from '../components/CoverWash'
 import { useCoverTint } from '../hooks/useSeasons'
-import { cx } from '../lib/cx'
 import { ProgressBar } from '../components/ProgressBar'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
@@ -226,7 +225,7 @@ export function PlaylistPage() {
 
   return (
     <div className="w-full">
-      <CoverWash template={playlist?.artworkTemplate} />
+      <CoverWash template={playlist?.artworkTemplate} color={playlist?.artworkColor} />
       {error && <Badge variant="bad">{error}</Badge>}
 
       <div className="messages">
@@ -275,8 +274,8 @@ export function PlaylistPage() {
 
       {playlist && (
         <>
-          <div className="mb-7 flex flex-col items-center gap-[18px] text-center md:flex-row md:items-end md:gap-8 md:text-left">
-            <div className="plate aspect-square w-[min(260px,70vw)] shrink-0 overflow-hidden rounded-card md:w-60">
+          <div className="mb-[26px] flex flex-col items-center gap-[18px] text-center md:flex-row md:items-stretch md:gap-7 md:text-left">
+            <div className="plate aspect-square w-[min(260px,70vw)] shrink-0 overflow-hidden rounded-cover md:w-[250px]">
               {coverBig ? (
                 <img
                   src={coverBig}
@@ -289,25 +288,9 @@ export function PlaylistPage() {
                 <div className="flex h-full w-full items-center justify-center text-5xl">♫</div>
               )}
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1 self-stretch md:self-auto">
+            <div className="flex min-w-0 flex-1 flex-col gap-1 self-stretch md:pt-14">
               <h1 className="text-[27px] leading-[1.15] md:text-[34px]">{playlist.name}</h1>
               <div className="text-[17px] font-medium text-quiet md:text-xl">{playlist.curatorName}</div>
-              <div className="caption mt-1">
-                {[
-                  isUserCreated ? t('playlist.yourPlaylist') : t('playlist.playlist'),
-                  playlist.trackCount ? t('playlist.trackCount', { count: playlist.trackCount }) : null,
-                  playlist.hasHiRes ? t('playlist.hiResLossless') : playlist.hasLossless ? t('playlist.lossless') : null,
-                  playlist.hasAtmos ? t('playlist.dolbyAtmos') : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-                {undownloadable > 0 && (
-                  <span className="text-amber-500">
-                    {' · '}
-                    {t('playlist.notOnAppleMusic', { count: undownloadable })}
-                  </span>
-                )}
-              </div>
               {playlist.description && (
                 <p className="mt-1 line-clamp-3 text-[13px] text-quiet">{playlist.description}</p>
               )}
@@ -320,7 +303,7 @@ export function PlaylistPage() {
                   />
                 </div>
               )}
-              <div className="mt-[18px] flex flex-wrap justify-center gap-2.5 md:justify-start">
+              <div className="mt-[18px] flex flex-wrap justify-center gap-2.5 md:mt-auto md:justify-start md:pt-[18px]">
                 <Button
                   variant="primary"
                   onClick={onDownload}
@@ -370,13 +353,32 @@ export function PlaylistPage() {
             </div>
           </div>
 
-          <div className="mb-2 grid grid-cols-[1.75rem_1fr_auto] gap-x-3 pl-3.5 pr-3.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet md:grid-cols-[1.75rem_1fr_10rem_5rem]">
-            <div className="text-center">#</div>
+          {/* The list's head, as nori's: what it holds, a hairline under. */}
+          <div className="caption flex min-h-12 items-center border-b border-[var(--hair)] px-2">
+            <span>
+              {[
+                isUserCreated ? t('playlist.yourPlaylist') : t('playlist.playlist'),
+                playlist.trackCount ? t('playlist.trackCount', { count: playlist.trackCount }) : null,
+                playlist.hasHiRes ? t('playlist.hiResLossless') : playlist.hasLossless ? t('playlist.lossless') : null,
+                playlist.hasAtmos ? t('playlist.dolbyAtmos') : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              {undownloadable > 0 && (
+                <span className="text-amber-500">
+                  {' · '}
+                  {t('playlist.notOnAppleMusic', { count: undownloadable })}
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="mt-1 grid min-h-7 grid-cols-[1.75rem_1fr_auto] items-center gap-x-3 px-2 text-xs font-semibold text-quiet md:grid-cols-[1.75rem_1fr_10rem_5rem]">
+            <div className="text-right">#</div>
             <div>{t('playlist.title')}</div>
             <div className="hidden md:block">{t('playlist.artist')}</div>
             <div className="text-right"><Clock3 className="inline h-3.5 w-3.5" /></div>
           </div>
-          <div className="grouped rows [--row-text:54px]">
+          <div className="rows [--row-text:48px]">
             {playlist.tracks.map((track, i) => {
               const matchingJob = jobs.find(
                 (j) => j.songId === track.id && (j.status === 'queued' || j.status === 'running'),
@@ -384,11 +386,11 @@ export function PlaylistPage() {
               return (
                 <div
                   key={track.id}
-                  className="grid min-h-[52px] grid-cols-[1.75rem_1fr_auto] items-center gap-x-3 px-3.5 py-1.5 transition-colors hover:bg-[var(--hover)] md:grid-cols-[1.75rem_1fr_10rem_5rem]"
+                  className="grid min-h-[52px] grid-cols-[1.75rem_1fr_auto] items-center gap-x-3 px-2 py-1.5 transition-colors hover:bg-[var(--hover)] md:grid-cols-[1.75rem_1fr_10rem_5rem]"
                 >
-                  <div className="text-center text-quiet tabular-nums">{i + 1}</div>
+                  <div className="text-right text-[13px] text-quiet tabular-nums">{i + 1}</div>
                   <div className="min-w-0">
-                    <div className={cx('truncate text-base leading-[21px]', matchingJob && 'text-accent')}>
+                    <div className="truncate text-base leading-[21px]">
                       {track.name}
                       {track.hasHiRes && (
                         <BadgeIcon className="ml-1.5 inline h-3.5 w-3.5 text-quiet" aria-label={t('playlist.hiRes')} />
@@ -419,7 +421,7 @@ export function PlaylistPage() {
                   </div>
                   <div className="flex items-center justify-end gap-1.5 text-right text-[13px] text-quiet tabular-nums">
                     {matchingJob && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-accent">
+                      <span className="text-[11px] font-semibold text-quiet">
                         {matchingJob.status === 'running'
                           ? `${formatPercent(matchingJob.progress)}`
                           : t('playlist.queued')}

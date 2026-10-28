@@ -158,8 +158,9 @@ export function TopBar({ health, loading }: Props) {
   )
 }
 
-// The bar's search, as nori's: a pill of a fixed width (so nothing beside it moves), its edge in the accent
-// while focused. What is typed is the search page's query; the answer shows on that page, under the bar.
+// The bar's search, as nori's: a capsule on the surface with a hairline edge, in the accent while it has the
+// keys, when it widens into the room left of it (the tabs keep their places). What is typed is the search
+// page's query; the answer shows on that page, under the bar.
 function SearchPill() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -180,8 +181,12 @@ function SearchPill() {
   }
 
   return (
-    <label className="field mx-1 flex !min-h-9 w-44 shrink-0 cursor-text items-center gap-2 !bg-[var(--veil)] !px-3 text-quiet lg:w-60 [&:not(:focus-within)]:!border-transparent">
-      <SearchIcon className="h-[17px] w-[17px] shrink-0" />
+    <label
+      className={cx(
+        'group/search mx-1 flex h-9 w-44 shrink-0 cursor-text items-center gap-2 rounded-full border border-[var(--hair)] bg-surface px-3 text-quiet transition-[width,background-color] duration-200 ease-out hover:bg-[color-mix(in_srgb,var(--ink)_5%,var(--surface))] focus-within:w-56 focus-within:border-accent focus-within:!bg-surface lg:w-48 lg:focus-within:w-72',
+      )}
+    >
+      <SearchIcon className={cx('h-[18px] w-[18px] shrink-0 group-focus-within/search:text-accent', onSearch && 'text-accent')} />
       <input
         type="search"
         value={q}

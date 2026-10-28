@@ -40,11 +40,11 @@ export function HomePage() {
               )}
             </div>
             {active.length === 0 ? (
-              <p className="grouped px-4 py-5 text-[15px] text-quiet">
+              <p className="px-2 py-2 text-[15px] text-quiet">
                 {t('home.noActiveDownloads')}
               </p>
             ) : (
-              <div className="grouped rows [--row-text:74px]">
+              <div className="rows [--row-text:68px]">
                 {active.map((j) => (
                   <QueueItem key={j.id} job={j} />
                 ))}
@@ -57,12 +57,12 @@ export function HomePage() {
               <CheckCircle2 /> {t('home.recentlyImported')}
             </h2>
             {recentList.length === 0 ? (
-              <p className="grouped flex items-center gap-2 px-4 py-5 text-[15px] text-quiet">
+              <p className="flex items-center gap-2 px-2 py-2 text-[15px] text-quiet">
                 <AlertCircle className="h-4 w-4" />
                 {t('home.noRecentDownloads')}
               </p>
             ) : (
-              <div className="grouped rows [--row-text:74px]">
+              <div className="rows [--row-text:68px]">
                 {recentList.map((j) => (
                   <QueueItem key={j.id} job={j} />
                 ))}

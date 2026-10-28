@@ -14,7 +14,6 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { api, type LibraryAlbum, type LibraryPlaylist, type LibrarySingle } from '../api/client'
-import { Card } from '../components/Card'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
@@ -326,11 +325,11 @@ export function LibraryPage() {
                 <Disc3 /> {t('library.albums')}
               </h2>
               {albums.length === 0 ? (
-                <Card className="px-4 py-5 text-[15px] text-quiet">{t('library.noAlbumsFound')}</Card>
+                <p className="px-2 py-2 text-[15px] text-quiet">{t('library.noAlbumsFound')}</p>
               ) : visibleAlbums.length === 0 ? (
-                <Card className="px-4 py-5 text-[15px] text-quiet">{t('library.noAlbumsMatch')}</Card>
+                <p className="px-2 py-2 text-[15px] text-quiet">{t('library.noAlbumsMatch')}</p>
               ) : (
-                <StaggeredList className="grouped rows [--row-text:68px]">
+                <StaggeredList className="rows [--row-text:60px]">
                   <AnimatePresence initial={false}>
                     {visibleAlbums.map((a) => (
                       <motion.div
@@ -345,7 +344,7 @@ export function LibraryPage() {
                           scale: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
                         }}
                       >
-                      <div className="flex min-h-[60px] items-center gap-3 py-2 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)]">
+                      <div className="flex min-h-[60px] items-center gap-3 py-2 pl-2 pr-1 transition-colors hover:bg-[var(--hover)]">
                         <ResolvedMediaLink
                           kind="album"
                           artistId={a.artistId}
@@ -399,11 +398,11 @@ export function LibraryPage() {
                 <ListOrdered /> {t('library.playlists')}
               </h2>
               {playlists.length === 0 ? (
-                <Card className="px-4 py-5 text-[15px] text-quiet">{t('library.noPlaylistsFound')}</Card>
+                <p className="px-2 py-2 text-[15px] text-quiet">{t('library.noPlaylistsFound')}</p>
               ) : visiblePlaylists.length === 0 ? (
-                <Card className="px-4 py-5 text-[15px] text-quiet">{t('library.noPlaylistsMatch')}</Card>
+                <p className="px-2 py-2 text-[15px] text-quiet">{t('library.noPlaylistsMatch')}</p>
               ) : (
-                <StaggeredList className="grouped rows [--row-text:68px]">
+                <StaggeredList className="rows [--row-text:60px]">
                   <AnimatePresence initial={false}>
                     {visiblePlaylists.map((p) => (
                       <motion.div
@@ -418,7 +417,7 @@ export function LibraryPage() {
                           scale: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
                         }}
                       >
-                        <div className="flex min-h-[60px] items-center gap-3 py-2 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)]">
+                        <div className="flex min-h-[60px] items-center gap-3 py-2 pl-2 pr-1 transition-colors hover:bg-[var(--hover)]">
                           <div className="plate flex h-10 w-10 shrink-0 items-center justify-center rounded-cover">
                             <ListOrdered className="h-5 w-5" />
                           </div>
@@ -445,11 +444,11 @@ export function LibraryPage() {
                 <Music2 /> {t('library.singles')}
               </h2>
               {singles.length === 0 ? (
-                <Card className="px-4 py-5 text-[15px] text-quiet">{t('library.noSinglesFound')}</Card>
+                <p className="px-2 py-2 text-[15px] text-quiet">{t('library.noSinglesFound')}</p>
               ) : visibleSingles.length === 0 ? (
-                <Card className="px-4 py-5 text-[15px] text-quiet">{t('library.noSinglesMatch')}</Card>
+                <p className="px-2 py-2 text-[15px] text-quiet">{t('library.noSinglesMatch')}</p>
               ) : (
-                <StaggeredList className="grouped rows [--row-text:68px]">
+                <StaggeredList className="rows [--row-text:60px]">
                   <AnimatePresence initial={false}>
                     {visibleSingles.map((s) => (
                       <motion.div
@@ -464,7 +463,7 @@ export function LibraryPage() {
                           scale: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
                         }}
                       >
-                      <div className="flex min-h-[60px] items-center gap-3 py-2 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)]">
+                      <div className="flex min-h-[60px] items-center gap-3 py-2 pl-2 pr-1 transition-colors hover:bg-[var(--hover)]">
                         <div className="plate flex h-10 w-10 shrink-0 items-center justify-center rounded-cover">
                           <Music2 className="h-5 w-5" />
                         </div>

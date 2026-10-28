@@ -233,7 +233,7 @@ export function SearchPage() {
 
           {catSet.has('songs') && (
             <Section title={t('search.songs')} empty={results.songs.length === 0}>
-              <StaggeredList className="grouped rows [--row-text:66px]">
+              <StaggeredList className="rows [--row-text:60px]">
                 {results.songs
                   .slice(0, cats.length === 1 ? 50 : 10)
                   .map((s) => (
@@ -330,7 +330,7 @@ function SongRow({ song }: { song: Song }) {
     isSongInLibrary(song) || (albumLookup ? isAlbumInLibrary(albumLookup) : false)
 
   return (
-    <div className="group relative flex min-h-[60px] items-center gap-3 py-2 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)]">
+    <div className="group relative flex min-h-[60px] items-center gap-3 py-2 pl-2 pr-1 transition-colors hover:bg-[var(--hover)]">
       <div className="plate relative h-10 w-10 shrink-0 overflow-hidden rounded-cover">
         {song.albumId ? (
           <Link to={`/album/${song.albumId}`}>

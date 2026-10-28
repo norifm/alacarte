@@ -45,8 +45,8 @@ export function ReleaseScopePicker({ value, onChange, compact = false, disabled 
                 : 'flex w-full items-start gap-3 rounded-card border-hair px-3 py-2.5 text-left transition-colors disabled:opacity-60',
               selected
                 ? compact
-                  ? 'bg-[var(--veil)] text-white'
-                  : 'border-[var(--hair)] bg-[var(--veil)] text-white'
+                  ? 'bg-[var(--chosen)] text-white'
+                  : 'border-[var(--hair)] bg-[var(--chosen)] text-white'
                 : compact
                   ? 'text-quiet hover:text-white'
                   : 'border-transparent text-white hover:bg-[var(--hover)]',

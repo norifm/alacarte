@@ -355,11 +355,11 @@ export function FollowingPage() {
             {error && <Badge variant="bad">{error}</Badge>}
 
             {loading ? (
-                <Card className="px-4 py-5 text-[15px] text-quiet">
+                <p className="px-2 py-2 text-[15px] text-quiet">
                     {activeTab === "artists"
                         ? t("following.loadingArtists")
                         : t("following.loadingPlaylists")}
-                </Card>
+                </p>
             ) : activeTab === "artists" ? (
                 artists.length === 0 ? (
                     <EmptyState
@@ -479,12 +479,12 @@ function EmptyState({
     linkHref?: string;
 }) {
     return (
-        <Card className="p-8 md:p-10">
-            <div className="max-w-xl space-y-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">
+        <div className="flex flex-col items-center px-5 py-8 text-center">
+            <div className="flex max-w-md flex-col items-center gap-2">
+                <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_.lucide]:h-7 [&_.lucide]:w-7">
                     {icon}
                 </div>
-                <h2 className="text-xl font-semibold tracking-[-0.4px] text-white">{title}</h2>
+                <h2 className="text-[19px] font-semibold tracking-[-0.2px] text-white">{title}</h2>
                 <p className="text-sm text-quiet">{body}</p>
                 <Link
                     to={linkHref}
@@ -493,7 +493,7 @@ function EmptyState({
                     {linkLabel}
                 </Link>
             </div>
-        </Card>
+        </div>
     );
 }
 
@@ -615,7 +615,7 @@ function PlaylistFollowCard({
                                     : t("following.waitingFirstSync")}
                             </div>
                             {activeJobCount > 0 && (
-                                <div className="mt-1 text-accent">
+                                <div className="mt-1 text-white">
                                     {t("following.tracksDownloading", { count: activeJobCount })}
                                 </div>
                             )}
@@ -634,7 +634,7 @@ function PlaylistFollowCard({
                                             console.error(err);
                                         }
                                     }}
-                                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--veil)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.1] disabled:opacity-40"
+                                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--plate)] px-3 text-[13px] font-medium text-[var(--plate-ink)] transition-opacity hover:opacity-85 disabled:opacity-40"
                                 >
                                     <Download className="h-3.5 w-3.5" />
                                     {t("following.downloadMissing")}
@@ -644,7 +644,7 @@ function PlaylistFollowCard({
                                 type="button"
                                 onClick={onSync}
                                 disabled={syncing}
-                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--veil)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.1] disabled:opacity-40"
+                                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--plate)] px-3 text-[13px] font-medium text-[var(--plate-ink)] transition-opacity hover:opacity-85 disabled:opacity-40"
                             >
                                 <RefreshCw
                                     className={
@@ -804,7 +804,7 @@ function ArtistFollowCard({
                         </div>
                         <div className="flex flex-wrap items-center justify-start gap-2 lg:shrink-0 lg:justify-end">
                             {isDownloading ? (
-                                <div className="inline-flex h-9 shrink-0 items-center gap-2 px-1 text-[13px] font-medium text-accent tabular-nums">
+                                <div className="inline-flex h-9 shrink-0 items-center gap-2 px-1 text-[13px] font-medium text-quiet tabular-nums">
                                     <div className="w-16">
                                         <div className="relative h-1 w-full overflow-hidden rounded-full bg-[var(--seek-track)]">
                                             <div
@@ -835,7 +835,7 @@ function ArtistFollowCard({
                                             console.error(err);
                                         }
                                     }}
-                                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--veil)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.1] disabled:opacity-40"
+                                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--plate)] px-3 text-[13px] font-medium text-[var(--plate-ink)] transition-opacity hover:opacity-85 disabled:opacity-40"
                                 >
                                     {t("following.downloadMissing")}
                                 </button>

@@ -53,7 +53,7 @@ export function QueueItem({ job, onMoveTop, dragHandle }: Props) {
       : null
 
   return (
-    <div className="flex min-h-[68px] items-center gap-3 py-2.5 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)]">
+    <div className="flex min-h-[68px] items-center gap-3 py-2.5 pl-2 pr-1 transition-colors hover:bg-[var(--hover)]">
       {dragHandle}
       <div className="plate h-12 w-12 shrink-0 overflow-hidden rounded-cover">
         {job.artworkUrl ? (
@@ -65,7 +65,7 @@ export function QueueItem({ job, onMoveTop, dragHandle }: Props) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 min-w-0">
           <StatusIcon className={`h-4 w-4 shrink-0 ${statusColor} ${spin}`} />
-          <div className={`truncate text-base leading-[21px] ${job.status === 'running' ? 'text-accent' : ''}`}>
+          <div className="truncate text-base leading-[21px]">
             {isPlaylist && playlistHref ? (
               <Link to={playlistHref} className="hover:text-white transition-colors">
                 {stripYear(job.albumTitle)}

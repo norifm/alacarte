@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Download, Clock3, Badge as BadgeIcon, Check } from 'lucide-react'
+import { Download, Badge as BadgeIcon, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -226,13 +226,13 @@ export function AlbumPage() {
 
   return (
     <div className="w-full">
-      <CoverWash template={album?.artworkTemplate} />
+      <CoverWash template={album?.artworkTemplate} color={album?.artworkColor} />
       {error && <Badge variant="bad">{error}</Badge>}
 
       {album && (
         <>
-          <div className="mb-7 flex flex-col items-center gap-[18px] text-center md:flex-row md:items-end md:gap-8 md:text-left">
-            <div className="aspect-square w-[min(260px,70vw)] shrink-0 overflow-hidden rounded-card plate md:w-60">
+          <div className="mb-[26px] flex flex-col items-center gap-[18px] text-center md:flex-row md:items-stretch md:gap-7 md:text-left">
+            <div className="aspect-square w-[min(260px,70vw)] shrink-0 overflow-hidden rounded-cover plate md:w-[250px]">
               {coverBig && (
                 <img
                   src={coverBig}
@@ -246,7 +246,7 @@ export function AlbumPage() {
                 />
               )}
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1 self-stretch md:self-auto">
+            <div className="flex min-w-0 flex-1 flex-col gap-1 self-stretch md:pt-14">
               <h1 className="text-[27px] leading-[1.15] md:text-[34px]">{stripYear(album.name)}</h1>
               <div className="text-[17px] font-medium text-quiet md:text-xl">
                 <ResolvedMediaLink
@@ -267,16 +267,8 @@ export function AlbumPage() {
                   ))}
                 </div>
               )}
-              <div className="caption mt-1">
-                {caption.map((part, i) => (
-                  <span key={i}>
-                    {i > 0 && ' · '}
-                    {part}
-                  </span>
-                ))}
-              </div>
 
-              <div className="mt-[18px] flex flex-col gap-3">
+              <div className="mt-[18px] flex flex-col gap-3 md:mt-auto md:pt-[18px]">
                 {existingJob &&
                   (existingJob.status === 'queued' || existingJob.status === 'running') && (
                     <ProgressBar
@@ -319,14 +311,18 @@ export function AlbumPage() {
             </div>
           </div>
 
-          <div className="mb-2 grid grid-cols-[1.75rem_1fr_auto_2.25rem] pl-3.5 pr-2 gap-x-3 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-quiet md:grid-cols-[1.75rem_1fr_10rem_5rem_2.25rem]">
-            <div className="text-center">#</div>
-            <div>{t('album.title')}</div>
-            <div className="hidden md:block">{t('album.artist')}</div>
-            <div className="text-right"><Clock3 className="inline h-3.5 w-3.5" /></div>
-            <div />
+          {/* The list's head, as nori's: what it holds, a hairline under. */}
+          <div className="caption flex min-h-12 items-center border-b border-[var(--hair)] px-2">
+            <span className="truncate">
+              {caption.map((part, i) => (
+                <span key={i}>
+                  {i > 0 && ' · '}
+                  {part}
+                </span>
+              ))}
+            </span>
           </div>
-          <div className="grouped rows [--row-text:54px]">
+          <div className="rows mt-1 [--row-text:48px]">
             {album.tracks.map((track) => {
               const tArtistId = track.artistName === album.artistName
                 ? primaryArtistId
@@ -345,11 +341,11 @@ export function AlbumPage() {
               return (
               <div
                 key={track.id}
-                className="group/track grid min-h-[52px] grid-cols-[1.75rem_1fr_auto_2.25rem] items-center gap-x-3 py-1.5 pl-3.5 pr-2 transition-colors hover:bg-[var(--hover)] md:grid-cols-[1.75rem_1fr_10rem_5rem_2.25rem]"
+                className="group/track grid min-h-[52px] grid-cols-[1.75rem_1fr_auto_2.25rem] items-center gap-x-3 py-1.5 pl-2 pr-1 transition-colors hover:bg-[var(--hover)] md:grid-cols-[1.75rem_1fr_10rem_5rem_2.25rem]"
               >
-                <div className="text-center text-quiet tabular-nums">{track.trackNumber ?? '—'}</div>
+                <div className="text-right text-[13px] text-quiet tabular-nums">{track.trackNumber ?? '—'}</div>
                 <div className={cx('min-w-0', notOut && 'opacity-50')}>
-                  <div className={cx('truncate text-base leading-[21px]', trackJob && 'text-accent')}>{track.name}</div>
+                  <div className="truncate text-base leading-[21px]">{track.name}</div>
                   <div className="truncate text-[13px] text-quiet md:hidden">
                     <ResolvedMediaLink
                       kind="artist"
@@ -427,7 +423,7 @@ export function AlbumPage() {
             })}
           </div>
           {album.recordLabel && (
-            <div className="mx-3.5 mt-4 text-[13px] text-quiet">
+            <div className="mt-4 px-2 text-[13px] text-quiet">
               {album.recordLabel}
               {album.copyright ? ` · ${album.copyright}` : ''}
             </div>

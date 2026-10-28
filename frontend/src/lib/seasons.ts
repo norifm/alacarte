@@ -199,13 +199,19 @@ function textEitherWay(color: Rgb, page: Rgb, fallback: Rgb): Rgb {
 
 /** The season's paper dyed with a cover's color: a page about one cover wears it. Ink and accent stay the
  *  season's, moved only where they would not read on it. */
+/** `c` brought to the depth of the paper (dark or light), keeping its hue and some of its saturation, and
+ *  mixed into it. A grey's hue is noise, so it gives no saturation. */
+function dyed(c: Rgb, paper: Rgb, dark: boolean): Rgb {
+  const [h, s] = toHsl(c)
+  const own = Math.min(1, Math.max(0, (chroma(c) - 0.006) / 0.01))
+  const toned: [number, number, number] = dark ? [h, Math.min(s * own, 0.45), 0.11] : [h, Math.min(0.5, Math.max(0.2 * own, s * own)), 0.86]
+  return blend(paper, fromHsl(toned), 0.6)
+}
+
 function dyedPalette(cover: Rgb, light: Palette, dark: Palette, darkTheme: boolean): Palette {
   const deep = darkTheme || luminance(cover) < 0.18
   const season = deep ? dark : light
-  const [h, s] = toHsl(cover)
-  const own = Math.min(1, Math.max(0, (chroma(cover) - 0.006) / 0.01))
-  const toned: [number, number, number] = deep ? [h, Math.min(s * own, 0.45), 0.11] : [h, Math.min(0.5, Math.max(0.2 * own, s * own)), 0.86]
-  const page = blend(season.page, fromHsl(toned), 0.6)
+  const page = dyed(cover, season.page, deep)
   const reads = (ink: Rgb) => contrast(ink, page) >= 9 && contrast(veil(ink, QUIET, page), page) >= 4.5
   const ink = reads(season.ink) ? season.ink : luminance(page) < 0.3 ? hex('F5F3F0') : hex('141210')
   const accent = textEitherWay(luminance(page) < DARK_PAGE ? dark.accent : light.accent, page, ink)
@@ -218,7 +224,12 @@ const css = (c: Rgb) => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('
 
 /** The CSS custom properties of a palette: its five roles and the shares of ink made from them. */
 function vars(pl: Palette, dark: boolean): Record<string, string> {
+  // A secondary button's plate and its ink, as nori dresses them: darker as the page gets paler, its ink
+  // the accent on a dark page and the ink on a pale one.
+  const paper = Math.min(1, Math.max(0, (luminance(pl.page) - 0.4) / 0.4))
   return {
+    '--plate': css(veil(pl.ink, 0.12 + 0.05 * paper, pl.page)),
+    '--plate-ink': css(blend(pl.accent, pl.ink, paper)),
     '--page': css(pl.page),
     '--surface': css(pl.surface),
     '--ink': css(pl.ink),
@@ -236,7 +247,7 @@ function vars(pl: Palette, dark: boolean): Record<string, string> {
 export type Look = { season: SeasonSetting; appearance: Appearance }
 
 const KEY = 'alacarte-look'
-const NAMES = ['--page', '--surface', '--ink', '--ink2', '--hair', '--outline', '--accent', '--on', '--on-accent', '--error', '--warn']
+const NAMES = ['--plate', '--plate-ink', '--page', '--surface', '--ink', '--ink2', '--hair', '--outline', '--accent', '--on', '--on-accent', '--error', '--warn']
 
 let look: Look = { season: 'follow', appearance: 'system' }
 let tint: string | null = null
@@ -313,6 +324,27 @@ export function setCoverTint(color: string | null | undefined) {
   if (next === tint) return
   tint = next
   apply(true)
+}
+
+/** A cover's wash (`rgba`, its pixels) dyed as the page it lies on is: each color brought to the depth of
+ *  the season's paper and mixed into it, or the page itself where quiet text would not read on it. Null in
+ *  Midnight, which wears no cover colors. */
+export function dyeWash(rgba: Uint8ClampedArray, cover: string): Uint8ClampedArray | null {
+  if (look.appearance === 'midnight' || !/^[0-9a-f]{6}$/i.test(cover)) return null
+  const darkTheme = isDark(look)
+  const light = palette(look.season, false, false)
+  const night = palette(look.season, true, false)
+  const deep = darkTheme || luminance(hex(cover)) < 0.18
+  const paper = (deep ? night : light).page
+  const page = dyedPalette(hex(cover), light, night, darkTheme)
+  const quiet = veil(page.ink, QUIET, page.page)
+  const out = new Uint8ClampedArray(rgba.length)
+  for (let i = 0; i < rgba.length; i += 4) {
+    const w = dyed([rgba[i], rgba[i + 1], rgba[i + 2]], paper, deep)
+    const c = contrast(quiet, w) >= 4.5 ? w : page.page
+    out.set([c[0], c[1], c[2], 255], i)
+  }
+  return out
 }
 
 /** The page about a cover closed: the season's paper comes back unless the next page brings a cover of

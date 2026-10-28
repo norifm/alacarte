@@ -28,7 +28,8 @@ import {
     ReleaseScopePicker,
     releaseScopeLabel,
 } from "../components/ReleaseScopePicker";
-import { useCoverTint, useLook } from "../hooks/useSeasons";
+import { useCoverTint } from "../hooks/useSeasons";
+import { CoverWash } from "../components/CoverWash";
 import { useLibraryPresence } from "../hooks/useLibraryPresence";
 import { useActivityFeed } from "../hooks/useActivityFeed";
 import { useAppSettings } from "../hooks/useAppSettings";
@@ -264,6 +265,7 @@ export function ArtistPage() {
             {error && <Badge variant="bad">{error}</Badge>}
             {artist && (
                 <>
+                    <CoverWash template={artist.artworkTemplate} color={artist.artworkColor} />
                     <ArtistBanner template={artist.artworkTemplate} />
                     <header className="flex min-h-[calc(max(340px,52vh)-110px)] flex-col items-center justify-end gap-4 pb-2 text-center md:min-h-[calc(max(420px,64vh)-110px)]">
                         <div>
@@ -466,10 +468,8 @@ export function ArtistPage() {
 // The artist's picture across the page's whole width, dissolving into the page's paper; it drifts up slower
 // than the page as the page scrolls and fades as it goes.
 function ArtistBanner({ template }: { template?: string | null }) {
-    const { appearance } = useLook();
     const [loaded, setLoaded] = useState(false);
     const ref = useRef<HTMLDivElement | null>(null);
-    const wash = artworkUrl(template, 32);
     const src = artworkUrl(template, 1400);
     useEffect(() => {
         const b = ref.current;
@@ -490,9 +490,6 @@ function ArtistBanner({ template }: { template?: string | null }) {
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[max(340px,52vh)] overflow-hidden will-change-transform md:h-[max(420px,64vh)]"
         >
-            {wash && appearance !== "midnight" && (
-                <img src={wash} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl" />
-            )}
             {src && (
                 <img
                     src={src}

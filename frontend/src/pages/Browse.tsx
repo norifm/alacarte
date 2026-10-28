@@ -13,7 +13,6 @@ import {
 import { AlbumCard } from "../components/AlbumCard";
 import { PlaylistCard } from "../components/PlaylistCard";
 import { SelectDownloadsModal } from "../components/SelectDownloadsModal";
-import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { StaggeredList, StaggeredItem } from "../components/StaggeredList";
@@ -57,7 +56,7 @@ function Header({ kind, item, children }: { kind: string; item: BrowseHeader; ch
     useCoverTint(item.artworkColor);
     return (
         <header className="pb-1 pt-6">
-            <CoverWash template={item.artworkTemplate} />
+            <CoverWash template={item.artworkTemplate} color={item.artworkColor} />
             <div className="caption mb-1">{kind}</div>
             <h1 className="text-[31px] leading-10 md:text-[34px] md:leading-[42px]">
                 {item.name}
@@ -77,7 +76,7 @@ function Section({ title, empty, emptyText, children }: { title: string; empty: 
         <section>
             <h2 className="section-title">{title}</h2>
             {empty ? (
-                <Card className="px-4 py-5 text-[15px] text-quiet">{emptyText}</Card>
+                <p className="px-2 py-2 text-[15px] text-quiet">{emptyText}</p>
             ) : (
                 children
             )}

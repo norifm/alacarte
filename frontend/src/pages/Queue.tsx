@@ -76,9 +76,9 @@ export function QueuePage() {
           <Card className="mb-2 p-4 text-sm text-amber-500">{t('queue.pausedNotice')}</Card>
         )}
         {active.length === 0 ? (
-          <Card className="px-4 py-5 text-[15px] text-quiet">{t('queue.nothingActive')}</Card>
+          <p className="px-2 py-2 text-[15px] text-quiet">{t('queue.nothingActive')}</p>
         ) : (
-          <div className="grouped rows [--row-text:74px]">
+          <div className="rows [--row-text:68px]">
             {running.map((j) => (
               <QueueItem key={j.id} job={j} />
             ))}
@@ -103,11 +103,11 @@ export function QueuePage() {
           {t('queue.historyCount', { count: recent.length })}
         </h2>
         {recent.length === 0 ? (
-          <Card className="px-4 py-5 text-[15px] text-quiet">
+          <p className="px-2 py-2 text-[15px] text-quiet">
             {t('queue.noCompletedDownloads')}
-          </Card>
+          </p>
         ) : (
-          <div className="grouped rows [--row-text:74px]">
+          <div className="rows [--row-text:68px]">
             {recent.slice(0, 50).map((j) => (
               <QueueItem key={j.id} job={j} />
             ))}

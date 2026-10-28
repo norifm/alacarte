@@ -1,20 +1,55 @@
+import { useEffect, useRef, useState } from 'react'
+
 import { artworkUrl } from '../api/client'
 import { useLook } from '../hooks/useSeasons'
+import { dyeWash } from '../lib/seasons'
 
-// Across the top of a page about one cover, behind its head: the cover drawn tiny and stretched, so it is
-// already soft, under the page's paper growing from 15 % to whole. Not in Midnight, which wears no
-// cover colors.
-export function CoverWash({ template, height = 440 }: { template?: string | null; height?: number }) {
-  const { appearance } = useLook()
-  const src = artworkUrl(template, 32)
-  if (!src || appearance === 'midnight') return null
+const SIDE = 32
+
+// Across the top of a page about one cover, behind its head: the cover drawn tiny and dyed as the page is
+// (nori's wash, each color brought to the season's paper), stretched so it is soft, under the page's paper
+// growing from 15 % to whole. Not in Midnight, which wears no cover colors.
+export function CoverWash({ template, color, height = 440 }: { template?: string | null; color?: string | null; height?: number }) {
+  const look = useLook()
+  const canvas = useRef<HTMLCanvasElement | null>(null)
+  const [shown, setShown] = useState(false)
+  const src = artworkUrl(template, SIDE)
+
+  useEffect(() => {
+    setShown(false)
+    if (!src || !color) return
+    let gone = false
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const c = canvas.current
+      const g = c?.getContext('2d', { willReadFrequently: true })
+      if (gone || !c || !g) return
+      g.drawImage(img, 0, 0, SIDE, SIDE)
+      let washed: Uint8ClampedArray | null = null
+      try {
+        washed = dyeWash(g.getImageData(0, 0, SIDE, SIDE).data, color)
+      } catch {
+        /* a cover that cannot be read: no wash */
+      }
+      if (!washed) return
+      g.putImageData(new ImageData(new Uint8ClampedArray(washed), SIDE, SIDE), 0, 0)
+      setShown(true)
+    }
+    img.src = src
+    return () => {
+      gone = true
+    }
+  }, [src, color, look])
+
+  if (!src || !color || look.appearance === 'midnight') return null
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-0 -z-10 overflow-hidden animate-[dots-in_400ms_ease-out]"
+      className={`pointer-events-none absolute inset-x-0 top-0 -z-10 overflow-hidden transition-opacity duration-[400ms] ease-out ${shown ? 'opacity-100' : 'opacity-0'}`}
       style={{ height }}
     >
-      <img src={src} alt="" className="h-full w-full scale-125 object-cover blur-2xl" />
+      <canvas ref={canvas} width={SIDE} height={SIDE} className="h-full w-full scale-110 blur-xl" />
       <div
         className="absolute inset-0"
         style={{
