@@ -18,7 +18,6 @@ alacarte is a browser-based tool that downloads lossless audio from Apple Music,
 - **Library awareness:** what's already in your library is marked, so nothing is downloaded twice.
 - **Explicit / clean:** Apple lists both as separate albums; pick one in Settings, or show both.
 - **Following:** follow an artist to download new releases as they drop, or a playlist to download what's added to it. The check runs on a schedule that scales with how many you follow, to stay under Apple's limits.
-- **Seasons:** the look follows the old Japanese calendar through spring, summer, autumn and winter, in day, night or midnight. Pages about an album, artist or playlist wear its cover's colors.
 
 Settings → Library maintenance fixes artist credits, lyrics and tags for tracks that are already in your library.
 
@@ -26,7 +25,7 @@ Output lands in `/music/<Artist>/<Album>/01. Track.flac` (or `/music/<Artist>/Si
 
 ---
 
-## On the desktop and on your phone
+## Beautiful and functional. Not just on the desktop.
 
 <table style="border: none;">
   <tr>
