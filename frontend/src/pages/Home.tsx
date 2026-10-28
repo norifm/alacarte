@@ -18,7 +18,7 @@ export function HomePage() {
   const [abortingAll, setAbortingAll] = useState(false)
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div className="flex w-full flex-col gap-[26px]">
       <PageTitle>{t('home.title')}</PageTitle>
 
       {loading ? (
@@ -26,7 +26,7 @@ export function HomePage() {
           <Dots />
         </div>
       ) : (
-        <div className="space-y-[26px]">
+        <div className="flex flex-col gap-[26px]">
           <section>
             <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
               <h2 className="section-title !mb-0">

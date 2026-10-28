@@ -225,7 +225,7 @@ export function PlaylistPage() {
     : true
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="w-full">
       <CoverWash template={playlist?.artworkTemplate} />
       {error && <Badge variant="bad">{error}</Badge>}
 

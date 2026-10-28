@@ -54,7 +54,7 @@ export function StatusPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-[26px]">
+    <div className="flex w-full flex-col gap-[26px]">
       <PageTitle>{t('status.title')}</PageTitle>
 
       <section className="grid gap-3 md:grid-cols-3">

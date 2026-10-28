@@ -26,6 +26,7 @@ import {
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { PageTitle } from "../components/PageTitle";
 import { StaggeredItem, StaggeredList } from "../components/StaggeredList";
 import {
     useActivityFeed,
@@ -237,7 +238,7 @@ export function FollowingPage() {
     };
 
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-5">
+        <div className="flex w-full flex-col gap-[26px]">
             <div className="messages">
             <AnimatePresence>
                 {queuedCount > 0 && (
@@ -271,39 +272,10 @@ export function FollowingPage() {
             </AnimatePresence>
             </div>
 
-            <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div className="space-y-2">
-                    <h1 className="text-[31px] leading-10 md:text-[34px] md:leading-[42px]">
-                        {t("following.title")}
-                    </h1>
-                    <p className="max-w-2xl text-[15px] text-quiet">
-                        {t("following.subtitle")}
-                    </p>
-                    <div
-                        className="flex flex-wrap gap-2 pt-1"
-                        role="group"
-                        aria-label={t("following.sectionAriaLabel")}
-                    >
-                        <FollowTabPill
-                            label={t("following.tabArtists")}
-                            icon={UserRoundCheck}
-                            active={activeTab === "artists"}
-                            onClick={() => setActiveTab("artists")}
-                            count={artists.length}
-                        />
-                        <FollowTabPill
-                            label={t("following.tabPlaylists")}
-                            icon={ListMusic}
-                            active={activeTab === "playlists"}
-                            onClick={() => setActiveTab("playlists")}
-                            count={playlists.length}
-                        />
-                    </div>
-                </div>
-                <div
-                    className="flex w-full flex-wrap items-center justify-start gap-2 md:w-auto md:justify-end"
-                    aria-busy={activeJobsTotal > 0}
-                >
+            <PageTitle
+                sub={t("following.subtitle")}
+                aside={
+                    <>
                     <Button
                         onClick={runCheck}
                         disabled={checking || loading}
@@ -354,8 +326,31 @@ export function FollowingPage() {
                             )}
                         </Button>
                     )}
-                </div>
-            </section>
+                    </>
+                }
+            >
+                {t("following.title")}
+            </PageTitle>
+                    <div
+                        className="-mt-3.5 flex flex-wrap gap-1"
+                        role="group"
+                        aria-label={t("following.sectionAriaLabel")}
+                    >
+                        <FollowTabPill
+                            label={t("following.tabArtists")}
+                            icon={UserRoundCheck}
+                            active={activeTab === "artists"}
+                            onClick={() => setActiveTab("artists")}
+                            count={artists.length}
+                        />
+                        <FollowTabPill
+                            label={t("following.tabPlaylists")}
+                            icon={ListMusic}
+                            active={activeTab === "playlists"}
+                            onClick={() => setActiveTab("playlists")}
+                            count={playlists.length}
+                        />
+                    </div>
 
             {error && <Badge variant="bad">{error}</Badge>}
 

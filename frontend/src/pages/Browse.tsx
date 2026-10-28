@@ -90,7 +90,7 @@ export function CuratorPage() {
     const { id } = useParams<{ id: string }>();
     const { data, error } = useBrowse(id, api.curator);
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-5">
+        <div className="flex w-full flex-col gap-[26px]">
             {error && <Badge variant="bad">{error}</Badge>}
             {data && (
                 <>
@@ -149,7 +149,7 @@ export function LabelPage() {
     );
 
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-5">
+        <div className="flex w-full flex-col gap-[26px]">
             <div className="messages">
             <AnimatePresence>
                 {(queuedStats.queued > 0 || queuedStats.skippedExisting > 0) && (

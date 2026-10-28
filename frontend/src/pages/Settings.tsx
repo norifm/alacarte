@@ -167,7 +167,7 @@ export function SettingsPage() {
         )}
       </AnimatePresence>
 
-      <StaggeredList className="mx-auto w-full max-w-3xl">
+      <StaggeredList className="flex w-full flex-col gap-[26px]">
         <PageTitle>{t('nav.settings')}</PageTitle>
 
         <StaggeredItem>
@@ -623,7 +623,7 @@ function AppearanceSection({
   })
   return (
     <section>
-      <h2 className="group-label flex items-center gap-2 [&_.lucide]:h-3.5 [&_.lucide]:w-3.5">
+      <h2 className="group-label !mt-0 flex items-center gap-2 [&_.lucide]:h-3.5 [&_.lucide]:w-3.5">
         <Palette />
         {t('settings.appearance')}
       </h2>
@@ -708,7 +708,7 @@ function SettingsCard({
 }) {
   return (
     <section>
-      <h2 className="group-label flex items-center gap-2 [&_.lucide]:h-3.5 [&_.lucide]:w-3.5">
+      <h2 className="group-label !mt-0 flex items-center gap-2 [&_.lucide]:h-3.5 [&_.lucide]:w-3.5">
         {icon}
         {title}
       </h2>

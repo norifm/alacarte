@@ -170,7 +170,7 @@ export function ArtistPage() {
     };
 
     return (
-        <div className="mx-auto w-full max-w-7xl">
+        <div className="w-full">
             <div className="messages">
             <AnimatePresence>
                 {(queuedCount > 0 || queuedSkipped > 0) && (
@@ -473,15 +473,16 @@ function ArtistBanner({ template }: { template?: string | null }) {
     const src = artworkUrl(template, 1400);
     useEffect(() => {
         const b = ref.current;
-        if (!b) return;
+        const page = document.getElementById("main");
+        if (!b || !page) return;
         const moved = () => {
-            const top = window.scrollY;
+            const top = page.scrollTop;
             b.style.transform = `translateY(${(top * 0.55).toFixed(1)}px)`;
             b.style.opacity = String(1 + Math.max(-0.8, -top / b.offsetHeight));
         };
         moved();
-        window.addEventListener("scroll", moved, { passive: true });
-        return () => window.removeEventListener("scroll", moved);
+        page.addEventListener("scroll", moved, { passive: true });
+        return () => page.removeEventListener("scroll", moved);
     }, []);
     return (
         <div

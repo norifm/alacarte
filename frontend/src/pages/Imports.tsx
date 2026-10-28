@@ -7,6 +7,7 @@ import { api, type ImportedFile } from "../api/client";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { PageTitle } from "../components/PageTitle";
 import { Dots } from "../components/Dots";
 import { StaggeredItem, StaggeredList } from "../components/StaggeredList";
 import i18n from "../i18n";
@@ -100,19 +101,13 @@ export function ImportsPage() {
     };
 
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-5">
+        <div className="flex w-full flex-col gap-[26px]">
             {error && <Badge variant="bad">{error}</Badge>}
 
-            <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div className="space-y-2">
-                    <h1 className="text-[31px] leading-10 md:text-[34px] md:leading-[42px]">
-                        {t("imports.title")}
-                    </h1>
-                    <p className="max-w-2xl text-[15px] text-quiet">
-                        {t("imports.subtitle")}
-                    </p>
-                </div>
-                <div className="flex w-full flex-wrap items-center justify-start gap-2 md:w-auto md:justify-end">
+            <PageTitle
+                sub={t("imports.subtitle")}
+                aside={
+                    <>
                     <Button
                         onClick={pickFiles}
                         disabled={uploading}
@@ -127,8 +122,11 @@ export function ImportsPage() {
                             ? t("imports.adding")
                             : t("imports.add")}
                     </Button>
-                </div>
-            </section>
+                    </>
+                }
+            >
+                {t("imports.title")}
+            </PageTitle>
 
             <input
                 ref={inputRef}

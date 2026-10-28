@@ -169,7 +169,7 @@ export function SearchPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-[26px]">
+    <div className="flex w-full flex-col gap-[26px]">
       <label className="field flex items-center gap-2 !px-3.5 text-quiet">
         <SearchIcon className="h-[19px] w-[19px] shrink-0" />
         <input

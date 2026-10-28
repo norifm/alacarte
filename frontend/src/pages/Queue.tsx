@@ -61,7 +61,7 @@ export function QueuePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-[26px]">
+    <div className="flex w-full flex-col gap-[26px]">
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="section-title !mb-0">

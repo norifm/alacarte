@@ -238,9 +238,16 @@ export function LibraryPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-[26px]">
-      <header>
+    <div className="flex w-full flex-col gap-[26px]">
+      <header className="flex flex-col gap-[26px]">
         <PageTitle
+          sub={
+            <span className="caption">
+              {t('library.albumCount', { count: totals.albums })} ·{' '}
+              {t('library.playlistCount', { count: totals.playlists })} ·{' '}
+              {t('library.singleCount', { count: totals.singles })}
+            </span>
+          }
           aside={
             <Button onClick={() => load(true)}>
               <RefreshCw /> {t('library.refresh')}
@@ -249,11 +256,6 @@ export function LibraryPage() {
         >
           {t('nav.downloads')}
         </PageTitle>
-        <div className="caption -mt-3 mb-4">
-          {t('library.albumCount', { count: totals.albums })} ·{' '}
-          {t('library.playlistCount', { count: totals.playlists })} ·{' '}
-          {t('library.singleCount', { count: totals.singles })}
-        </div>
 
         <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
           <div>
@@ -317,7 +319,7 @@ export function LibraryPage() {
             key="content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="space-y-[26px]"
+            className="flex flex-col gap-[26px]"
           >
             <section>
               <h2 className="section-title">

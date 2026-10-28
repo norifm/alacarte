@@ -225,7 +225,7 @@ export function AlbumPage() {
     : []
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="w-full">
       <CoverWash template={album?.artworkTemplate} />
       {error && <Badge variant="bad">{error}</Badge>}
 

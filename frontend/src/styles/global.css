@@ -41,7 +41,6 @@
   --r-tile: 18px;
   --r-sheet: 26px;
   --hairline: 0.5px;
-  --gutter: 40px;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-snappy: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -63,6 +62,11 @@
 :root.tinting,
 :root.tinting body {
   transition: --page 340ms, --surface 340ms, --ink 340ms, --ink2 340ms, --hair 340ms, --outline 340ms, --accent 340ms, --on-accent 340ms;
+}
+
+/* The side margin every page shares: the top bar's on a wide window, so the column below it is its width. */
+:root {
+  --gutter: 16px;
 }
 
 @media (max-width: 767px) {
@@ -92,17 +96,19 @@ body,
   -webkit-tap-highlight-color: transparent;
 }
 
-html {
-  scrollbar-gutter: stable;
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+#main {
+  scrollbar-gutter: stable both-edges;
 }
 
 * {
   scrollbar-color: color-mix(in srgb, var(--ink) 18%, transparent) transparent;
   scrollbar-width: thin;
-}
-
-body {
-  overflow-y: scroll;
 }
 
 button,

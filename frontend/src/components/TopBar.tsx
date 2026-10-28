@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import {
   Activity,
-  ArrowLeft,
   Cloud,
   FileUp,
   Home as HomeIcon,
@@ -20,8 +19,6 @@ import { Modal } from './Modal'
 import { api, type HealthReport } from '../api/client'
 import { cx } from '../lib/cx'
 
-const ROOT_ROUTES = new Set(['/', '/library'])
-
 type Props = {
   health: HealthReport | null
   loading: boolean
@@ -35,14 +32,12 @@ type Tab = { to: string; end?: boolean; icon: React.ComponentType<{ className?: 
 // the same outline.
 export function TopBar({ health, loading }: Props) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmSignOut, setConfirmSignOut] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
 
   const wide = useWide()
-  const atRoot = ROOT_ROUTES.has(location.pathname)
   const showHealth = location.pathname !== '/settings' && location.pathname !== '/status'
 
   const tabs: Tab[] = [
@@ -66,11 +61,6 @@ export function TopBar({ health, loading }: Props) {
     window.location.reload()
   }
 
-  const back = !atRoot && (
-    <button type="button" onClick={() => navigate(-1)} className="glyph h-9 w-9" aria-label="Back">
-      <ArrowLeft className="h-5 w-5" />
-    </button>
-  )
 
   const menu = (
     <NavMenu
@@ -87,7 +77,6 @@ export function TopBar({ health, loading }: Props) {
     <>
       {/* A wide window: the bar along the top. */}
       <header className="chrome fixed left-1/2 top-3 z-30 hidden h-12 w-[min(1040px,calc(100%-32px))] -translate-x-1/2 items-center gap-0.5 rounded-full px-1.5 md:flex">
-        {back}
         <nav className="flex min-w-0 flex-1 items-center gap-0.5" aria-label={t('nav.browse')}>
           {tabs.map((tab, i) => (
             <span key={tab.to} className="contents">
@@ -125,12 +114,7 @@ export function TopBar({ health, loading }: Props) {
         <div className="relative">{wide && menu}</div>
       </header>
 
-      {/* A phone: a way back over the page, and the dock at the bottom. */}
-      {!atRoot && (
-        <div className="chrome fixed left-3 top-[max(12px,env(safe-area-inset-top))] z-30 rounded-full md:hidden">
-          {back}
-        </div>
-      )}
+      {/* A phone: the dock at the bottom. */}
       <div className="chrome fixed inset-x-2.5 bottom-[max(6px,env(safe-area-inset-bottom))] z-30 overflow-visible rounded-tile md:hidden">
         {showHealth && (
           <>

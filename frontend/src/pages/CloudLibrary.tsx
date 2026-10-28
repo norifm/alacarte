@@ -32,6 +32,7 @@ import { PlaylistCard } from '../components/PlaylistCard'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import { PageTitle } from '../components/PageTitle'
 import { Dots } from '../components/Dots'
 import { DownloadButton } from '../components/DownloadButton'
 import { Modal } from '../components/Modal'
@@ -301,7 +302,7 @@ export function CloudLibraryPage() {
 
   if (healthLoading) {
     return (
-      <div className="mx-auto flex w-full max-w-7xl justify-center py-16">
+      <div className="flex w-full justify-center py-16">
         <Dots />
       </div>
     )
@@ -319,7 +320,7 @@ export function CloudLibraryPage() {
   const totalLabel = activeState.total !== null ? activeState.total : activeState.items.length
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-5">
+    <div className="flex w-full flex-col gap-[26px]">
       <div className="messages">
       <AnimatePresence>
         {bulkBanner && (
@@ -358,13 +359,9 @@ export function CloudLibraryPage() {
       </AnimatePresence>
       </div>
 
-      <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-[31px] leading-10 md:text-[34px] md:leading-[42px]">
-            {t('cloudLibrary.pageTitle')}
-          </h1>
-        </div>
-        <div className="flex w-full flex-wrap items-center justify-start gap-2 md:w-auto md:justify-end">
+      <PageTitle
+        aside={
+          <>
           <Button onClick={refresh} disabled={activeState.loading} className="whitespace-nowrap">
             <RefreshCw className={activeState.loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
             {t('cloudLibrary.refresh')}
@@ -391,10 +388,13 @@ export function CloudLibraryPage() {
               )}
             </Button>
           )}
-        </div>
-      </section>
+          </>
+        }
+      >
+        {t('cloudLibrary.pageTitle')}
+      </PageTitle>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('cloudLibrary.librarySectionAriaLabel')}>
+      <div className="-mt-3.5 flex flex-wrap gap-1" role="group" aria-label={t('cloudLibrary.librarySectionAriaLabel')}>
         <CatPill
           label={t('cloudLibrary.albumsLabel')}
           icon={Disc3}
@@ -529,7 +529,7 @@ function NotConnectedScreen({
         ? error || t('cloudLibrary.probeFailedBody')
         : t('cloudLibrary.connectAccountBody')
   return (
-    <div className="mx-auto w-full max-w-3xl pt-2">
+    <div className="w-full">
       <Card className="p-8 md:p-10">
         <div className="space-y-4">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center text-quiet">

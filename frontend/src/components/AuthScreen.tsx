@@ -167,9 +167,9 @@ export function AuthScreen({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="min-h-dvh w-full flex items-center justify-center px-4 py-10"
+      className="fixed inset-0 flex overflow-y-auto px-4 py-10"
     >
-      <div className="w-full max-w-[26rem]">
+      <div className="m-auto w-full max-w-[26rem]">
         <motion.div
           layout
           transition={{ layout: { type: 'spring', stiffness: 380, damping: 32 } }}

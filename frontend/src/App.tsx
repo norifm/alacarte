@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Route, Routes, useLocation } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 
@@ -100,7 +101,7 @@ export default function App() {
 
   if (gate.status === 'loading') {
     return (
-      <div className="min-h-dvh w-full flex items-center justify-center px-4">
+      <div className="fixed inset-0 flex items-center justify-center px-4">
         {bootError ? (
           <div className="w-full max-w-md p-5 text-center space-y-3">
             <p className="text-sm font-semibold text-rose-500">{t('app.couldNotLoadAuthState')}</p>
@@ -136,6 +137,7 @@ export default function App() {
 function AuthedApp() {
   const { health, loading } = useHealth()
   const location = useLocation()
+  const navigate = useNavigate()
   const settings = useAppSettings()
 
   // The UI-language setting lives in backend settings (so it follows the
@@ -151,14 +153,25 @@ function AuthedApp() {
     if (settings) setLook({ season: settings.season, appearance: settings.appearance })
   }, [settings?.season, settings?.appearance])
 
+  // Each page opens at its top.
+  const mainRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0)
+  }, [location.pathname])
+
   return (
-    <div className="min-h-dvh w-full flex flex-col">
+    <>
       <TopBar health={health} loading={loading} />
 
-
-      {/* The page scrolls under the chrome; this keeps it clear of it at rest. */}
-      <main className="relative isolate flex-1 min-w-0 flex flex-col">
-        <div className="flex-1 px-[var(--gutter)] pt-[calc(max(12px,env(safe-area-inset-top))+52px)] pb-[calc(var(--dock-h,128px)+env(safe-area-inset-bottom))] md:pt-[84px] md:pb-12">
+      {/* The page scrolls inside here, under the chrome, as nori's does: the document itself never scrolls,
+          so a phone's toolbars stay put and the dock never moves. The column is the top bar's width. */}
+      <main ref={mainRef} id="main" className="fixed inset-0 isolate overflow-y-auto overscroll-contain">
+        <div className="mx-auto w-full max-w-[calc(1040px+2*var(--gutter))] px-[var(--gutter)] pb-[calc(140px+env(safe-area-inset-bottom))] pt-[max(20px,env(safe-area-inset-top))] md:pb-12 md:pt-[84px]">
+          {DETAIL.test(location.pathname) && (
+            <button type="button" onClick={() => navigate(-1)} className="glyph -ml-3 -mt-1.5 mb-1.5" aria-label="Back">
+              <ArrowLeft className="h-[22px] w-[22px]" />
+            </button>
+          )}
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<PageWrapper><HomePage /></PageWrapper>} />
@@ -179,7 +192,10 @@ function AuthedApp() {
           </AnimatePresence>
         </div>
       </main>
-    </div>
+    </>
   )
 }
+
+/** Pages reached from another one, which offer a way back; the sections in the chrome do not. */
+const DETAIL = /^\/(album|artist|playlist|curator|label)\//
 
