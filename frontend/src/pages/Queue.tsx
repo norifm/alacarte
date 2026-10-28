@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Reorder, useDragControls } from 'framer-motion'
-import { GripVertical, Pause, Play } from 'lucide-react'
+import { Drag as GripVertical, Pause, Play } from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type Job } from '../api/client'

@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { X, ListChecks, Disc3, Music2, Album as AlbumIcon } from 'lucide-react'
+import {
+  Xmark as X,
+  TaskList as ListChecks,
+  CompactDisc as Disc3,
+  MusicNote as Music2,
+  CompactDisc as AlbumIcon,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import { api, artworkUrl, type Album, type QualityPreference } from '../api/client'

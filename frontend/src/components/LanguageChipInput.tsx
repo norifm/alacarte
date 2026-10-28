@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { X } from 'lucide-react'
+import { Xmark as X } from 'iconoir-react'
 
 import { cx } from '../lib/cx'
 

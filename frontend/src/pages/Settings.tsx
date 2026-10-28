@@ -1,24 +1,25 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
+  WarningCircle as AlertCircle,
+  NavArrowDown as ChevronDown,
+  NavArrowUp as ChevronUp,
   Copy,
   Lock,
   Key,
   Globe,
-  FolderOpen,
-  ListPlus,
-  MicVocal,
-  Plug,
-  Radar,
+  Folder as FolderOpen,
+  PlaylistPlus as ListPlus,
+  QuoteMessage as MicVocal,
+  Server as Plug,
+  AntennaSignal,
+  Antenna as Radar,
   ShieldCheck,
-  Tags,
+  Label as Tags,
   User as UserIcon,
-  Users,
-  Wrench,
+  Community as Users,
+  Tools as Wrench,
   Palette,
-} from 'lucide-react'
+} from 'iconoir-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 
@@ -539,7 +540,7 @@ export function SettingsPage() {
         </StaggeredItem>
 
         <StaggeredItem>
-          <SettingsCard icon={<Plug className="h-4 w-4" />} title={t('settings.cardAppleApi')}>
+          <SettingsCard icon={<AntennaSignal className="h-4 w-4" />} title={t('settings.cardAppleApi')}>
             <AppleStatusCard flash={flash} />
           </SettingsCard>
         </StaggeredItem>
@@ -623,7 +624,7 @@ function AppearanceSection({
   })
   return (
     <section>
-      <h2 className="group-label !mt-0 flex items-center gap-2 [&_.lucide]:h-3.5 [&_.lucide]:w-3.5">
+      <h2 className="group-label !mt-0 flex items-center gap-2 [&_svg]:h-3.5 [&_svg]:w-3.5">
         <Palette />
         {t('settings.appearance')}
       </h2>
@@ -708,7 +709,7 @@ function SettingsCard({
 }) {
   return (
     <section>
-      <h2 className="group-label !mt-0 flex items-center gap-2 [&_.lucide]:h-3.5 [&_.lucide]:w-3.5">
+      <h2 className="group-label !mt-0 flex items-center gap-2 [&_svg]:h-3.5 [&_svg]:w-3.5">
         {icon}
         {title}
       </h2>

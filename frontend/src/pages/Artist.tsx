@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-    ListChecks,
-    Radar,
-    UserRoundCheck,
-    UserRoundMinus,
-    X,
-} from "lucide-react";
+  TaskList as ListChecks,
+  Antenna as Radar,
+  UserBadgeCheck as UserRoundCheck,
+  UserXmark as UserRoundMinus,
+  Xmark as X,
+} from "iconoir-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 

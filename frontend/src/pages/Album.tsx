@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Download, Badge as BadgeIcon, Check } from 'lucide-react'
+import { Download, Hd as BadgeIcon, Check } from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import {

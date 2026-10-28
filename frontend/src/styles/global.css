@@ -129,11 +129,6 @@ h1 {
   letter-spacing: -0.3px;
 }
 
-/* Iconoir's weight: every outline glyph at one 1.5 stroke. */
-.lucide {
-  stroke-width: 1.5;
-}
-
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -315,7 +310,7 @@ input[type='range']::-moz-range-thumb {
     letter-spacing: -0.2px;
   }
 
-  .section-title > .lucide {
+  .section-title > svg {
     width: 20px;
     height: 20px;
     color: var(--ink2);
@@ -438,7 +433,7 @@ input[type='range']::-moz-range-thumb {
     font-size: 14px;
   }
 
-  .pill > .lucide {
+  .pill > svg {
     width: 18px;
     height: 18px;
   }
@@ -563,7 +558,7 @@ input[type='range']::-moz-range-thumb {
     background: var(--hover);
   }
 
-  .popover-item > .lucide {
+  .popover-item > svg {
     width: 18px;
     height: 18px;
     color: var(--ink2);

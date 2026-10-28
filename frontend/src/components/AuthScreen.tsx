@@ -1,6 +1,11 @@
 import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import { AnimatePresence, motion, useAnimationControls } from 'framer-motion'
-import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react'
+import {
+  Eye,
+  EyeClosed as EyeOff,
+  Lock,
+  ShieldCheck,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from './Button'
@@ -178,7 +183,7 @@ export function AuthScreen({
         <motion.div animate={shakeControls} className="p-8">
           <div className="flex flex-col items-center gap-3 mb-7">
             <div className="flex h-12 w-12 items-center justify-center text-quiet" aria-hidden>
-              {isSetup ? <ShieldCheck size={28} /> : <Lock size={26} />}
+              {isSetup ? <ShieldCheck className="h-7 w-7" /> : <Lock className="h-[26px] w-[26px]" />}
             </div>
             <div className="text-center">
               <h1 className="text-[27px] leading-8 text-white">
@@ -389,7 +394,7 @@ const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className="block"
           >
-            {show ? <EyeOff size={18} /> : <Eye size={18} />}
+            {show ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
           </motion.span>
         </AnimatePresence>
       </button>

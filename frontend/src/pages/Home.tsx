@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { CheckCircle2, AlertCircle, Loader2, XCircle } from 'lucide-react'
+import {
+  CheckCircle as CheckCircle2,
+  WarningCircle as AlertCircle,
+  RefreshDouble as Loader2,
+  XmarkCircle as XCircle,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import { api } from '../api/client'

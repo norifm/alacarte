@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Download, Loader2, AlertCircle } from 'lucide-react'
+import {
+  Check,
+  Download,
+  RefreshDouble as Loader2,
+  WarningCircle as AlertCircle,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import type { Job } from '../api/client'

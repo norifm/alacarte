@@ -3,16 +3,16 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
-    CheckCircle2,
-    Clock,
-    ListMusic,
-    RefreshCw,
-    UserRoundCheck,
-    X,
-    Loader2,
-    Download,
-    AlertTriangle,
-} from "lucide-react";
+  CheckCircle as CheckCircle2,
+  Clock,
+  Playlist as ListMusic,
+  Refresh as RefreshCw,
+  UserBadgeCheck as UserRoundCheck,
+  Xmark as X,
+  RefreshDouble as Loader2,
+  Download,
+  WarningTriangle as AlertTriangle,
+} from "iconoir-react";
 
 import {
     api,
@@ -481,7 +481,7 @@ function EmptyState({
     return (
         <div className="flex flex-col items-center px-5 py-8 text-center">
             <div className="flex max-w-md flex-col items-center gap-2">
-                <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_.lucide]:h-7 [&_.lucide]:w-7">
+                <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_svg]:h-7 [&_svg]:w-7">
                     {icon}
                 </div>
                 <h2 className="text-[19px] font-semibold tracking-[-0.2px] text-white">{title}</h2>

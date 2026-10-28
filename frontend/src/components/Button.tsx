@@ -20,7 +20,7 @@ export function Button({
     <button
       type="button"
       className={cx(
-        'inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-[background,color,opacity] duration-150 disabled:cursor-default disabled:opacity-40 [&>.lucide]:h-[18px] [&>.lucide]:w-[18px]',
+        'inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-[background,color,opacity] duration-150 disabled:cursor-default disabled:opacity-40 [&>svg]:h-[18px] [&>svg]:w-[18px]',
         active
           ? 'border-hair border-[var(--hair)] bg-surface text-white'
           : variant === 'primary'

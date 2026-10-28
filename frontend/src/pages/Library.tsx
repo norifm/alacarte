@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  BookAudio,
-  FileText,
-  Music2,
-  Disc3,
-  RefreshCw,
-  Trash2,
-  AlertCircle,
+  CompactDisc as BookAudio,
+  QuoteMessage as FileText,
+  MusicNote as Music2,
+  CompactDisc as Disc3,
+  Refresh as RefreshCw,
+  Trash as Trash2,
+  WarningCircle as AlertCircle,
   Search,
-  ListFilter,
-  ListOrdered,
-} from 'lucide-react'
+  Filter as ListFilter,
+  NumberedListLeft as ListOrdered,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type LibraryAlbum, type LibraryPlaylist, type LibrarySingle } from '../api/client'

@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Clock, FileUp, Loader2, RefreshCw, X } from "lucide-react";
+import {
+  Clock,
+  PageUp as FileUp,
+  RefreshDouble as Loader2,
+  Refresh as RefreshCw,
+  Xmark as X,
+} from "iconoir-react";
 
 import { api, type ImportedFile } from "../api/client";
 import { Badge } from "../components/Badge";

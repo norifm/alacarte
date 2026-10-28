@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Clock3, Badge as BadgeIcon, Download, ListMusic, ListPlus, ListX, X } from 'lucide-react'
+import {
+  Clock as Clock3,
+  Hd as BadgeIcon,
+  Download,
+  Playlist as ListMusic,
+  PlaylistPlus as ListPlus,
+  MinusCircle as ListX,
+  Xmark as X,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import {

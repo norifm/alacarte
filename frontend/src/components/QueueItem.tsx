@@ -1,6 +1,15 @@
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { X, CheckCircle2, AlertCircle, Loader2, Clock, CircleSlash, ArrowUpToLine, CalendarClock } from 'lucide-react'
+import {
+  Xmark as X,
+  CheckCircle as CheckCircle2,
+  WarningCircle as AlertCircle,
+  RefreshDouble as Loader2,
+  Clock,
+  Prohibition as CircleSlash,
+  AlignTopBox as ArrowUpToLine,
+  Calendar as CalendarClock,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type Job } from '../api/client'

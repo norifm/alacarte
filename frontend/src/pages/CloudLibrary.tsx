@@ -5,14 +5,14 @@ import { useTranslation } from 'react-i18next'
 import {
   Cloud,
   CloudDownload,
-  Disc3,
+  CompactDisc as Disc3,
   Download,
-  ListMusic,
-  Loader2,
-  Music2,
-  RefreshCw,
-  X,
-} from 'lucide-react'
+  Playlist as ListMusic,
+  RefreshDouble as Loader2,
+  MusicNote as Music2,
+  Refresh as RefreshCw,
+  Xmark as X,
+} from 'iconoir-react'
 
 import {
   api,
@@ -424,7 +424,7 @@ export function CloudLibraryPage() {
       ) : !hasItems ? (
         <div className="flex flex-col items-center px-5 py-8 text-center">
           <div className="flex max-w-md flex-col items-center gap-2">
-            <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_.lucide]:h-7 [&_.lucide]:w-7">
+            <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_svg]:h-7 [&_svg]:w-7">
               <Cloud className="h-5 w-5" />
             </div>
             <h2 className="text-[19px] font-semibold tracking-[-0.2px] text-white">{t('cloudLibrary.emptyTitle')}</h2>
@@ -531,7 +531,7 @@ function NotConnectedScreen({
     <div className="w-full">
       <div className="flex flex-col items-center px-5 py-8 text-center">
         <div className="flex max-w-md flex-col items-center gap-2">
-          <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_.lucide]:h-7 [&_.lucide]:w-7">
+          <div className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-[var(--veil)] text-quiet [&_svg]:h-7 [&_svg]:w-7">
             <Cloud className="h-5 w-5" />
           </div>
           <h2 className="text-[19px] font-semibold tracking-[-0.2px] text-white">{headline}</h2>

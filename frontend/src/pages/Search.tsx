@@ -3,13 +3,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Search as SearchIcon,
-  X,
-  Disc3,
-  UserRound,
-  Music2,
-  ListChecks,
-  ListMusic,
-} from 'lucide-react'
+  Xmark as X,
+  CompactDisc as Disc3,
+  User as UserRound,
+  MusicNote as Music2,
+  TaskList as ListChecks,
+  Playlist as ListMusic,
+} from 'iconoir-react'
 
 import { api, artworkUrl, type Album, type Artist, type Song, type Playlist } from '../api/client'
 import { AlbumCard } from '../components/AlbumCard'

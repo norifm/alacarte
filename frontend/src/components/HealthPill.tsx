@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Activity, ChevronRight } from 'lucide-react'
+import { Activity, NavArrowRight as ChevronRight } from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import type { HealthReport } from '../api/client'

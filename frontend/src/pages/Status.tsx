@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  RefreshCw,
-} from 'lucide-react'
+  WarningCircle as AlertCircle,
+  CheckCircle as CheckCircle2,
+  RefreshDouble as Loader2,
+  Refresh as RefreshCw,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import i18n from '../i18n'

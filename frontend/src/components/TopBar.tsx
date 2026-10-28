@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Cloud,
-  FileUp,
-  Home as HomeIcon,
-  Library as LibraryIcon,
+  PageUp as FileUp,
+  HomeSimple as HomeIcon,
+  AlbumList as LibraryIcon,
   Search as SearchIcon,
-  Settings2,
-  UserRoundCheck,
-  X,
-} from 'lucide-react'
+  Settings as Settings2,
+  UserBadgeCheck as UserRoundCheck,
+  Xmark as X,
+} from 'iconoir-react'
 import { useTranslation } from 'react-i18next'
 
 import { HealthGlyph, HealthRow } from './HealthPill'

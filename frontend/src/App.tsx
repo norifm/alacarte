@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'iconoir-react'
 import { AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 
