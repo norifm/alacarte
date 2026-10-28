@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { HealthPill, getHealthPillTarget, getHealthPillAriaLabel } from './HealthPill'
+import { HealthGlyph, HealthRow } from './HealthPill'
 import { Button } from './Button'
 import { Modal } from './Modal'
 import { api, type HealthReport } from '../api/client'
@@ -105,13 +105,7 @@ export function TopBar({ health, loading }: Props) {
           ))}
         </nav>
         <SearchPill />
-        <Link
-          to={getHealthPillTarget(health)}
-          aria-label={getHealthPillAriaLabel(health)}
-          className="group ml-0.5 inline-flex"
-        >
-          <HealthPill health={health} loading={loading} variant="shell" />
-        </Link>
+        <HealthGlyph health={health} loading={loading} />
         <div className="relative">{wide && menu}</div>
       </header>
 
@@ -119,14 +113,8 @@ export function TopBar({ health, loading }: Props) {
       <div className="chrome fixed inset-x-2.5 bottom-[max(6px,env(safe-area-inset-bottom))] z-30 overflow-visible rounded-tile md:hidden">
         {showHealth && (
           <>
-            <Link
-              to={getHealthPillTarget(health)}
-              aria-label={getHealthPillAriaLabel(health)}
-              className="group flex justify-center px-2 pt-1.5"
-            >
-              <HealthPill health={health} loading={loading} variant="shell" />
-            </Link>
-            <hr className="mx-0 mt-1.5 border-0 border-t border-[var(--line)]" />
+            <HealthRow health={health} loading={loading} />
+            <hr className="mx-0 border-0 border-t border-[var(--line)]" />
           </>
         )}
         <nav className="flex h-[50px] items-center px-1.5" aria-label={t('nav.browse')}>
@@ -245,7 +233,7 @@ function NavMenu({
   const { t } = useTranslation()
   const location = useLocation()
   const ref = useRef<HTMLDivElement | null>(null)
-  const lit = open || location.pathname === '/settings' || location.pathname === '/status'
+  const lit = open || location.pathname === '/settings'
 
   useEffect(() => {
     if (!open) return
