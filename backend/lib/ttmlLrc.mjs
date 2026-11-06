@@ -1,6 +1,9 @@
 import fsp from 'node:fs/promises'
 import path from 'node:path'
-import { spawn } from 'node:child_process'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+
+const execFileAsync = promisify(execFile)
 
 function parseTtmlTime(value) {
   if (!value) return null
@@ -40,73 +43,46 @@ export function ttmlToLrc(ttml) {
   return out.length ? `${out.join('\n')}\n` : null
 }
 
-function runFfmpeg(args) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] })
-    let stderr = ''
-    proc.stderr.on('data', (d) => {
-      stderr += d.toString()
-    })
-    proc.on('close', (code) => {
-      if (code === 0) resolve()
-      else reject(new Error(`ffmpeg exit ${code}: ${stderr.slice(-500)}`))
-    })
-    proc.on('error', reject)
-  })
+// MP4Box edits the tag in place. An ffmpeg remux drops the ISRC and UPC and
+// fails on Atmos. In its tag file a line starting with a tag name opens that
+// tag, so a space keeps such a lyric from overwriting the title, and a last line
+// under 4 characters is dropped, so blank padding ends the file instead of a lyric.
+async function embedLrcInM4a(m4aPath, lrc) {
+  const tagsPath = `${m4aPath}.tags.txt`
+  const body = lrc.trimEnd().replace(/^(?=[^\s=[]+=)/gm, ' ')
+  await fsp.writeFile(tagsPath, `lyrics=${body}\n\n    `)
+  try {
+    await execFileAsync('MP4Box', ['-itags', tagsPath, m4aPath], { timeout: 60_000 })
+  } finally {
+    await fsp.rm(tagsPath, { force: true })
+  }
 }
 
-async function embedLrcInM4a(m4aPath, lrcContent) {
-  const tmpPath = `${m4aPath}.tmp.m4a`
-  await runFfmpeg([
-    '-y',
-    '-i',
-    m4aPath,
-    '-c',
-    'copy',
-    '-metadata',
-    `lyrics=${lrcContent}`,
-    tmpPath,
-  ])
-  await fsp.rename(tmpPath, m4aPath)
-}
-
-/**
- * Ensures that any directory containing .ttml sidecars also contains the corresponding
- * .lrc sidecars (converted from TTML) and that any companion .m4a audio file has its
- * embedded lyrics tag set to standard LRC text rather than raw TTML XML.
- */
-export async function syncDualLyricsInDir(dir) {
+// amdp embeds the file it saved, so next to a .ttml the audio carries raw XML
+// that players can't show. This swaps it for LRC, which a FLAC conversion then
+// copies along, and writes the .lrc sidecar too when asked. An existing .lrc is kept.
+export async function syncTtmlLyricsInDir(dir, { writeLrc = false } = {}) {
   const entries = await fsp.readdir(dir, { withFileTypes: true }).catch(() => [])
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name)
     if (entry.isDirectory()) {
-      await syncDualLyricsInDir(fullPath)
-    } else if (/\.ttml$/i.test(entry.name)) {
-      const base = path.basename(entry.name, path.extname(entry.name))
-      const lrcPath = path.join(dir, `${base}.lrc`)
-      const lrcExists = await fsp.stat(lrcPath).then((s) => s.isFile()).catch(() => false)
-      let lrcContent = ''
-      if (!lrcExists) {
-        const ttmlXml = await fsp.readFile(fullPath, 'utf8').catch(() => '')
-        lrcContent = ttmlToLrc(ttmlXml)
-        if (lrcContent) {
-          await fsp.writeFile(lrcPath, lrcContent, 'utf8')
-        }
-      } else {
-        lrcContent = await fsp.readFile(lrcPath, 'utf8').catch(() => '')
-      }
-
-      if (lrcContent) {
-        const m4aPath = path.join(dir, `${base}.m4a`)
-        const m4aExists = await fsp.stat(m4aPath).then((s) => s.isFile()).catch(() => false)
-        if (m4aExists) {
-          try {
-            await embedLrcInM4a(m4aPath, lrcContent)
-          } catch (err) {
-            console.warn(`[lyrics] Failed to embed LRC in ${m4aPath}:`, err.message)
-          }
-        }
-      }
+      await syncTtmlLyricsInDir(fullPath, { writeLrc })
+      continue
+    }
+    if (!/\.ttml$/i.test(entry.name)) continue
+    const stem = fullPath.slice(0, -path.extname(fullPath).length)
+    let lrc = await fsp.readFile(`${stem}.lrc`, 'utf8').catch(() => null)
+    if (lrc == null) {
+      lrc = ttmlToLrc(await fsp.readFile(fullPath, 'utf8').catch(() => ''))
+      if (lrc && writeLrc) await fsp.writeFile(`${stem}.lrc`, lrc, 'utf8')
+    }
+    if (!lrc) continue
+    const m4aPath = `${stem}.m4a`
+    if (!(await fsp.stat(m4aPath).then((s) => s.isFile(), () => false))) continue
+    try {
+      await embedLrcInM4a(m4aPath, lrc)
+    } catch (err) {
+      console.warn(`[lyrics] Failed to embed LRC in ${m4aPath}:`, err.message)
     }
   }
 }

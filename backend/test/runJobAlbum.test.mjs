@@ -22,6 +22,9 @@ script(
   `d="Artist/Record (2020)"; mkdir -p "$d"
 cp "${alac}" "$d/01. Song (feat. Guest).m4a"
 cp "${alac}" "$d/02. Other.m4a"
+if grep -q 'lrc-format: "ttml"' config.yaml; then
+  echo '<tt><body><div><p begin="1.000">one</p></div></body></tt>' > "$d/02. Other.ttml"
+fi
 echo "Track 1 of 2: Song"`,
 )
 process.env.PATH = `${bin}:${process.env.PATH}`
@@ -57,7 +60,7 @@ test.after(() => {
   for (const s of wrapperServers) s.close()
 })
 
-async function runAlbumJob() {
+async function runAlbumJob(fields = {}) {
   const job = {
     id: crypto.randomUUID(),
     kind: 'album',
@@ -70,6 +73,7 @@ async function runAlbumJob() {
     quality: 'flac',
     createdAt: Date.now(),
     stats: { total: 2, done: 0, failed: 0 },
+    ...fields,
   }
   state.jobs.set(job.id, job)
   state.queue.push(job.id)
@@ -91,6 +95,18 @@ test('an album downloads, converts to flac and lands in the library', async () =
   const files = await fsp.readdir(dir)
   assert.deepEqual(files.filter((f) => /\.(flac|m4a)$/.test(f)).sort(), ['01. Song (feat. Guest).flac', '02. Other.flac'])
   assert.ok(!files.some((f) => f.includes('.converting.')), 'no conversion temp files')
+})
+
+test('a playlist in both format gets its lrc sidecars too', async () => {
+  // Tracks already in the library are reused, sidecars and all.
+  await fsp.rm(path.join(tmpMusic, 'Artist'), { recursive: true, force: true })
+  await writeSettings({ lyricsFormat: 'both' })
+  const job = await runAlbumJob({ kind: 'playlist', playlistId: 'pl.1', albumTitle: 'Mix' })
+  await writeSettings({ lyricsFormat: 'lrc' })
+  assert.equal(job.status, 'done', job.error)
+  const files = (await fsp.readdir(tmpMusic, { recursive: true })).map((f) => path.basename(f))
+  assert.ok(files.includes('02. Other.ttml'), files.join(', '))
+  assert.ok(files.includes('02. Other.lrc'), files.join(', '))
 })
 
 test('the qobuz convention renames tracks before they are imported', async () => {

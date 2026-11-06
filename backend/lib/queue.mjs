@@ -26,7 +26,7 @@ import {
   convertDirToFlac,
   extractFolderArt,
 } from './flacConvert.mjs'
-import { syncDualLyricsInDir } from './ttmlLrc.mjs'
+import { syncTtmlLyricsInDir } from './ttmlLrc.mjs'
 import {
   applyNamingConvention,
   assertFreeSpace,
@@ -1565,6 +1565,7 @@ async function runJob(job) {
     }
     const partial = assertAmdpResult(downloadResult, combined)
     const partialSuffix = failedTracksSuffix(partial?.failed, partial?.reason)
+    await syncTtmlLyricsInDir(jobStaging, { writeLrc: settings.lyricsFormat === 'both' })
 
     progressState.downloadDone = progressState.downloadTotal
     progressState.downloadPartial = 0
@@ -1658,8 +1659,6 @@ async function runJob(job) {
     if (!firstAlbum) throw new Error('amdp produced no album folder')
     const albumPath = path.join(artistPath, firstAlbum.name)
     if (partial) await removeOrphanLyrics(albumPath)
-
-    if (settings.lyricsFormat === 'both') await syncDualLyricsInDir(jobStaging)
 
     if (progressState.convertEnabled) {
       await convertStagingToFlac(job, albumPath, progressState)
@@ -1900,7 +1899,7 @@ async function downloadSingleTrack({ job, trackStaging, settings, creds, url, qu
   } else {
     assertAmdpResult(sub, combined)
   }
-  if (settings.lyricsFormat === 'both') await syncDualLyricsInDir(trackStaging)
+  await syncTtmlLyricsInDir(trackStaging, { writeLrc: settings.lyricsFormat === 'both' })
 }
 
 // A catalog playlist normally runs as one amdp pass, which cannot skip
