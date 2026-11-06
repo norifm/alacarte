@@ -11,7 +11,7 @@ process.env.AMDL_MUSIC_PATH = tmpMusic
 
 const { startLyricsBackfill, getLyricsBackfillStatus } = await import('../lib/lyricsBackfill.mjs')
 const { ttmlToLrc } = await import('../lib/ttmlLrc.mjs')
-const { buildMinimalFlacWithTags } = await import('../lib/audioTags.mjs')
+const { buildMinimalFlacWithTags, buildMinimalOpusWithTags } = await import('../lib/audioTags.mjs')
 
 function makeFlac(rel, isrc) {
   const abs = path.join(tmpMusic, rel)
@@ -212,4 +212,15 @@ test('a rate limit pauses the lyrics run and it resumes', async () => {
   assert.equal(sawWaiting, true)
   assert.equal(getLyricsBackfillStatus().failed, 0)
   assert.match(read(sidecars(flac).lrc), /^\[00:06\.39\]/)
+})
+
+test('backfill adds lyrics next to opus tracks', async () => {
+  const opus = path.join(tmpMusic, 'C/Album/01. Song.opus')
+  fs.mkdirSync(path.dirname(opus), { recursive: true })
+  fs.writeFileSync(opus, buildMinimalOpusWithTags({ isrc: 'USCCC0000001' }))
+
+  await startLyricsBackfill({ deps: deps() })
+  await waitUntilDone()
+
+  assert.match(read(opus.replace(/\.opus$/, '.lrc')), /^\[00:06\.39\]/)
 })

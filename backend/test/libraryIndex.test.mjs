@@ -23,6 +23,8 @@ test('songNameFromFilename strips track-number prefix and extension', async () =
   assert.equal(songNameFromFilename('04. After That.flac'), 'After That')
   assert.equal(songNameFromFilename('01 - Intro.m4a'), 'Intro')
   assert.equal(songNameFromFilename('12 Track Name.mp3'), 'Track Name')
+  assert.equal(songNameFromFilename('02. Opus Track.opus'), 'Opus Track')
+  assert.equal(songNameFromFilename('03. Ogg Track.ogg'), 'Ogg Track')
   assert.equal(songNameFromFilename('Plain Title.flac'), 'Plain Title')
   assert.equal(songNameFromFilename('07. Song Name [E].flac'), 'Song Name')
 })

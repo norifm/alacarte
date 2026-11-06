@@ -6,6 +6,7 @@ import path from 'node:path'
 
 import {
   buildMinimalFlacWithTags,
+  buildMinimalOpusWithTags,
   normalizeIsrc,
   normalizeUpc,
   parseFlacIdentityTags,
@@ -68,6 +69,33 @@ test('readAudioIdentityTags reads from disk and ignores non-flac', async () => {
   }
 })
 
+test('readAudioIdentityTags reads opus comments, also behind cover art that spans pages', async () => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-tags-'))
+  try {
+    for (const [name, padding] of [['t.opus', 0], ['t.ogg', 0], ['cover.opus', 200_000]]) {
+      const file = path.join(dir, name)
+      await fsp.writeFile(file, buildMinimalOpusWithTags({ isrc: 'GBUM71505078', upc: '075679562944', padding }))
+      assert.deepEqual(await readAudioIdentityTags(file), { isrc: 'GBUM71505078', upc: '075679562944' })
+    }
+  } finally {
+    await fsp.rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('a broken or untagged opus file reads as empty', async () => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-tags-'))
+  const tagged = buildMinimalOpusWithTags({ isrc: 'GBUM71505078', padding: 200_000 })
+  try {
+    for (const body of [buildMinimalOpusWithTags(), tagged.subarray(0, 5000), tagged.subarray(0, 20), Buffer.from('x')]) {
+      const file = path.join(dir, 't.opus')
+      await fsp.writeFile(file, body)
+      assert.deepEqual(await readAudioIdentityTags(file), { isrc: '', upc: '' })
+    }
+  } finally {
+    await fsp.rm(dir, { recursive: true, force: true })
+  }
+})
+
 async function withMusicRoot(fn) {
   const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-isrc-'))
   const prevRoot = process.env.AMDL_MUSIC_PATH
@@ -94,6 +122,18 @@ test('scanLibrary indexes ISRC and UPC from flac tags', async () => {
     const idx = await mod.scanLibrary()
     assert.ok(idx.isrcs.has('USRC19999999'))
     assert.ok(idx.upcs.has('999888777666'))
+  })
+})
+
+test('scanLibrary lists opus tracks and indexes their tags', async () => {
+  await withMusicRoot(async (root, mod) => {
+    const album = path.join(root, 'Artist', 'Album')
+    await fsp.mkdir(album, { recursive: true })
+    await fsp.writeFile(path.join(album, '01. Song.opus'), buildMinimalOpusWithTags({ isrc: 'USAAA0000042' }))
+
+    const idx = await mod.scanLibrary()
+    assert.ok(idx.songKeys.has(mod.makeSongKey('Artist', 'Song')))
+    assert.ok(idx.isrcs.has('USAAA0000042'))
   })
 })
 

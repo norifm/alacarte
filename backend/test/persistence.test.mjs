@@ -261,5 +261,5 @@ test('an outdated identity tag version re-reads cached files once', async () => 
   setMeta('identity_tags_version', '1')
   invalidateLibraryCache()
   assert.ok((await scanLibrary()).isrcs.has('USRC15555555'))
-  assert.equal(getMeta('identity_tags_version'), '2')
+  assert.equal(getMeta('identity_tags_version'), '3')
 })

@@ -12,6 +12,7 @@ import {
 import { normalizeIsrc, normalizeUpc } from '../lib/audioTags.mjs'
 import { emitEvent } from '../lib/eventBus.mjs'
 import {
+  AUDIO_RE,
   getAlbumTrackPresence,
   invalidateLibraryCache,
   makeAlbumKey,
@@ -26,7 +27,6 @@ import { readSettings } from '../lib/settingsStore.mjs'
 export const libraryRouter = express.Router()
 
 const MUSIC_ROOT = process.env.AMDL_MUSIC_PATH || '/music'
-const AUDIO_RE = /\.(flac|m4a|mp3)$/i
 // Artist IDs only feed deep links, so they are never fetched while a request
 // waits. Missing ones are looked up in the background, one at a time, and kept in
 // library.db so a restart or a page load costs no Apple calls.

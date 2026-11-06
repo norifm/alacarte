@@ -17,14 +17,14 @@ import {
 export { stripTrailingYear }
 
 
-const AUDIO_RE = /\.(flac|m4a|mp3)$/i
+export const AUDIO_RE = /\.(flac|m4a|mp3|opus|ogg)$/i
 
 const SCAN_TTL_MS = 30_000
 // Even with incremental tracking, walk everything periodically so external
 // edits (re-tagged files, mtime-preserving moves) are eventually picked up.
 // Bump when readAudioIdentityTags learns a new format, so cached rows are
 // re-read by one full scan instead of waiting for files to change.
-const IDENTITY_TAGS_VERSION = '2'
+const IDENTITY_TAGS_VERSION = '3'
 const FULL_RESCAN_MS =
   Math.max(1, Number(process.env.AMDL_FULL_RESCAN_HOURS) || 24) *
   60 *
@@ -585,7 +585,7 @@ function deleteFileRowsNotIn(db, parent, seenPaths) {
 
 export function songNameFromFilename(filename) {
   if (!filename) return ''
-  let base = String(filename).replace(/\.(flac|m4a|mp3)$/i, '')
+  let base = String(filename).replace(AUDIO_RE, '')
   // Strip leading "NN. " or "NN - " or "NN " track-number prefix.
   base = base.replace(/^\s*\d{1,3}\s*[.\-]?\s+/, '')
   // Strip the [E]/[C]/[M] choice tags amdp may append.

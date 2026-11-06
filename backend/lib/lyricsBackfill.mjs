@@ -87,7 +87,7 @@ async function collectAudio(dir, out) {
     if (entry.name.startsWith('.')) continue
     const abs = path.join(dir, entry.name)
     if (entry.isDirectory()) await collectAudio(abs, out)
-    else if (/\.(flac|m4a)$/i.test(entry.name)) out.push(abs)
+    else if (/\.(flac|m4a|opus|ogg)$/i.test(entry.name)) out.push(abs)
   }
 }
 
