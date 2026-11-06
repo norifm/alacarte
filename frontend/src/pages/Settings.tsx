@@ -366,24 +366,6 @@ export function SettingsPage() {
                 </div>
               </label>
               <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
-                <span className="text-[15px] md:w-40 md:pt-2">{t('settings.lyricsType')}</span>
-                <div className="md:flex-1">
-                  <select
-                    id="lyrics-type-select"
-                    value={settings.lyricsType}
-                    disabled={!settings.downloadLyrics}
-                    onChange={(e) =>
-                      update({ lyricsType: e.target.value as PublicSettings['lyricsType'] })
-                    }
-                    className="w-full rounded-card bg-[var(--field)] px-4 py-3 pr-10 text-white outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_60%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="lyrics">{t('settings.lyricsTypeLyrics')}</option>
-                    <option value="lyrics-with-translation">{t('settings.lyricsTypeWithTranslation')}</option>
-                  </select>
-
-                </div>
-              </label>
-              <label className="flex flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
                 <span className="text-[15px] md:w-40 md:pt-2">
                   {t('settings.coverSize')}
                 </span>

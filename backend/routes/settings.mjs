@@ -63,7 +63,6 @@ export const WRITABLE_KEYS = new Set([
   'promptForDownloadQuality',
   'explicitFilter',
   'lyricsFormat',
-  'lyricsType',
   'navidromeEnabled',
   'navidromeUrl',
   'navidromeUser',
@@ -91,7 +90,6 @@ export const WRITABLE_KEYS = new Set([
 const APPLE_GATEWAY_FLAGS = new Set(['appleGatewayEnabled', 'appleGatewayPaceIntegration', 'appleGatewayAdaptive'])
 const EXPLICIT_FILTER_VALUES = new Set(['explicit', 'clean', 'both'])
 const LYRICS_FORMAT_VALUES = new Set(['lrc', 'ttml', 'both'])
-const LYRICS_TYPE_VALUES = new Set(['lyrics', 'lyrics-with-translation'])
 const QUALITY_VALUES = new Set(['flac', 'alac', 'atmos', 'aac'])
 
 settingsRouter.get('/', async (_req, res) => {
@@ -119,7 +117,6 @@ settingsRouter.put('/', async (req, res) => {
       if (!WRITABLE_KEYS.has(k)) continue
       if (k === 'explicitFilter' && !EXPLICIT_FILTER_VALUES.has(v)) continue
       if (k === 'lyricsFormat' && !LYRICS_FORMAT_VALUES.has(v)) continue
-      if (k === 'lyricsType' && !LYRICS_TYPE_VALUES.has(v)) continue
       if (k === 'quality' && !QUALITY_VALUES.has(v)) continue
       if (k === 'namingConvention' && !NAMING_CONVENTION_VALUES.has(v)) continue
       if (APPLE_GATEWAY_FLAGS.has(k) && typeof v !== 'boolean') continue

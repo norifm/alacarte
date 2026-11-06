@@ -31,7 +31,6 @@ const DEFAULTS = {
   coverSize: '1400x1400',
   downloadLyrics: false,
   lyricsFormat: 'lrc',
-  lyricsType: 'lyrics',
   promptForDownloadQuality: false,
   explicitFilter: 'explicit',
   appleEmail: null,
@@ -319,7 +318,6 @@ export async function readPublicSettings() {
     coverSize: s.coverSize,
     downloadLyrics: Boolean(s.downloadLyrics),
     lyricsFormat: s.lyricsFormat || 'lrc',
-    lyricsType: s.lyricsType || 'lyrics',
     promptForDownloadQuality: Boolean(s.promptForDownloadQuality),
     explicitFilter: s.explicitFilter || 'explicit',
     appleEmailMasked: s.appleEmail
