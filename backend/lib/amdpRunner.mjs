@@ -34,12 +34,15 @@ export async function writeAmdpConfig({
   stagingRoot,
 }) {
   const lyricsEnabled = Boolean(settings.downloadLyrics && mediaUserToken)
+  const lrcFormat = settings.lyricsFormat === 'both' ? 'ttml' : (settings.lyricsFormat || 'lrc')
   const cfg = {
     'media-user-token': mediaUserToken || '',
     'authorization-token': '',
     language: settings.language || '',
-    'lrc-type': settings.lyricsType || 'lyrics',
-    'lrc-format': settings.lyricsFormat === 'both' ? 'ttml' : (settings.lyricsFormat || 'lrc'),
+    // Apple serves the line version here when a song has no word timing. lrc
+    // stays on lyrics, amdp would turn word timing into per-word stamps.
+    'lrc-type': lrcFormat === 'ttml' ? 'syllable-lyrics' : 'lyrics',
+    'lrc-format': lrcFormat,
     'embed-lrc': lyricsEnabled,
     'save-lrc-file': lyricsEnabled,
     'save-artist-cover': false,

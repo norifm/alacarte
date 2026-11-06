@@ -4,9 +4,19 @@ import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { syncDualLyricsInDir } from '../lib/ttmlLrc.mjs'
+import { syncDualLyricsInDir, ttmlToLrc } from '../lib/ttmlLrc.mjs'
 
 const TTML = '<tt><body><div><p begin="00:06.390" end="00:08.000">one</p></div></body></tt>'
+
+test('word synced ttml comes out as plain lines with the background vocals', () => {
+  const ttml =
+    '<tt itunes:timing="Word"><body><div><p begin="1.314" end="3.464">' +
+    '<span begin="1.314" end="1.451">one</span> <span begin="1.451" end="1.677">t</span>' +
+    '<span begin="1.677" end="1.957">wo</span> ' +
+    '<span ttm:role="x-bg"><span begin="1.618" end="2.245">(three)</span></span>' +
+    '</p></div></body></tt>'
+  assert.equal(ttmlToLrc(ttml), '[00:01.31]one two (three)\n')
+})
 
 test('syncDualLyricsInDir writes an lrc next to every ttml and keeps an existing lrc', async () => {
   const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-dual-'))

@@ -184,11 +184,11 @@ export async function getSongsByIsrc({ storefront, isrcs, language = 'en-US', in
   return apiGet(`${BASE}/${encodeURIComponent(storefront)}/songs?${qs.toString()}`, { language })
 }
 
-// Needs a media-user-token. Returns the TTML document, or null when Apple has
-// no lyrics for the song.
+// Needs a media-user-token. Returns the TTML document, word synced when Apple
+// has that and line synced otherwise, or null when Apple has no lyrics for the song.
 export async function getSongLyricsTtml({ storefront, id, language = 'en-US', mediaUserToken }) {
   const qs = new URLSearchParams({ l: language, extend: 'ttmlLocalizations' })
-  const url = `${BASE}/${encodeURIComponent(storefront)}/songs/${encodeURIComponent(id)}/lyrics?${qs.toString()}`
+  const url = `${BASE}/${encodeURIComponent(storefront)}/songs/${encodeURIComponent(id)}/syllable-lyrics?${qs.toString()}`
   try {
     const json = await apiGet(url, { language, mediaUserToken })
     const attrs = json?.data?.[0]?.attributes || {}

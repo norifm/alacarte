@@ -34,6 +34,17 @@ test('amdp patches alac frames ffmpeg would drop', async () => {
   assert.match(await fsp.readFile(cfgPath, 'utf8'), /^alac-fix: true$/m)
 })
 
+test('ttml sidecars ask amdp for word synced lyrics, lrc stays on line synced', async () => {
+  const lrcType = async (lyricsFormat) => {
+    const cfgPath = await writeAmdpConfig({ settings: { lyricsFormat }, mediaUserToken: 't', stagingRoot: tmpConfig })
+    return /^lrc-type: "(.+)"$/m.exec(await fsp.readFile(cfgPath, 'utf8'))[1]
+  }
+  assert.equal(await lrcType('ttml'), 'syllable-lyrics')
+  assert.equal(await lrcType('both'), 'syllable-lyrics')
+  assert.equal(await lrcType('lrc'), 'lyrics')
+  assert.equal(await lrcType(undefined), 'lyrics')
+})
+
 test('playlist files are renumbered from the album track tag', () => {
   assert.equal(renumberFromTrackTag('08. Double Trio 2.m4a', '7/9'), '07. Double Trio 2.m4a')
   assert.equal(renumberFromTrackTag('05. And I Dance.flac', '1'), '01. And I Dance.flac')
