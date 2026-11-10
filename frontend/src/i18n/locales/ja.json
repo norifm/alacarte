@@ -451,7 +451,7 @@
     "openStatus": "ステータスを開く",
     "openSettings": "設定を開く",
     "paused": "一時停止中",
-    "leaseLostTitle": "このアカウントで別のデバイスが Apple Music を再生中です。ラッパーは約 {{mins}} 分後、またはダウンロード開始時にすぐ再開します。",
+    "leaseLostTitle": "このアカウントで別のデバイスが Apple Music を再生中です。そのデバイスを中断しないようラッパーは一時停止したままで、ダウンロードが必要になると再開します。",
     "wrapperRestarting": "ラッパーを再起動中",
     "wrapperRestartingTitle": "Apple Music ラッパーを起動しています。"
   },

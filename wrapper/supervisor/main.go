@@ -32,14 +32,8 @@ const (
 	minCleanBackoff = 5 * time.Second
 	maxCleanBackoff = 60 * time.Second
 	stableUptime    = 30 * time.Second
-	// Apple ends the wrapper's playback lease when another device on the
-	// account starts streaming, and the wrapper exits. Restarting takes the
-	// lease back, so wait long enough not to fight that device.
-	minLeaseBackoff   = time.Minute
-	maxLeaseBackoff   = 15 * time.Minute
-	leaseStableUptime = 10 * time.Minute
-	maxBodyBytes      = 64 << 10
-	loginSuccessMsg   = "account info cached successfully"
+	maxBodyBytes    = 64 << 10
+	loginSuccessMsg = "account info cached successfully"
 )
 
 type Mode string
@@ -65,7 +59,6 @@ type Supervisor struct {
 	loginCancel    context.CancelFunc
 	stopping       bool
 	cleanExits     int
-	leaseLosses    int
 	restartReason  string
 	restartAt      time.Time
 	wake           chan struct{}
@@ -224,16 +217,7 @@ func killGroup(pgid int) {
 
 // restartDelay backs off consecutive clean exits (e.g. no credentials yet)
 // while still restarting, so the wrapper recovers once credentials exist.
-// A lost playback lease backs off much longer; see minLeaseBackoff.
-func (s *Supervisor) restartDelay(exitErr error, uptime time.Duration, leaseLost bool) time.Duration {
-	if leaseLost {
-		if uptime > leaseStableUptime {
-			s.leaseLosses = 0
-		}
-		s.leaseLosses++
-		return backoff(minLeaseBackoff, maxLeaseBackoff, s.leaseLosses)
-	}
-	s.leaseLosses = 0
+func (s *Supervisor) restartDelay(exitErr error, uptime time.Duration) time.Duration {
 	if exitErr != nil {
 		s.cleanExits = 0
 		return crashRestart
@@ -316,9 +300,11 @@ func (s *Supervisor) StartNormal() {
 				close(p.done)
 				return
 			}
-			delay = s.restartDelay(err, time.Since(started), leaseLost.Load())
 			s.restartReason = exitReason(err, leaseLost.Load())
-			s.restartAt = time.Now().Add(delay)
+			if !leaseLost.Load() {
+				delay = s.restartDelay(err, time.Since(started))
+				s.restartAt = time.Now().Add(delay)
+			}
 			select { // drop a wake request that arrived while it was running
 			case <-s.wake:
 			default:
@@ -327,6 +313,13 @@ func (s *Supervisor) StartNormal() {
 		s.mu.Unlock()
 		close(p.done)
 		if !unexpected {
+			return
+		}
+		if leaseLost.Load() {
+			// Another device on the account took the playback lease. Starting
+			// again would take it back and stop that device, so stay idle until
+			// a download asks for the wrapper through /wake (handleWake starts it).
+			log.Printf("[supervisor] wrapper lost the playback lease; idle until the next download wakes it")
 			return
 		}
 		log.Printf("[supervisor] wrapper exited (%v, %s), restarting in %s", exitDesc(err), s.reasonSnapshot(), delay)
