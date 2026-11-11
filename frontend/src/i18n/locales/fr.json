@@ -452,7 +452,7 @@
     "openStatus": "Ouvrir l'état",
     "openSettings": "Ouvrir les réglages",
     "paused": "En pause",
-    "leaseLostTitle": "Apple Music est en lecture sur un autre appareil avec ce compte. Le wrapper reprendra dans environ {{mins}} min, ou immédiatement au démarrage d'un téléchargement.",
+    "leaseLostTitle": "Apple Music est en lecture sur un autre appareil avec ce compte. Le wrapper reste en pause pour ne pas interrompre cet appareil et redémarre quand un téléchargement en a besoin.",
     "wrapperRestarting": "Redémarrage du wrapper",
     "wrapperRestartingTitle": "Le wrapper Apple Music démarre."
   },

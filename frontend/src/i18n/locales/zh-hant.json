@@ -451,7 +451,7 @@
     "openStatus": "開啟狀態頁面",
     "openSettings": "開啟設定",
     "paused": "已暫停",
-    "leaseLostTitle": "Apple Music 正在另一台裝置上使用此帳號播放。Wrapper 將在約 {{mins}} 分鐘後恢復，或在開始下載時立即恢復。",
+    "leaseLostTitle": "Apple Music 正在另一台裝置上使用此帳號播放。為了不打斷那台裝置，Wrapper 會保持暫停，等到需要下載時再啟動。",
     "wrapperRestarting": "Wrapper 重新啟動中",
     "wrapperRestartingTitle": "Apple Music wrapper 正在啟動。"
   },

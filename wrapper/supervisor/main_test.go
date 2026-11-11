@@ -151,7 +151,7 @@ func TestRestartDelay(t *testing.T) {
 	sup := NewSupervisor("", "", nil)
 	var got []time.Duration
 	for i := 0; i < 6; i++ {
-		got = append(got, sup.restartDelay(nil, time.Second, false))
+		got = append(got, sup.restartDelay(nil, time.Second))
 	}
 	want := []time.Duration{5, 10, 20, 40, 60, 60}
 	for i := range want {
@@ -159,10 +159,10 @@ func TestRestartDelay(t *testing.T) {
 			t.Fatalf("clean exit delays = %v, want %v s", got, want)
 		}
 	}
-	if d := sup.restartDelay(nil, time.Minute, false); d != 5*time.Second {
+	if d := sup.restartDelay(nil, time.Minute); d != 5*time.Second {
 		t.Errorf("stable run should reset backoff, got %s", d)
 	}
-	if d := sup.restartDelay(errors.New("exit status 1"), time.Second, false); d != crashRestart {
+	if d := sup.restartDelay(errors.New("exit status 1"), time.Second); d != crashRestart {
 		t.Errorf("crash delay = %s, want %s", d, crashRestart)
 	}
 }
@@ -250,27 +250,7 @@ echo "[.] end lease code 1"
 exit 1
 `
 
-func TestLeaseBackoff(t *testing.T) {
-	sup := NewSupervisor("", "", nil)
-	var got []time.Duration
-	for i := 0; i < 6; i++ {
-		got = append(got, sup.restartDelay(errors.New("exit status 1"), time.Second, true))
-	}
-	want := []time.Duration{1, 2, 4, 8, 15, 15}
-	for i := range want {
-		if got[i] != want[i]*time.Minute {
-			t.Fatalf("lease loss delays = %v, want %v min", got, want)
-		}
-	}
-	if d := sup.restartDelay(errors.New("exit status 1"), 11*time.Minute, true); d != time.Minute {
-		t.Errorf("a long run should reset the lease backoff, got %s", d)
-	}
-	if d := sup.restartDelay(errors.New("exit status 1"), time.Second, false); d != crashRestart {
-		t.Errorf("an ordinary crash should still restart after %s, got %s", crashRestart, d)
-	}
-}
-
-func TestLeaseLossWaitsAndWakeRestarts(t *testing.T) {
+func TestLeaseLossStaysIdleUntilWake(t *testing.T) {
 	dir := t.TempDir()
 	bin := filepath.Join(dir, "wrapper")
 	if err := os.WriteFile(bin, []byte(leaseLossWrapper), 0755); err != nil {
@@ -295,11 +275,11 @@ func TestLeaseLossWaitsAndWakeRestarts(t *testing.T) {
 	sup.StartNormal()
 	time.Sleep(crashRestart*2 + time.Second)
 	if n := starts(); n != 1 {
-		t.Fatalf("wrapper restarted %d times within %s of losing the lease", n-1, crashRestart*2)
+		t.Fatalf("wrapper restarted %d times after losing the lease", n-1)
 	}
 	h := health(t, srv)
-	if h.Mode != string(ModeIdle) || h.Reason != "lease_lost" || h.RestartInMs < 50_000 {
-		t.Fatalf("health during lease backoff = %+v", h)
+	if h.Mode != string(ModeIdle) || h.Reason != "lease_lost" || h.RestartInMs != 0 {
+		t.Fatalf("health after losing the lease = %+v (no restart should be scheduled)", h)
 	}
 
 	res, err := http.Post(srv.URL+"/wake", "application/json", nil)

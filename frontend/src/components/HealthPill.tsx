@@ -107,16 +107,15 @@ function isWrapperDown(health: HealthReport): boolean {
 }
 
 // The ports are also closed while the supervisor restarts the wrapper, or
-// waits because another device took the Apple Music stream; neither needs a
-// new sign-in.
+// stays idle because another device took the Apple Music stream (until the
+// next download wakes it); neither needs a new sign-in.
 function wrapperPause(health: HealthReport): { label: string; title: string } | null {
   const sup = health.wrapper?.supervisor
   if (!sup) return null
   if (sup.reason === 'lease_lost') {
-    const mins = Math.max(1, Math.ceil((sup.restartInMs ?? 0) / 60_000))
     return {
       label: i18n.t('healthPill.paused'),
-      title: i18n.t('healthPill.leaseLostTitle', { mins }),
+      title: i18n.t('healthPill.leaseLostTitle'),
     }
   }
   if (sup.running || sup.restartInMs != null) {

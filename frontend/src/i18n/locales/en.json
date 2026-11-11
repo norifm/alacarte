@@ -452,7 +452,7 @@
     "openStatus": "Open status",
     "openSettings": "Open settings",
     "paused": "Paused",
-    "leaseLostTitle": "Apple Music is playing on another device with this account. The wrapper resumes in about {{mins}} min, or right away when a download starts.",
+    "leaseLostTitle": "Apple Music is playing on another device with this account. The wrapper stays paused so it doesn't interrupt that device, and starts again when a download needs it.",
     "wrapperRestarting": "Wrapper restarting",
     "wrapperRestartingTitle": "The Apple Music wrapper is starting up."
   },

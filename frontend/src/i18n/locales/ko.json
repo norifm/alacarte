@@ -451,7 +451,7 @@
     "openStatus": "상태 열기",
     "openSettings": "설정 열기",
     "paused": "일시 중지됨",
-    "leaseLostTitle": "이 계정으로 다른 기기에서 Apple Music을 재생 중입니다. 약 {{mins}}분 후 또는 다운로드가 시작되면 즉시 래퍼가 재개됩니다.",
+    "leaseLostTitle": "이 계정으로 다른 기기에서 Apple Music을 재생 중입니다. 해당 기기를 방해하지 않도록 래퍼는 일시 중지된 상태로 있으며, 다운로드가 필요할 때 다시 시작됩니다.",
     "wrapperRestarting": "래퍼 재시작 중",
     "wrapperRestartingTitle": "Apple Music 래퍼를 시작하는 중입니다."
   },
