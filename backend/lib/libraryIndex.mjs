@@ -24,7 +24,7 @@ const SCAN_TTL_MS = 30_000
 // edits (re-tagged files, mtime-preserving moves) are eventually picked up.
 // Bump when readAudioIdentityTags learns a new format, so cached rows are
 // re-read by one full scan instead of waiting for files to change.
-const IDENTITY_TAGS_VERSION = '3'
+const IDENTITY_TAGS_VERSION = '4'
 const FULL_RESCAN_MS =
   Math.max(1, Number(process.env.AMDL_FULL_RESCAN_HOURS) || 24) *
   60 *
@@ -95,6 +95,11 @@ function emptyIndex() {
     isrcPaths: new Map(),
     songVersionPaths: new Map(),
     albumVersionGroups: new Map(),
+    // Album folders by rel path, and which folders hold a given UPC or ISRC.
+    // findExistingReleaseDir picks from these.
+    albumDirs: new Map(),
+    upcDirs: new Map(),
+    isrcDirs: new Map(),
   }
 }
 
@@ -328,7 +333,11 @@ async function scanAudioDir(dirPath, kind, artistName, ctx, acc) {
         albumKey,
         isrc: tags.isrc || null,
         upc: tags.upc || null,
-        meta: dirGroup ? { hasLyrics, version: dirGroup } : { hasLyrics },
+        meta: {
+          hasLyrics,
+          ...(dirGroup ? { version: dirGroup } : {}),
+          ...(tags.album ? { album: tags.album } : {}),
+        },
       })
       if (ctx.persist) upsertFileRow(ctx.db, row)
     }
@@ -395,16 +404,22 @@ function aggregateAudioDirFromRows(rawRows, kind, artistName, dirPath, dirAddedA
       if (row.metaParsed.hasLyrics) lyricsCount += 1
       if (row.song_key) trackSet.add(row.song_key)
     }
-    acc.albums.push({
+    const title = mostCommon(rows.map((r) => r.metaParsed.album))
+    const album = {
       id: rel,
       artistName,
       albumName,
+      // The album as tagged; albumName is the folder, which a scheme or a
+      // hand rename may decorate ("Meta - EP (2021)").
+      title: title || null,
       relPath: rel,
       trackCount: rows.length,
       lyricsCount,
       hasLyrics: lyricsCount > 0,
       addedAt: dirAddedAt,
-    })
+    }
+    acc.albums.push(album)
+    acc.albumDirs.set(rel, { ...album, upcCounts: new Map(), isrcs: new Set() })
     const albumKey = makeAlbumKey(artistName, albumName)
     if (albumKey) {
       acc.albumKeys.add(albumKey)
@@ -462,7 +477,86 @@ function aggregateAudioDirFromRows(rawRows, kind, artistName, dirPath, dirAddedA
       if (!acc.isrcPaths.has(row.isrc)) acc.isrcPaths.set(row.isrc, toRel(row.path))
     }
     if (row.upc) acc.upcs.add(row.upc)
+    if (kind === 'album') noteAlbumDirTrack(acc, rel, row)
   }
+}
+
+function mostCommon(values) {
+  const counts = new Map()
+  for (const v of values) if (v) counts.set(v, (counts.get(v) || 0) + 1)
+  let best = null
+  for (const [v, n] of counts) {
+    if (!best || n > best[1] || (n === best[1] && v < best[0])) best = [v, n]
+  }
+  return best?.[0] || null
+}
+
+function addToSetMap(map, key, value) {
+  let set = map.get(key)
+  if (!set) map.set(key, (set = new Set()))
+  set.add(value)
+}
+
+function noteAlbumDirTrack(acc, rel, row) {
+  const dir = acc.albumDirs.get(rel)
+  if (!dir) return
+  if (row.upc) {
+    dir.upcCounts.set(row.upc, (dir.upcCounts.get(row.upc) || 0) + 1)
+    addToSetMap(acc.upcDirs, row.upc, rel)
+  }
+  if (row.isrc) {
+    dir.isrcs.add(row.isrc)
+    addToSetMap(acc.isrcDirs, row.isrc, rel)
+  }
+}
+
+// Keeps a pre-scanned index current while one import lands tracks, so the
+// next track of the same import finds the folder without another scan.
+export function noteImportedTrack(index, absPath, { isrc = null, upc = null, album = null, songName = null } = {}) {
+  if (!index || !absPath) return
+  const rel = toRel(path.dirname(absPath))
+  const parts = rel.split('/')
+  if (parts.length !== 2 || parts[0] === 'Playlists' || parts[1].toLowerCase() === 'singles') return
+  const isrcNorm = normalizeIsrc(isrc) || null
+  const upcNorm = normalizeUpc(upc) || null
+  if (!index.albumDirs.has(rel)) {
+    const entry = {
+      id: rel,
+      artistName: parts[0],
+      albumName: parts[1],
+      title: album || null,
+      relPath: rel,
+      trackCount: 0,
+      lyricsCount: 0,
+      hasLyrics: false,
+      addedAt: Date.now(),
+    }
+    index.albums.push(entry)
+    index.albumDirs.set(rel, { ...entry, upcCounts: new Map(), isrcs: new Set() })
+    const key = makeAlbumKey(parts[0], parts[1])
+    if (key) {
+      index.albumKeys.add(key)
+      if (!index.albumTrackKeys.has(key)) index.albumTrackKeys.set(key, new Set())
+    }
+  }
+  const dir = index.albumDirs.get(rel)
+  dir.trackCount += 1
+  const fileRel = toRel(absPath)
+  const name = songName || songNameFromFilename(path.basename(absPath))
+  const songKey = name ? makeSongKey(parts[0], name) : ''
+  if (songKey) {
+    index.songKeys.add(songKey)
+    index.albumTrackKeys.get(makeAlbumKey(parts[0], parts[1]))?.add(songKey)
+    let candidates = index.songCandidates.get(songKey)
+    if (!candidates) index.songCandidates.set(songKey, (candidates = []))
+    candidates.push({ rel: fileRel, isrc: isrcNorm || '', album: albumMatchName(parts[1]) })
+  }
+  if (isrcNorm) {
+    index.isrcs.add(isrcNorm)
+    if (!index.isrcPaths.has(isrcNorm)) index.isrcPaths.set(isrcNorm, fileRel)
+  }
+  if (upcNorm) index.upcs.add(upcNorm)
+  noteAlbumDirTrack(index, rel, { isrc: isrcNorm, upc: upcNorm })
 }
 
 function aggregatePlaylistRow(rawRow, acc) {
@@ -801,6 +895,128 @@ export async function findSongPathInLibrary(
 // names in the same form.
 function albumMatchName(name) {
   return normalizeForMatchKey(stripTrailingYear(sanitizeSegment(name))).toLowerCase()
+}
+
+function plainAlbumKey(name) {
+  const base = String(name || '').replace(/\s*\((FLAC|ALAC|Atmos|AAC)\)$/i, '')
+  return albumMatchName(base)
+}
+
+function nameTokens(name) {
+  return sanitizeSegment(normalizeForMatchKey(name))
+    .toLowerCase()
+    .split(' ')
+    .filter((t) => t && t !== '_')
+}
+
+function artistOverlaps(existingName, wanted) {
+  const have = nameTokens(existingName)
+  if (!have.length) return false
+  const haveKey = have.join(' ')
+  for (const name of wanted) {
+    const need = nameTokens(name)
+    if (!need.length) continue
+    if (need.join(' ') === haveKey) return true
+    if (need.every((t) => have.includes(t)) || have.every((t) => need.includes(t))) return true
+  }
+  return false
+}
+
+function albumDirFromRel(root, rel) {
+  if (!rel || typeof rel !== 'string') return null
+  const parts = rel.split('/').filter(Boolean)
+  if (parts.length !== 2) return null
+  if (parts[0] === 'Playlists' || parts.some((p) => p === '.' || p === '..' || p.startsWith('.'))) return null
+  const abs = path.resolve(root, parts[0], parts[1])
+  const rootResolved = path.resolve(root)
+  if (abs !== rootResolved && !abs.startsWith(`${rootResolved}${path.sep}`)) return null
+  return abs
+}
+
+// Where this release already lives, or null. Used only when a custom scheme
+// or the primary-artist option would otherwise write a second copy.
+//
+// 1. Barcode: a folder holding the UPC counts when its name is this album
+//    (folder or tag) or most of its tracks carry the UPC. Some folders mix
+//    tracks of several releases, so a stray track is not enough.
+// 2. Name: one artist/album folder (year and "A" vs "A & B" aside); two
+//    equally plausible folders are not guessed at.
+// 3. ISRC: one folder holding most of the release's tracks, which also
+//    finds folders renamed by hand or never tagged with a UPC.
+// Ties are broken by path so the answer never depends on scan order.
+export async function findExistingReleaseDir({
+  upc,
+  isrcs = [],
+  artists,
+  album,
+  variant = null,
+  index: preScannedIndex = null,
+} = {}) {
+  // Album and song jobs ask at most twice per download, so a fresh walk is
+  // cheap there; imports that ask per track pass the index they keep.
+  let index = preScannedIndex
+  if (!index) {
+    try {
+      index = await scanLibrary()
+    } catch {
+      return null
+    }
+  }
+  const root = getMusicRoot()
+  const wantVariant = variant || null
+  const wantAlbum = plainAlbumKey(album)
+  const usable = async (rel) => {
+    const abs = albumDirFromRel(root, rel)
+    if (!abs || (parseVariantSuffix(path.basename(abs)) || null) !== wantVariant) return null
+    const st = await fsp.stat(abs).catch(() => null)
+    return st?.isDirectory() ? abs : null
+  }
+  const namedLike = (dir) =>
+    Boolean(wantAlbum) &&
+    (plainAlbumKey(dir.albumName) === wantAlbum || (dir.title && plainAlbumKey(dir.title) === wantAlbum))
+
+  const upcNorm = normalizeUpc(upc)
+  if (upcNorm) {
+    const picks = []
+    for (const rel of index.upcDirs?.get(upcNorm) || []) {
+      const dir = index.albumDirs?.get(rel)
+      if (!dir) continue
+      const share = (dir.upcCounts.get(upcNorm) || 0) / Math.max(1, dir.trackCount)
+      const named = namedLike(dir)
+      if (!named && share <= 0.5) continue
+      picks.push({ rel, named, share })
+    }
+    picks.sort((a, b) => Number(b.named) - Number(a.named) || b.share - a.share || (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0))
+    for (const pick of picks) {
+      const abs = await usable(pick.rel)
+      if (abs) return abs
+    }
+  }
+
+  if (wantAlbum) {
+    const wanted = (Array.isArray(artists) ? artists : [artists]).filter(Boolean)
+    const hits = []
+    for (const dir of index.albumDirs?.values() || []) {
+      if (!namedLike(dir)) continue
+      if (!artistOverlaps(dir.artistName, wanted)) continue
+      const abs = await usable(dir.relPath)
+      if (abs) hits.push(abs)
+    }
+    const unique = [...new Set(hits)]
+    if (unique.length === 1) return unique[0]
+    if (unique.length > 1) return null
+  }
+
+  const wantIsrcs = [...new Set((isrcs || []).map(normalizeIsrc).filter(Boolean))]
+  if (wantIsrcs.length) {
+    const counts = new Map()
+    for (const isrc of wantIsrcs) {
+      for (const rel of index.isrcDirs?.get(isrc) || []) counts.set(rel, (counts.get(rel) || 0) + 1)
+    }
+    const best = [...counts].filter(([, n]) => n * 2 > wantIsrcs.length).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0]
+    if (best) return usable(best[0])
+  }
+  return null
 }
 
 export async function getAlbumVersionGroups(artistName, albumName, upc = null, preScannedIndex = null) {

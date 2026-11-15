@@ -13,6 +13,14 @@ import crypto from 'node:crypto'
 const fixtures = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-runjob-fixture-'))
 const alac = path.join(fixtures, 'tone.m4a')
 execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'alac', alac])
+// A collab single as amdp tags it: one display string, a barcode, no year.
+const collab = path.join(fixtures, 'collab.m4a')
+execFileSync('ffmpeg', [
+  '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'alac', '-movflags', 'use_metadata_tags',
+  '-metadata', 'title=Beautiful', '-metadata', 'album=Beautiful - Single', '-metadata', 'album_artist=Anyma & Joji',
+  '-metadata', 'artist=Anyma & Joji', '-metadata', 'track=1/1', '-metadata', 'UPC=197190551068', '-metadata', 'ISRC=QZ0000000009',
+  collab,
+])
 
 const bin = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-runjob-bin-'))
 const script = (name, body) => fs.writeFileSync(path.join(bin, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
@@ -20,8 +28,12 @@ script('MP4Box', 'echo "MP4Box - GPAC version 2.2"')
 script(
   'apple-music-dl',
   `d="Artist/Record (2020)"; mkdir -p "$d"
-cp "${alac}" "$d/01. Song (feat. Guest).m4a"
-cp "${alac}" "$d/02. Other.m4a"
+# A fill asks for one track (?i=<id>); track 2 is the only one filled.
+case "$*" in
+  *pl.collab*) c="Anyma & Joji/Beautiful - Single"; mkdir -p "$c"; cp "${collab}" "$c/01. Beautiful.m4a" ;;
+  *i=*) cp "${alac}" "$d/02. Other.m4a" ;;
+  *) cp "${alac}" "$d/01. Song (feat. Guest).m4a"; cp "${alac}" "$d/02. Other.m4a" ;;
+esac
 if grep -q 'lrc-format: "ttml"' config.yaml; then
   echo '<tt><body><div><p begin="1.000">one</p></div></body></tt>' > "$d/02. Other.ttml"
 fi
@@ -54,6 +66,7 @@ const { loadSecretsAtBoot } = await import('../lib/secretKey.mjs')
 await ensureConfigDir(tmpConfig)
 loadSecretsAtBoot(tmpConfig)
 const { __test__ } = await import('../lib/queue.mjs')
+const { buildMinimalFlacWithTags } = await import('../lib/audioTags.mjs')
 const { state, tickQueue, applyQobuzFileNames } = __test__
 
 test.after(() => {
@@ -116,6 +129,154 @@ test('the qobuz convention renames tracks before they are imported', async () =>
   assert.equal(job.status, 'done', job.error)
   const files = (await fsp.readdir(path.join(tmpMusic, 'Artist', 'Record'))).filter((f) => f.endsWith('.flac')).sort()
   assert.deepEqual(files, ['01. Song.flac', '02. Other.flac'])
+})
+
+async function resetLibrarySettings() {
+  await writeSettings({
+    namingConvention: 'apple',
+    pathTemplate: '',
+    primaryAlbumArtist: false,
+    lyricsFormat: 'lrc',
+  })
+}
+
+test('a folder scheme is used for an album that is not already in the library', async () => {
+  await fsp.rm(path.join(tmpMusic, 'Artist'), { recursive: true, force: true })
+  await resetLibrarySettings()
+  try {
+    await writeSettings({ pathTemplate: '$artist/$album ($year)/$track - $title' })
+    const job = await runAlbumJob({ year: '2013' })
+    assert.equal(job.status, 'done', job.error)
+    const dir = path.join(tmpMusic, 'Artist', 'Record (2013)')
+    const files = (await fsp.readdir(dir)).filter((f) => f.endsWith('.flac')).sort()
+    assert.deepEqual(files, ['01 - Song (feat. Guest).flac', '02 - Other.flac'])
+    assert.equal(await fsp.stat(path.join(tmpMusic, 'Artist', 'Record')).catch(() => null), null)
+  } finally {
+    await resetLibrarySettings()
+    await fsp.rm(path.join(tmpMusic, 'Artist'), { recursive: true, force: true })
+  }
+})
+
+test('an album already on disk stays in its folder when the scheme changes', async () => {
+  await fsp.rm(path.join(tmpMusic, 'Artist'), { recursive: true, force: true })
+  const existing = path.join(tmpMusic, 'Artist', 'Record')
+  await fsp.mkdir(existing, { recursive: true })
+  await fsp.writeFile(path.join(existing, '00. Keep.flac'), 'keep')
+  await resetLibrarySettings()
+  try {
+    await writeSettings({ pathTemplate: '$artist/$album ($year)/$track. $title' })
+    const job = await runAlbumJob({ year: '2013' })
+    assert.equal(job.status, 'done', job.error)
+    assert.equal(job.finalDir, existing)
+    const files = await fsp.readdir(existing)
+    assert.equal(await fsp.readFile(path.join(existing, '00. Keep.flac'), 'utf8'), 'keep')
+    assert.ok(files.includes('01. Song (feat. Guest).flac'))
+    assert.equal(await fsp.stat(path.join(tmpMusic, 'Artist', 'Record (2013)')).catch(() => null), null)
+  } finally {
+    await resetLibrarySettings()
+    await fsp.rm(path.join(tmpMusic, 'Artist'), { recursive: true, force: true })
+  }
+})
+
+test('the primary artist is the folder only when that album is not already filed under the full credit', async () => {
+  await fsp.rm(path.join(tmpMusic, 'Anyma & Joji'), { recursive: true, force: true })
+  await fsp.rm(path.join(tmpMusic, 'Anyma'), { recursive: true, force: true })
+  await resetLibrarySettings()
+  try {
+    await writeSettings({ primaryAlbumArtist: true })
+    const fresh = await runAlbumJob({ artist: 'Anyma & Joji', folderArtist: 'Anyma' })
+    assert.equal(fresh.status, 'done', fresh.error)
+    assert.equal(fresh.finalDir, path.join(tmpMusic, 'Anyma', 'Record'))
+    await fsp.rm(path.join(tmpMusic, 'Anyma'), { recursive: true, force: true })
+
+    const existing = path.join(tmpMusic, 'Anyma & Joji', 'Record')
+    await fsp.mkdir(existing, { recursive: true })
+    await fsp.writeFile(path.join(existing, '00. Keep.flac'), 'keep')
+    const again = await runAlbumJob({ artist: 'Anyma & Joji', folderArtist: 'Anyma' })
+    assert.equal(again.status, 'done', again.error)
+    assert.equal(again.finalDir, existing)
+    assert.equal(await fsp.readFile(path.join(existing, '00. Keep.flac'), 'utf8'), 'keep')
+    assert.equal(await fsp.stat(path.join(tmpMusic, 'Anyma')).catch(() => null), null)
+  } finally {
+    await resetLibrarySettings()
+    await fsp.rm(path.join(tmpMusic, 'Anyma & Joji'), { recursive: true, force: true })
+    await fsp.rm(path.join(tmpMusic, 'Anyma'), { recursive: true, force: true })
+  }
+})
+
+test('playlist tracks get the primary artist folder and a year from Apple', async () => {
+  await resetLibrarySettings()
+  const asked = []
+  __test__.setPlaylistAlbumLookup(async (req) => {
+    asked.push(req)
+    const info = { year: '2024', artistName: 'Anyma & Joji', artists: ['Anyma', 'Joji'], isCompilation: false, upc: '197190551068' }
+    return { byUpc: new Map([['197190551068', info]]), byIsrc: new Map() }
+  })
+  try {
+    await writeSettings({ pathTemplate: '$artist/$album ($year)/$track. $title', primaryAlbumArtist: true })
+    const job = await runAlbumJob({ kind: 'playlist', playlistId: 'pl.collab', albumTitle: 'Mix', artist: 'Some Curator' })
+    assert.equal(job.status, 'done', job.error)
+    const file = path.join(tmpMusic, 'Anyma', 'Beautiful - Single (2024)', '01. Beautiful.flac')
+    assert.ok(await fsp.stat(file).catch(() => null), (await fsp.readdir(tmpMusic, { recursive: true })).join(', '))
+    assert.equal(asked.length, 1)
+    assert.deepEqual(asked[0].upcs, ['197190551068'])
+    // The curator is not an artist the release is looked up under.
+    assert.equal(await fsp.stat(path.join(tmpMusic, 'Some Curator')).catch(() => null), null)
+  } finally {
+    __test__.setPlaylistAlbumLookup(null)
+    await resetLibrarySettings()
+    for (const d of ['Anyma', 'Anyma & Joji', 'Playlists']) await fsp.rm(path.join(tmpMusic, d), { recursive: true, force: true })
+  }
+})
+
+async function fillIntoExisting(existingNames, pathTemplate) {
+  await fsp.rm(path.join(tmpMusic, 'Artist'), { recursive: true, force: true })
+  const existing = path.join(tmpMusic, 'Artist', 'Record')
+  await fsp.mkdir(existing, { recursive: true })
+  // Tagged like a real download: the names are explained by the tags.
+  for (const name of existingNames) {
+    await fsp.writeFile(
+      path.join(existing, name),
+      buildMinimalFlacWithTags({ extra: { TITLE: 'Song (feat. Guest)', TRACKNUMBER: '1', ARTIST: 'Artist', ALBUM: 'Record' } }),
+    )
+  }
+  await resetLibrarySettings()
+  await writeSettings({ pathTemplate })
+  const job = await runAlbumJob({
+    year: '2013',
+    stats: { total: 1, done: 0, failed: 0 },
+    missingTracks: [{ id: '2', name: 'Other', trackNumber: 2, discNumber: 1 }],
+    trackIsrcs: [
+      { name: 'Song (feat. Guest)', trackNumber: 1, discNumber: 1, isrc: 'QZ0000000001' },
+      { name: 'Other', trackNumber: 2, discNumber: 1, isrc: 'QZ0000000002' },
+    ],
+  })
+  assert.equal(job.status, 'done', job.error)
+  assert.equal(job.finalDir, existing)
+  return (await fsp.readdir(existing)).filter((f) => f.endsWith('.flac')).sort()
+}
+
+test('tracks filled into an existing folder are named like the files already there', async () => {
+  try {
+    // The folder predates the scheme: the fill keeps amdp's "02. Other".
+    assert.deepEqual(
+      await fillIntoExisting(['01. Song (feat. Guest).flac'], '$artist/$album ($year)/$track - $title'),
+      ['01. Song (feat. Guest).flac', '02. Other.flac'],
+    )
+    // A folder written with another file scheme keeps that one.
+    assert.deepEqual(
+      await fillIntoExisting(['01 - Song (feat. Guest).flac'], '$artist/$album ($year)/$track. $title'),
+      ['01 - Song (feat. Guest).flac', '02 - Other.flac'],
+    )
+    // Also with the default layout, which otherwise never renames.
+    assert.deepEqual(
+      await fillIntoExisting(['Artist - 01 - Song (feat. Guest).flac'], ''),
+      ['Artist - 01 - Song (feat. Guest).flac', 'Artist - 02 - Other.flac'],
+    )
+  } finally {
+    await resetLibrarySettings()
+    await fsp.rm(path.join(tmpMusic, 'Artist'), { recursive: true, force: true })
+  }
 })
 
 test('qobuz renaming keeps a file whose new name is taken', async () => {

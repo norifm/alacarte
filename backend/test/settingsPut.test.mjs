@@ -56,6 +56,32 @@ test('PUT persists namingConvention qobuz and GET returns it', async () => {
   })
 })
 
+test('PUT stores a folder scheme and rejects one that is not artist/album/file', async () => {
+  await withSettingsServer(async (base) => {
+    try {
+      const bad = await jsonRequest(base, 'PUT', { pathTemplate: '$artist/$title' })
+      assert.equal(bad.status, 400)
+      assert.match(bad.data.error, /artist\/album\/file/)
+      assert.equal(bad.data.code, 'pathTemplate.parts')
+
+      const put = await jsonRequest(base, 'PUT', {
+        pathTemplate: '$artist/$album ($year)/$track. $title',
+        primaryAlbumArtist: true,
+      })
+      assert.equal(put.status, 200)
+      assert.equal(put.data.pathTemplate, '$artist/$album ($year)/$track. $title')
+      assert.equal(put.data.primaryAlbumArtist, true)
+
+      const legacy = await jsonRequest(base, 'PUT', { pathTemplate: '$artist/$album/$track. $title' })
+      assert.equal(legacy.status, 200)
+      assert.equal(legacy.data.pathTemplate, '')
+      assert.equal(legacy.data.primaryAlbumArtist, true)
+    } finally {
+      await jsonRequest(base, 'PUT', { pathTemplate: '', primaryAlbumArtist: false })
+    }
+  })
+})
+
 test('PUT rejects unknown namingConvention values', async () => {
   await withSettingsServer(async (base) => {
     await jsonRequest(base, 'PUT', { namingConvention: 'qobuz' })

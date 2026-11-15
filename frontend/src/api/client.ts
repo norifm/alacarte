@@ -243,6 +243,8 @@ export type PublicSettings = {
   autoDownloadCheckFrequency: AutoCheckFrequency
   stagingInsideMusicLibrary: boolean
   namingConvention: 'apple' | 'qobuz'
+  pathTemplate: string
+  primaryAlbumArtist: boolean
   versionOptionsEnabled: boolean
   versionOptions: QualityGroup[]
   uiLanguage: UiLanguage
@@ -326,7 +328,9 @@ export type LibraryAlbum = {
   id: string
   artistName: string
   artistId?: string | null
+  // Folder name. `title` is the album as tagged, null when untagged.
   albumName: string
+  title?: string | null
   relPath: string
   trackCount: number
   lyricsCount: number
@@ -462,6 +466,38 @@ export type LyricsBackfillStatus = {
   error: string | null
 }
 
+export type LibraryMoveSkip = { path: string; reason: string }
+
+export type LibraryMoveStatus = {
+  running: boolean
+  mode: 'move' | 'undo'
+  phase: 'idle' | 'planning' | 'waiting' | 'moving' | 'playlists' | 'scanning' | 'done'
+  total: number
+  scanned: number
+  moved: number
+  inPlace: number
+  skipped: number
+  failed: number
+  playlistsUpdated: number
+  skippedItems: LibraryMoveSkip[]
+  current: string | null
+  startedAt: number | null
+  finishedAt: number | null
+  stopRequested: boolean
+  error: string | null
+  canUndo: boolean
+}
+
+export type LibraryMovePreview = {
+  samples: { kind: string; path: string }[]
+  albums: number
+  move: number
+  inPlace: number
+  skipped: number
+  skippedItems: LibraryMoveSkip[]
+  navidrome: { connected: boolean; version: string | null; losesPlays: boolean; versionUnknown: boolean }
+}
+
 export type ArtistBackfillStatus = {
   running: boolean
   waitingUntil?: number | null
@@ -514,18 +550,22 @@ export class HttpError extends Error {
   needsSetup: boolean
   retryAfter: number | null
   lockedUntil: number | null
+  // Machine-readable reason for errors the UI translates, e.g. "pathTemplate.parts".
+  code: string | null
   constructor(
     status: number,
     message: string,
     needsSetup = false,
     retryAfter: number | null = null,
     lockedUntil: number | null = null,
+    code: string | null = null,
   ) {
     super(message)
     this.status = status
     this.needsSetup = needsSetup
     this.retryAfter = retryAfter
     this.lockedUntil = lockedUntil
+    this.code = code
   }
 }
 
@@ -571,6 +611,7 @@ async function http<T>(
       false,
       typeof body?.retryAfter === 'number' ? body.retryAfter : null,
       typeof body?.lockedUntil === 'number' ? body.lockedUntil : null,
+      typeof body?.code === 'string' ? body.code : null,
     )
   }
   return body as T
@@ -972,6 +1013,21 @@ export const api = {
     http<ArtistBackfillStatus>('/api/settings/artist-backfill', { method: 'POST' }),
   stopArtistBackfill: () =>
     http<{ ok: boolean }>('/api/settings/artist-backfill/stop', { method: 'POST' }),
+  libraryMoveStatus: () => http<LibraryMoveStatus>('/api/settings/library-move'),
+  previewLibraryMove: (body: { pathTemplate: string; primaryAlbumArtist: boolean }) =>
+    http<LibraryMovePreview>('/api/settings/library-move/preview', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  startLibraryMove: (body: { pathTemplate: string; primaryAlbumArtist: boolean }) =>
+    http<LibraryMoveStatus>('/api/settings/library-move', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  stopLibraryMove: () =>
+    http<{ ok: boolean; running: boolean }>('/api/settings/library-move/stop', { method: 'POST' }),
+  undoLibraryMove: () =>
+    http<LibraryMoveStatus>('/api/settings/library-move/undo', { method: 'POST' }),
 }
 
 export function artworkUrl(

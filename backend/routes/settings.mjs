@@ -49,6 +49,15 @@ import {
   getArtistBackfillStatus,
   stopArtistBackfill,
 } from '../lib/artistCredits.mjs'
+import { parsePathTemplate, pathTemplateErrorMessage } from '../lib/pathTemplate.mjs'
+import {
+  getLibraryMoveStatus,
+  isLibraryMoveRunning,
+  previewLibraryMove,
+  startLibraryMove,
+  stopLibraryMove,
+  undoLibraryMove,
+} from '../lib/libraryMove.mjs'
 
 export const settingsRouter = express.Router()
 
@@ -72,6 +81,8 @@ export const WRITABLE_KEYS = new Set([
   'autoDownloadCheckFrequency',
   'stagingInsideMusicLibrary',
   'namingConvention',
+  'pathTemplate',
+  'primaryAlbumArtist',
   'versionOptionsEnabled',
   'versionOptions',
   'uiLanguage',
@@ -112,6 +123,13 @@ settingsRouter.get('/storefronts', async (req, res) => {
 settingsRouter.put('/', async (req, res) => {
   try {
     const body = req.body || {}
+    if (Object.prototype.hasOwnProperty.call(body, 'pathTemplate')) {
+      const parsed = parsePathTemplate(body.pathTemplate)
+      if (parsed.error) {
+        res.status(400).json({ error: pathTemplateErrorMessage(parsed.error), code: `pathTemplate.${parsed.error}` })
+        return
+      }
+    }
     const patch = {}
     for (const [k, v] of Object.entries(body)) {
       if (!WRITABLE_KEYS.has(k)) continue
@@ -119,6 +137,11 @@ settingsRouter.put('/', async (req, res) => {
       if (k === 'lyricsFormat' && !LYRICS_FORMAT_VALUES.has(v)) continue
       if (k === 'quality' && !QUALITY_VALUES.has(v)) continue
       if (k === 'namingConvention' && !NAMING_CONVENTION_VALUES.has(v)) continue
+      if (k === 'pathTemplate') {
+        patch[k] = parsePathTemplate(v).stored
+        continue
+      }
+      if (k === 'primaryAlbumArtist' && typeof v !== 'boolean') continue
       if (APPLE_GATEWAY_FLAGS.has(k) && typeof v !== 'boolean') continue
       if (k === 'autoStorefront' && typeof v !== 'boolean') continue
       if (k in APPLE_GATEWAY_LIMITS) {
@@ -324,11 +347,24 @@ settingsRouter.post('/apple-status/reset', (_req, res) => {
   res.json(appleGateway.status())
 })
 
+// Backfills walk and rewrite library files, so they never run while a
+// library move renames them (and the move waits for none to be running).
+function backfillRunning() {
+  return getTagBackfillStatus().running || getLyricsBackfillStatus().running || getArtistBackfillStatus().running
+}
+
+function refuseDuringMove(res) {
+  if (!isLibraryMoveRunning()) return false
+  res.status(409).json({ error: 'a library move is running', code: 'libraryMove.running' })
+  return true
+}
+
 settingsRouter.get('/tag-backfill', (_req, res) => {
   res.json(getTagBackfillStatus())
 })
 
 settingsRouter.post('/tag-backfill', async (req, res) => {
+  if (refuseDuringMove(res)) return
   try {
     res.json(
       await runInLane('background', () =>
@@ -352,6 +388,7 @@ settingsRouter.get('/lyrics-backfill', (_req, res) => {
 })
 
 settingsRouter.post('/lyrics-backfill', async (_req, res) => {
+  if (refuseDuringMove(res)) return
   try {
     res.json(await runInLane('background', () => startLyricsBackfill()))
   } catch (err) {
@@ -368,6 +405,7 @@ settingsRouter.get('/artist-backfill', (_req, res) => {
 })
 
 settingsRouter.post('/artist-backfill', async (_req, res) => {
+  if (refuseDuringMove(res)) return
   try {
     res.json(await runInLane('background', () => startArtistBackfill()))
   } catch (err) {
@@ -377,4 +415,55 @@ settingsRouter.post('/artist-backfill', async (_req, res) => {
 
 settingsRouter.post('/artist-backfill/stop', (_req, res) => {
   res.json(stopArtistBackfill())
+})
+
+// Moving the library to a new folder scheme or primary-artist setting.
+// The dialog asks for a dry run first; starting saves the setting.
+settingsRouter.get('/library-move', (_req, res) => {
+  res.json(getLibraryMoveStatus())
+})
+
+settingsRouter.post('/library-move/preview', async (req, res) => {
+  try {
+    const result = await previewLibraryMove({
+      pathTemplate: req.body?.pathTemplate ?? '',
+      primaryAlbumArtist: Boolean(req.body?.primaryAlbumArtist),
+    })
+    if (result.error) {
+      const code = result.error
+      res.status(400).json({ error: pathTemplateErrorMessage(code.replace(/^pathTemplate\./, '')), code })
+      return
+    }
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+settingsRouter.post('/library-move', async (req, res) => {
+  try {
+    res.json(
+      await startLibraryMove({
+        pathTemplate: req.body?.pathTemplate ?? '',
+        primaryAlbumArtist: Boolean(req.body?.primaryAlbumArtist),
+        isBusy: backfillRunning,
+      }),
+    )
+  } catch (err) {
+    const code = err.code || null
+    const message = code?.startsWith('pathTemplate.') ? pathTemplateErrorMessage(code.slice(13)) : err.message
+    res.status(err.statusCode || 500).json({ error: message, code })
+  }
+})
+
+settingsRouter.post('/library-move/stop', (_req, res) => {
+  res.json(stopLibraryMove())
+})
+
+settingsRouter.post('/library-move/undo', async (_req, res) => {
+  try {
+    res.json(await undoLibraryMove())
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message, code: err.code || null })
+  }
 })

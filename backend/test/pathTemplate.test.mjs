@@ -1,0 +1,224 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import os from 'node:os'
+import path from 'node:path'
+import fsp from 'node:fs/promises'
+
+import {
+  parsePathTemplate,
+  pathTemplateErrorMessage,
+  primaryFolderArtist,
+  renderFileStem,
+  renderSegment,
+} from '../lib/pathTemplate.mjs'
+import { resolveLibraryDir } from '../lib/folderLayout.mjs'
+
+const collab = {
+  artistName: 'Anyma & Joji',
+  isCompilation: false,
+  artists: [{ name: 'Anyma' }, { name: 'Joji' }],
+}
+
+test('an empty scheme is the historical layout', () => {
+  const parsed = parsePathTemplate('  ')
+  assert.equal(parsed.custom, false)
+  assert.equal(parsed.customFile, false)
+  assert.equal(parsed.stored, '')
+  assert.equal(parsePathTemplate('$artist/$album/$track. $title').custom, false)
+  assert.equal(parsePathTemplate('$Artist/$Album/$Track. $Title').stored, '')
+})
+
+test('the requested scheme renders artist, year and track', () => {
+  const parsed = parsePathTemplate('$artist/$album ($year)/$track. $title')
+  assert.equal(parsed.custom, true)
+  assert.equal(parsed.customFile, false)
+  const vars = { artist: 'Daft Punk', album: 'Random Access Memories', year: 2013, track: 8, title: 'Get Lucky' }
+  assert.equal(renderSegment(parsed.artist, vars), 'Daft Punk')
+  assert.equal(renderSegment(parsed.album, vars), 'Random Access Memories (2013)')
+  assert.equal(renderFileStem(parsed.file, vars, '.flac'), '08. Get Lucky')
+})
+
+test('a missing year or track number does not leave empty punctuation', () => {
+  const vars = { artist: 'Daft Punk', album: 'Random Access Memories (2013)', title: 'Get Lucky' }
+  assert.equal(renderSegment('$album ($year)', vars), 'Random Access Memories')
+  assert.equal(renderFileStem('$track. $title', vars), 'Get Lucky')
+  assert.equal(renderFileStem('$disc-$track. $title', { ...vars, track: 8 }), '08. Get Lucky')
+  assert.equal(renderFileStem('$disc-$track. $title', { ...vars, disc: 2, track: 8 }), '2-08. Get Lucky')
+})
+
+test('file and folder tokens cannot escape the library', () => {
+  assert.equal(renderFileStem('$title', { title: '..' }), '')
+  assert.equal(renderFileStem('$title', { title: 'A/B:C' }), 'A_B_C')
+  assert.equal(renderSegment('$artist', { artist: 'A/B' }), 'A_B')
+  assert.equal(renderFileStem('$title.flac', { title: 'Get Lucky' }, '.flac'), 'Get Lucky')
+})
+
+test('schemes that are not artist/album/file are rejected', () => {
+  for (const bad of [
+    '$artist/$title',
+    '$artist/$album/$track/$title',
+    '/$artist/$album/$title',
+    '$artist/../$album/$title',
+    '$album/$artist/$title',
+    '$artist/$year/$title',
+    '$artist/$album/$disc',
+    '$artist/$album/$name',
+    'C:\\music\\$artist\\$album\\$title',
+  ]) {
+    assert.ok(parsePathTemplate(bad).error, bad)
+  }
+})
+
+test('validation errors are codes the frontend translates', () => {
+  const cases = {
+    '$artist/$title': 'parts',
+    '$artist/$album/$track/$title': 'parts',
+    '$artist/$album/$name': 'unknownToken',
+    '$album/$artist/$title': 'artistToken',
+    '$artist/$year/$title': 'albumToken',
+    '$artist/$album/$disc': 'fileToken',
+    'C:\\music\\$artist\\$album\\$title': 'backslash',
+    [`$artist/$album/${'x'.repeat(240)}`]: 'tooLong',
+  }
+  for (const [input, code] of Object.entries(cases)) {
+    const { error } = parsePathTemplate(input)
+    assert.equal(error, code, input)
+    assert.notEqual(pathTemplateErrorMessage(error), 'Invalid folder scheme')
+  }
+})
+
+test('primary artist is the first credit, except compilations and single artists', () => {
+  assert.equal(primaryFolderArtist(collab, false), null)
+  assert.equal(primaryFolderArtist(collab, true), 'Anyma')
+  assert.equal(primaryFolderArtist({ ...collab, isCompilation: true }, true), null)
+  assert.equal(
+    primaryFolderArtist({ artistName: 'Anyma', artists: [{ name: 'Anyma' }] }, true),
+    null,
+  )
+})
+
+test('the default directory ignores the year and a custom scheme appends it', async () => {
+  const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-layout-'))
+  try {
+    const legacy = await resolveLibraryDir(root, {
+      artist: 'Daft Punk',
+      album: 'Random Access Memories',
+      year: '2013',
+    })
+    assert.equal(legacy, path.join(root, 'Daft Punk', 'Random Access Memories'))
+
+    const custom = await resolveLibraryDir(root, {
+      artist: 'Daft Punk',
+      album: 'Random Access Memories',
+      year: '2013',
+      layout: '$artist/$album ($year)/$track. $title',
+    })
+    assert.equal(custom, path.join(root, 'Daft Punk', 'Random Access Memories (2013)'))
+  } finally {
+    await fsp.rm(root, { recursive: true, force: true })
+  }
+})
+
+test('an album already in the library is kept, and a path outside it is not', async () => {
+  const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-layout-'))
+  const outside = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-layout-out-'))
+  try {
+    const existing = path.join(root, 'Daft Punk', 'Random Access Memories')
+    await fsp.mkdir(existing, { recursive: true })
+    const kept = await resolveLibraryDir(root, {
+      artist: 'Daft Punk',
+      album: 'Random Access Memories',
+      year: '2013',
+      layout: '$artist/$album ($year)/$title',
+      existingDir: existing,
+    })
+    assert.equal(kept, await fsp.realpath(existing))
+
+    const fresh = await resolveLibraryDir(root, {
+      artist: 'Daft Punk',
+      album: 'Random Access Memories',
+      year: '2013',
+      layout: '$artist/$album ($year)/$title',
+      existingDir: outside,
+    })
+    assert.equal(fresh, path.join(root, 'Daft Punk', 'Random Access Memories (2013)'))
+
+    const link = path.join(root, 'Daft Punk', 'escape')
+    await fsp.symlink(outside, link)
+    const linked = await resolveLibraryDir(root, {
+      artist: 'Daft Punk',
+      album: 'Random Access Memories',
+      year: '2013',
+      layout: '$artist/$album ($year)/$title',
+      existingDir: link,
+    })
+    assert.equal(linked, path.join(root, 'Daft Punk', 'Random Access Memories (2013)'))
+  } finally {
+    await fsp.rm(root, { recursive: true, force: true })
+    await fsp.rm(outside, { recursive: true, force: true })
+  }
+})
+
+// The Settings page validates while typing with a copy of the parser. Node
+// 22.6+ can load it directly; older runtimes skip the comparison.
+const frontendValidator = await import('../../frontend/src/lib/pathTemplate.ts').catch(() => null)
+
+test('the frontend validator gives the same codes as the backend', { skip: !frontendValidator }, () => {
+  for (const input of [
+    '',
+    '$artist/$album/$track. $title',
+    '$artist/$album ($year)/$disc-$track $title',
+    '$artist/$title',
+    '$artist/$album/$track/$title',
+    '/$artist/$album/$title',
+    '$artist/../$album/$title',
+    '$album/$artist/$title',
+    '$artist/$year/$title',
+    '$artist/$album/$disc',
+    '$artist/$album/$name',
+    'C:\\music\\$artist\\$album\\$title',
+    `$artist/$album/${'x'.repeat(240)}`,
+  ]) {
+    assert.equal(frontendValidator.pathTemplateError(input), parsePathTemplate(input).error ?? null, input)
+  }
+  assert.equal(frontendValidator.pathTemplateErrorFromCode('pathTemplate.parts'), 'parts')
+})
+
+test('the file pattern of an existing name is worked out from its tags', async () => {
+  const { inferFilePattern, isLegacyFileStem } = await import('../lib/pathTemplate.mjs')
+  assert.equal(inferFilePattern('03 - GORO', { track: '3/5', title: 'GORO' }), '$track - $title')
+  assert.equal(inferFilePattern('2-08. Get Lucky', { disc: 2, track: 8, title: 'Get Lucky' }), '$disc-$track. $title')
+  assert.equal(
+    inferFilePattern('Westside Gunn - 2025 - 04 DAVEY', { artist: 'Westside Gunn', year: '2025-04-18', track: 4, title: 'DAVEY' }),
+    '$artist - $year - $track $title',
+  )
+  // A title that is a number is still the title.
+  assert.equal(inferFilePattern('01. 1999', { track: 1, title: '1999' }), '$track. $title')
+  assert.equal(inferFilePattern('random name', { track: 1, title: 'Song' }), null)
+  assert.equal(inferFilePattern('$track', { track: 1, title: 'x' }), null)
+  assert.equal(isLegacyFileStem('01. FISHSCALE FRIDAY'), true)
+  assert.equal(isLegacyFileStem('03 - GORO'), false)
+})
+
+test('a rendered name can be read back into the values that made it', async () => {
+  const { matchSegment } = await import('../lib/pathTemplate.mjs')
+  assert.deepEqual(matchSegment('$album ($year)', 'Random Access Memories (2013)'), {
+    album: 'Random Access Memories',
+    year: '2013',
+  })
+  assert.deepEqual(matchSegment('$track. $title', '08. Get Lucky'), { track: '08', title: 'Get Lucky' })
+  assert.deepEqual(matchSegment('$disc-$track. $title', '2-08. Get Lucky'), {
+    disc: '2',
+    track: '08',
+    title: 'Get Lucky',
+  })
+  assert.deepEqual(matchSegment('$album', 'Above (non-deluxe, removed)'), {
+    album: 'Above (non-deluxe, removed)',
+  })
+  // With the track dropped, `$track. $title` is just a title, so this name
+  // is a possible reading. A required separator that is not there is not.
+  assert.deepEqual(matchSegment('$track. $title', '03 - GORO'), { title: '03 - GORO' })
+  assert.deepEqual(matchSegment('$artist - $title', '03 - GORO'), { artist: '03', title: 'GORO' })
+  assert.equal(matchSegment('$artist - $title', 'GORO'), null)
+  assert.equal(matchSegment('$album ($year)', ''), null)
+})

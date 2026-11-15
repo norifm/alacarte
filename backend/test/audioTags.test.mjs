@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 import {
   buildMinimalFlacWithTags,
@@ -354,4 +355,54 @@ test('findSongPathInLibrary title fallback respects album and ISRC', async () =>
     assert.equal(await find('Loose', null, 'Loose - Single'), path.join(singlesDir, 'Loose.flac'))
     assert.equal(await find('Loose', 'USRC18888888', 'Loose - Single'), null)
   })
+})
+
+test('readAudioIdentityTags also returns the album tag of flac and m4a files', async () => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-album-tag-'))
+  try {
+    const flacPath = path.join(dir, 'a.flac')
+    await fsp.writeFile(flacPath, buildMinimalFlacWithTags({ isrc: 'USRC17607839', extra: { ALBUM: 'Meta - EP' } }))
+    assert.deepEqual(await readAudioIdentityTags(flacPath), { isrc: 'USRC17607839', upc: '', album: 'Meta - EP' })
+
+    const m4aPath = path.join(dir, 'a.m4a')
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono', '-t', '0.1', '-c:a', 'aac', '-metadata', 'album=Indie Rock', m4aPath])
+    assert.equal((await readAudioIdentityTags(m4aPath)).album, 'Indie Rock')
+  } finally {
+    await fsp.rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('readTrackTags reads the fields that place a track in the library', async () => {
+  const { readTrackTags } = await import('../lib/audioTags.mjs')
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-track-tags-'))
+  try {
+    const flacPath = path.join(dir, 'a.flac')
+    await fsp.writeFile(flacPath, buildMinimalFlacWithTags({
+      upc: '197190551068',
+      extra: {
+        TITLE: 'Beautiful', ALBUM: 'Beautiful - Single', ALBUMARTIST: 'Anyma & Joji',
+        ALBUMARTISTS: 'Anyma;Joji', DATE: '2024-03-01', TRACKNUMBER: '1/1', DISCNUMBER: '1',
+      },
+    }))
+    const tags = await readTrackTags(flacPath)
+    assert.equal(tags.title, 'Beautiful')
+    assert.equal(tags.albumArtist, 'Anyma & Joji')
+    assert.deepEqual(tags.albumArtists, ['Anyma', 'Joji'])
+    assert.equal(tags.year, '2024')
+    assert.equal(tags.track, 1)
+    assert.equal(tags.disc, 1)
+    assert.equal(tags.upc, '197190551068')
+
+    const m4aPath = path.join(dir, 'a.m4a')
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono', '-t', '0.1', '-c:a', 'aac',
+      '-metadata', 'title=Blackout', '-metadata', 'track=11/12', '-metadata', 'date=2025-06-01', '-metadata', 'album_artist=Jane Remover', m4aPath])
+    const m4a = await readTrackTags(m4aPath)
+    assert.equal(m4a.title, 'Blackout')
+    assert.equal(m4a.track, 11)
+    assert.equal(m4a.year, '2025')
+    assert.equal(m4a.albumArtist, 'Jane Remover')
+    assert.deepEqual(m4a.albumArtists, [])
+  } finally {
+    await fsp.rm(dir, { recursive: true, force: true })
+  }
 })

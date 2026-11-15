@@ -31,6 +31,7 @@ const EVENT_TYPES = [
   'tags.backfill.progress',
   'lyrics.backfill.progress',
   'artists.backfill.progress',
+  'library.move.progress',
   'library.changed',
 ] as const
 
