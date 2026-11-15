@@ -67,6 +67,15 @@
     "qobuzCompatible": "Compatible con Qobuz",
     "pathTemplate": "Esquema de carpetas",
     "pathTemplateHelp": "Vacío mantiene Artist/Album/01. Title. Solo afecta a álbumes que aún no están en la biblioteca. $artist $album $year $track $title $disc. Ejemplo: $artist/$album ($year)/$track. $title",
+    "pathTemplateErrors": {
+      "tooLong": "Demasiado largo",
+      "backslash": "Usa / en lugar de \\",
+      "parts": "Necesita artista/álbum/archivo",
+      "unknownToken": "$token desconocido",
+      "artistToken": "La carpeta del artista necesita $artist",
+      "albumToken": "La carpeta del álbum necesita $album",
+      "fileToken": "El nombre del archivo necesita $title o $track"
+    },
     "primaryAlbumArtist": "Carpeta del artista principal",
     "primaryAlbumArtistHelp": "La carpeta usa el primer artista del álbum (Anyma & Joji → Anyma). Los recopilatorios se quedan igual. Lo ya descargado no se mueve.",
     "downloadLyrics": "Descargar letras",

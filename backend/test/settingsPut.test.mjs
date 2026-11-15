@@ -62,6 +62,7 @@ test('PUT stores a folder scheme and rejects one that is not artist/album/file',
       const bad = await jsonRequest(base, 'PUT', { pathTemplate: '$artist/$title' })
       assert.equal(bad.status, 400)
       assert.match(bad.data.error, /artist\/album\/file/)
+      assert.equal(bad.data.code, 'pathTemplate.parts')
 
       const put = await jsonRequest(base, 'PUT', {
         pathTemplate: '$artist/$album ($year)/$track. $title',

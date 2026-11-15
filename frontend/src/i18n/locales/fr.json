@@ -67,6 +67,15 @@
     "qobuzCompatible": "Compatible Qobuz",
     "pathTemplate": "Schéma de dossiers",
     "pathTemplateHelp": "Vide conserve Artist/Album/01. Title. Ne s'applique qu'aux albums absents de la bibliothèque. $artist $album $year $track $title $disc. Exemple : $artist/$album ($year)/$track. $title",
+    "pathTemplateErrors": {
+      "tooLong": "Trop long",
+      "backslash": "Utilisez / au lieu de \\",
+      "parts": "Il faut artiste/album/fichier",
+      "unknownToken": "$token inconnu",
+      "artistToken": "Le dossier artiste doit contenir $artist",
+      "albumToken": "Le dossier album doit contenir $album",
+      "fileToken": "Le nom de fichier doit contenir $title ou $track"
+    },
     "primaryAlbumArtist": "Dossier de l'artiste principal",
     "primaryAlbumArtistHelp": "Le dossier porte le premier artiste de l'album (Anyma & Joji → Anyma). Les compilations restent telles quelles. Rien de déjà téléchargé n'est déplacé.",
     "downloadLyrics": "Télécharger les paroles",

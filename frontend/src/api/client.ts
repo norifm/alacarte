@@ -516,18 +516,22 @@ export class HttpError extends Error {
   needsSetup: boolean
   retryAfter: number | null
   lockedUntil: number | null
+  // Machine-readable reason for errors the UI translates, e.g. "pathTemplate.parts".
+  code: string | null
   constructor(
     status: number,
     message: string,
     needsSetup = false,
     retryAfter: number | null = null,
     lockedUntil: number | null = null,
+    code: string | null = null,
   ) {
     super(message)
     this.status = status
     this.needsSetup = needsSetup
     this.retryAfter = retryAfter
     this.lockedUntil = lockedUntil
+    this.code = code
   }
 }
 
@@ -573,6 +577,7 @@ async function http<T>(
       false,
       typeof body?.retryAfter === 'number' ? body.retryAfter : null,
       typeof body?.lockedUntil === 'number' ? body.lockedUntil : null,
+      typeof body?.code === 'string' ? body.code : null,
     )
   }
   return body as T

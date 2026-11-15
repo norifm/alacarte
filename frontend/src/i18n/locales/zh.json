@@ -67,6 +67,15 @@
     "qobuzCompatible": "兼容 Qobuz",
     "pathTemplate": "文件夹方案",
     "pathTemplateHelp": "留空则保持 Artist/Album/01. Title。只作用于库里还没有的专辑。可用 $artist $album $year $track $title $disc，例如 $artist/$album ($year)/$track. $title",
+    "pathTemplateErrors": {
+      "tooLong": "太长",
+      "backslash": "请用 / 代替 \\",
+      "parts": "需要 艺人/专辑/文件",
+      "unknownToken": "未知的 $token",
+      "artistToken": "艺人文件夹需要 $artist",
+      "albumToken": "专辑文件夹需要 $album",
+      "fileToken": "文件名需要 $title 或 $track"
+    },
     "primaryAlbumArtist": "主艺人文件夹",
     "primaryAlbumArtistHelp": "文件夹用第一位专辑艺人（Anyma & Joji → Anyma）。合辑保持原样。已下载的文件不会移动。",
     "downloadLyrics": "下载歌词",

@@ -67,6 +67,15 @@
     "qobuzCompatible": "Qobuz 호환",
     "pathTemplate": "폴더 형식",
     "pathTemplateHelp": "비워 두면 Artist/Album/01. Title 을 유지합니다. 라이브러리에 없는 앨범에만 적용됩니다. $artist $album $year $track $title $disc. 예: $artist/$album ($year)/$track. $title",
+    "pathTemplateErrors": {
+      "tooLong": "너무 깁니다",
+      "backslash": "\\ 대신 / 를 쓰세요",
+      "parts": "아티스트/앨범/파일 형식이어야 합니다",
+      "unknownToken": "알 수 없는 $token 이 있습니다",
+      "artistToken": "아티스트 폴더에 $artist 가 필요합니다",
+      "albumToken": "앨범 폴더에 $album 이 필요합니다",
+      "fileToken": "파일 이름에 $title 또는 $track 이 필요합니다"
+    },
     "primaryAlbumArtist": "대표 아티스트 폴더",
     "primaryAlbumArtistHelp": "폴더 이름을 첫 앨범 아티스트로 씁니다 (Anyma & Joji → Anyma). 컴필레이션은 그대로 둡니다. 이미 받은 파일은 옮기지 않습니다.",
     "downloadLyrics": "가사 다운로드",

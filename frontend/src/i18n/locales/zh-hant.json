@@ -67,6 +67,15 @@
     "qobuzCompatible": "Qobuz 相容格式",
     "pathTemplate": "資料夾方案",
     "pathTemplateHelp": "留空則維持 Artist/Album/01. Title。只套用到資料庫裡還沒有的專輯。可用 $artist $album $year $track $title $disc，例如 $artist/$album ($year)/$track. $title",
+    "pathTemplateErrors": {
+      "tooLong": "太長",
+      "backslash": "請用 / 代替 \\",
+      "parts": "需要 藝人/專輯/檔案",
+      "unknownToken": "未知的 $token",
+      "artistToken": "藝人資料夾需要 $artist",
+      "albumToken": "專輯資料夾需要 $album",
+      "fileToken": "檔名需要 $title 或 $track"
+    },
     "primaryAlbumArtist": "主要藝人資料夾",
     "primaryAlbumArtistHelp": "資料夾用第一位專輯藝人（Anyma & Joji → Anyma）。合輯維持原樣。已下載的檔案不會移動。",
     "downloadLyrics": "下載歌詞",

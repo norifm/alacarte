@@ -67,6 +67,15 @@
     "qobuzCompatible": "Qobuz 互換",
     "pathTemplate": "フォルダ形式",
     "pathTemplateHelp": "空欄のときは Artist/Album/01. Title のままです。ライブラリにまだないアルバムだけに使います。$artist $album $year $track $title $disc。例: $artist/$album ($year)/$track. $title",
+    "pathTemplateErrors": {
+      "tooLong": "長すぎます",
+      "backslash": "\\ ではなく / を使ってください",
+      "parts": "アーティスト/アルバム/ファイル の形にしてください",
+      "unknownToken": "不明な $token があります",
+      "artistToken": "アーティストフォルダには $artist が必要です",
+      "albumToken": "アルバムフォルダには $album が必要です",
+      "fileToken": "ファイル名には $title か $track が必要です"
+    },
     "primaryAlbumArtist": "主アーティストのフォルダ",
     "primaryAlbumArtistHelp": "フォルダ名を最初のアルバムアーティストにします（Anyma & Joji → Anyma）。コンピレーションはそのままです。既にあるファイルは移動しません。",
     "downloadLyrics": "歌詞をダウンロード",

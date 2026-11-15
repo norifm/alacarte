@@ -67,6 +67,15 @@
     "qobuzCompatible": "Qobuz-compatible",
     "pathTemplate": "Folder scheme",
     "pathTemplateHelp": "Empty keeps Artist/Album/01. Title. Only albums that are not already in the library use this. $artist $album $year $track $title $disc — for example $artist/$album ($year)/$track. $title",
+    "pathTemplateErrors": {
+      "tooLong": "Too long",
+      "backslash": "Use / instead of \\",
+      "parts": "Needs artist/album/file",
+      "unknownToken": "Unknown $token",
+      "artistToken": "The artist folder needs $artist",
+      "albumToken": "The album folder needs $album",
+      "fileToken": "The file name needs $title or $track"
+    },
     "primaryAlbumArtist": "Primary artist folder",
     "primaryAlbumArtistHelp": "Name the folder after the first album artist (Anyma & Joji → Anyma). Compilations stay as they are. Nothing already downloaded is moved.",
     "downloadLyrics": "Download lyrics",

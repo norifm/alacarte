@@ -43,6 +43,7 @@ import { ProgressBar } from '../components/ProgressBar'
 import { StaggeredList, StaggeredItem } from '../components/StaggeredList'
 import { LanguageChipInput, type LanguageOption } from '../components/LanguageChipInput'
 import { cx } from '../lib/cx'
+import { pathTemplateError, pathTemplateErrorFromCode } from '../lib/pathTemplate'
 import { calendarNow, seasonTiles, setLook } from '../lib/seasons'
 import { useLook } from '../hooks/useSeasons'
 import { PageTitle } from '../components/PageTitle'
@@ -132,7 +133,9 @@ export function SettingsPage() {
       setPathDraft(null)
       flash(t('settings.saved'))
     } catch (err: any) {
-      flash(t('settings.errorPrefix', { message: err.message }), true)
+      const code = pathTemplateErrorFromCode(err?.code)
+      const message = code ? t(`settings.pathTemplateErrors.${code}`) : err.message
+      flash(t('settings.errorPrefix', { message }), true)
     }
   }
 
@@ -163,6 +166,8 @@ export function SettingsPage() {
   if (!settings) {
     return null
   }
+
+  const pathError = pathDraft === null ? null : pathTemplateError(pathDraft)
 
   return (
     <>
@@ -348,6 +353,7 @@ export function SettingsPage() {
                   value={pathDraft ?? settings.pathTemplate ?? ''}
                   placeholder="$artist/$album/$track. $title"
                   spellCheck={false}
+                  aria-invalid={Boolean(pathError)}
                   onChange={(e) => setPathDraft(e.target.value)}
                   onBlur={() => {
                     const raw = (pathDraft ?? settings.pathTemplate ?? '').trim()
@@ -355,12 +361,14 @@ export function SettingsPage() {
                       setPathDraft(null)
                       return
                     }
+                    if (pathTemplateError(raw)) return
                     void savePathTemplate(raw)
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') e.currentTarget.blur()
                   }}
                 />
+                <HintSlot hint={pathError ? { tone: 'error', text: t(`settings.pathTemplateErrors.${pathError}`) } : null} />
                 <div className="text-[13px] text-quiet">{t('settings.pathTemplateHelp')}</div>
               </div>
               <div>

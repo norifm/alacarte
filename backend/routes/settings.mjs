@@ -49,7 +49,7 @@ import {
   getArtistBackfillStatus,
   stopArtistBackfill,
 } from '../lib/artistCredits.mjs'
-import { parsePathTemplate } from '../lib/pathTemplate.mjs'
+import { parsePathTemplate, pathTemplateErrorMessage } from '../lib/pathTemplate.mjs'
 
 export const settingsRouter = express.Router()
 
@@ -118,7 +118,7 @@ settingsRouter.put('/', async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(body, 'pathTemplate')) {
       const parsed = parsePathTemplate(body.pathTemplate)
       if (parsed.error) {
-        res.status(400).json({ error: parsed.error })
+        res.status(400).json({ error: pathTemplateErrorMessage(parsed.error), code: `pathTemplate.${parsed.error}` })
         return
       }
     }

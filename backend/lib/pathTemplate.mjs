@@ -25,26 +25,42 @@ function tokenNames(part) {
   return [...String(part).matchAll(/\$([A-Za-z]+)\b/g)].map((m) => m[1].toLowerCase())
 }
 
+// Validation failures are codes so the frontend can translate them. The
+// English text is only for API callers and logs.
+export const PATH_TEMPLATE_ERRORS = {
+  tooLong: 'Folder scheme is too long',
+  backslash: 'Folder scheme cannot contain backslashes',
+  parts: 'Folder scheme needs artist/album/file',
+  unknownToken: 'Folder scheme has an unknown $token',
+  artistToken: 'Artist folder must include $artist',
+  albumToken: 'Album folder must include $album',
+  fileToken: 'File name must include $title or $track',
+}
+
+export function pathTemplateErrorMessage(code) {
+  return PATH_TEMPLATE_ERRORS[code] || 'Invalid folder scheme'
+}
+
 export function parsePathTemplate(input) {
   const raw = String(input ?? '').trim()
   if (!raw) return legacyLayout()
-  if (raw.length > 240) return { error: 'Folder scheme is too long' }
-  if (raw.includes('\\')) return { error: 'Folder scheme cannot contain backslashes' }
+  if (raw.length > 240) return { error: 'tooLong' }
+  if (raw.includes('\\')) return { error: 'backslash' }
   const parts = raw.split('/').map((s) => s.trim())
   if (parts.length !== 3 || parts.some((p) => !p || p === '.' || p === '..')) {
-    return { error: 'Folder scheme needs artist/album/file' }
+    return { error: 'parts' }
   }
   for (const part of parts) {
     if (tokenNames(part).some((name) => !KNOWN.has(name))) {
-      return { error: 'Folder scheme has an unknown $token' }
+      return { error: 'unknownToken' }
     }
   }
   const [artist, album, file] = parts
-  if (!tokenNames(artist).includes('artist')) return { error: 'Artist folder must include $artist' }
-  if (!tokenNames(album).includes('album')) return { error: 'Album folder must include $album' }
+  if (!tokenNames(artist).includes('artist')) return { error: 'artistToken' }
+  if (!tokenNames(album).includes('album')) return { error: 'albumToken' }
   const fileTokens = tokenNames(file)
   if (!fileTokens.includes('title') && !fileTokens.includes('track')) {
-    return { error: 'File name must include $title or $track' }
+    return { error: 'fileToken' }
   }
   const legacyFile = /^\$track\s*\.\s*\$title$/i.test(file)
   const legacy =

@@ -6,6 +6,7 @@ import fsp from 'node:fs/promises'
 
 import {
   parsePathTemplate,
+  pathTemplateErrorMessage,
   primaryFolderArtist,
   renderFileStem,
   renderSegment,
@@ -65,6 +66,24 @@ test('schemes that are not artist/album/file are rejected', () => {
     'C:\\music\\$artist\\$album\\$title',
   ]) {
     assert.ok(parsePathTemplate(bad).error, bad)
+  }
+})
+
+test('validation errors are codes the frontend translates', () => {
+  const cases = {
+    '$artist/$title': 'parts',
+    '$artist/$album/$track/$title': 'parts',
+    '$artist/$album/$name': 'unknownToken',
+    '$album/$artist/$title': 'artistToken',
+    '$artist/$year/$title': 'albumToken',
+    '$artist/$album/$disc': 'fileToken',
+    'C:\\music\\$artist\\$album\\$title': 'backslash',
+    [`$artist/$album/${'x'.repeat(240)}`]: 'tooLong',
+  }
+  for (const [input, code] of Object.entries(cases)) {
+    const { error } = parsePathTemplate(input)
+    assert.equal(error, code, input)
+    assert.notEqual(pathTemplateErrorMessage(error), 'Invalid folder scheme')
   }
 })
 
@@ -138,4 +157,29 @@ test('an album already in the library is kept, and a path outside it is not', as
     await fsp.rm(root, { recursive: true, force: true })
     await fsp.rm(outside, { recursive: true, force: true })
   }
+})
+
+// The Settings page validates while typing with a copy of the parser. Node
+// 22.6+ can load it directly; older runtimes skip the comparison.
+const frontendValidator = await import('../../frontend/src/lib/pathTemplate.ts').catch(() => null)
+
+test('the frontend validator gives the same codes as the backend', { skip: !frontendValidator }, () => {
+  for (const input of [
+    '',
+    '$artist/$album/$track. $title',
+    '$artist/$album ($year)/$disc-$track $title',
+    '$artist/$title',
+    '$artist/$album/$track/$title',
+    '/$artist/$album/$title',
+    '$artist/../$album/$title',
+    '$album/$artist/$title',
+    '$artist/$year/$title',
+    '$artist/$album/$disc',
+    '$artist/$album/$name',
+    'C:\\music\\$artist\\$album\\$title',
+    `$artist/$album/${'x'.repeat(240)}`,
+  ]) {
+    assert.equal(frontendValidator.pathTemplateError(input), parsePathTemplate(input).error ?? null, input)
+  }
+  assert.equal(frontendValidator.pathTemplateErrorFromCode('pathTemplate.parts'), 'parts')
 })
