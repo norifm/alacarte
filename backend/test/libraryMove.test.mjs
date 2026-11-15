@@ -158,6 +158,14 @@ describe('library move', { concurrency: 1 }, () => {
       scheme('', true),
     )
     assert.equal(untagged.skip, 'noArtistCredits')
+    const tyler = targetFor(
+      { kind: 'album', artistDir: 'Tyler, The Creator', albumDir: 'CHROMAKOPIA', tags: { albumArtist: 'Tyler, The Creator' }, files: [] },
+      scheme('', false),
+      scheme('', true),
+    )
+    assert.equal(tyler.skip, undefined)
+    assert.equal(tyler.artistName, 'Tyler, The Creator')
+    assert.equal(tyler.albumName, 'CHROMAKOPIA')
   })
 
   test('a file with no title and no number is skipped instead of renamed', () => {

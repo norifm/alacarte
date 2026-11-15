@@ -153,9 +153,11 @@ function sameName(a, b) {
 const SUFFIX_RE = /\s*\((FLAC|ALAC|Atmos|AAC)\)$/i
 const TRAILING_YEAR_RE = /\s*\((\d{4})\)\s*$/
 
-// A collab spelled as one artist: "A & B", "A, B", "A x B".
+// A collab spelled as one artist: "A & B", "A x B", "A and B".
+// A comma is not enough: "Tyler, The Creator" is one artist, and the
+// collabs in this library that use a comma also use "&".
 function looksCombined(name) {
-  return /\s&\s|,\s|\sx\s|\sand\s/i.test(String(name || ''))
+  return /\s&\s|\sx\s|\sand\s/i.test(String(name || ''))
 }
 
 // ---------------------------------------------------------------------------
