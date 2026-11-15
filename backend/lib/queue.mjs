@@ -171,8 +171,10 @@ async function libraryDestination(settings, {
   variant = null,
   quality = null,
   upc = null,
+  isrcs = [],
   folderArtist = null,
   alsoArtists = [],
+  index = null,
 } = {}) {
   const layout = parsePathTemplate(settings?.pathTemplate)
   const folderName = folderArtist || artist || 'Unknown Artist'
@@ -187,9 +189,11 @@ async function libraryDestination(settings, {
     try {
       existingDir = await findExistingReleaseDir({
         upc,
-        artists: [folderName, artist, ...alsoArtists],
+        isrcs,
+        artists: [folderName, artist, ...alsoArtists].filter(Boolean),
         album: namedAlbum,
         variant: variant ? groupOf(quality) : null,
+        index,
       })
     } catch (err) {
       console.error('existing album lookup failed:', err.message)
@@ -207,6 +211,14 @@ async function libraryDestination(settings, {
   return { dir, layout, existingDir }
 }
 
+// ISRCs of the whole release, for finding an album folder renamed by hand.
+// A single song's ISRC also sits in singles and compilations, so it is not
+// used on its own.
+function releaseIsrcs(job) {
+  if (job?.kind !== 'album') return []
+  return (job.trackIsrcs || []).map((t) => t.isrc).filter(Boolean)
+}
+
 async function preflightMusicTarget(settings, job) {
   if (job.kind === 'playlist' || !job.artist) {
     await assertWritableTarget(MUSIC_ROOT)
@@ -220,6 +232,7 @@ async function preflightMusicTarget(settings, job) {
     variant: job.variant,
     quality: job.quality,
     upc: job.upc,
+    isrcs: releaseIsrcs(job),
     folderArtist: job.folderArtist,
     alsoArtists: [job.artist],
   })
@@ -1869,6 +1882,7 @@ async function runJob(job) {
         variant: job.variant,
         quality: job.quality,
         upc: job.upc,
+        isrcs: releaseIsrcs(job),
         folderArtist: job.folderArtist,
         alsoArtists: [job.artist],
       })
@@ -2196,6 +2210,7 @@ async function runPartialAlbumFill({
     year: job.year,
     quality: job.quality,
     upc: job.upc,
+    isrcs: releaseIsrcs(job),
     folderArtist: job.folderArtist,
     alsoArtists: [job.artist],
   })
