@@ -24,7 +24,7 @@ const {
 const { parsePathTemplate } = await import('../lib/pathTemplate.mjs')
 const { readSettings } = await import('../lib/settingsStore.mjs')
 const { buildMinimalFlacWithTags } = await import('../lib/audioTags.mjs')
-const { losesPlaysOnMove, parseServerVersion } = await import('../lib/navidromeApi.mjs')
+const { losesPlaysOnMove, navidromeMoveRisk, parseServerVersion } = await import('../lib/navidromeApi.mjs')
 const { isQueueHeld, releaseQueue } = await import('../lib/queue.mjs')
 
 const YEAR = '$artist/$album ($year)/$track. $title'
@@ -385,6 +385,9 @@ test('navidrome before 0.55 loses plays when a file moves', () => {
   assert.equal(losesPlaysOnMove('1.0.0'), false)
   assert.equal(losesPlaysOnMove(null), false)
   assert.equal(losesPlaysOnMove('develop'), false)
+  assert.deepEqual(navidromeMoveRisk(' (128dd794)'), { losesPlays: false, versionUnknown: true })
+  assert.deepEqual(navidromeMoveRisk('0.54.1'), { losesPlays: true, versionUnknown: false })
+  assert.deepEqual(navidromeMoveRisk('0.55.0'), { losesPlays: false, versionUnknown: false })
 })
 
 test('a journal records an undo that has nothing to undo', async () => {

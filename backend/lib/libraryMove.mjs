@@ -5,7 +5,7 @@ import { emitEvent } from './eventBus.mjs'
 import { readTrackTags } from './audioTags.mjs'
 import { fitFileName, sanitizeSegment } from './libraryMatchKey.mjs'
 import { invalidateLibraryCache, scanLibrary } from './libraryIndex.mjs'
-import { getNavidromeVersion, losesPlaysOnMove, triggerNavidromeScan } from './navidromeApi.mjs'
+import { getNavidromeVersion, navidromeMoveRisk, triggerNavidromeScan } from './navidromeApi.mjs'
 import {
   isLegacyFileStem,
   matchSegment,
@@ -943,6 +943,7 @@ export async function previewLibraryMove({ pathTemplate, primaryAlbumArtist }) {
     return { kind: sample.kind, path: `${target.artistName}/${target.albumName}/${fileName}` }
   })
   const [plan, navidrome] = await Promise.all([planLibraryMove({ from, to }), getNavidromeVersion()])
+  const risk = navidromeMoveRisk(navidrome.version)
   return {
     error: null,
     samples,
@@ -954,9 +955,9 @@ export async function previewLibraryMove({ pathTemplate, primaryAlbumArtist }) {
     navidrome: {
       connected: navidrome.connected,
       version: navidrome.version,
-      losesPlays: navidrome.connected && losesPlaysOnMove(navidrome.version),
-      // A develop build can answer the ping and still omit serverVersion.
-      versionUnknown: navidrome.connected && !navidrome.version,
+      losesPlays: navidrome.connected && risk.losesPlays,
+      // A develop build can answer the ping with a hash and no number.
+      versionUnknown: navidrome.connected && risk.versionUnknown,
     },
   }
 }

@@ -65,11 +65,18 @@ export function parseServerVersion(value) {
 }
 
 // Before 0.55 Navidrome keys tracks by path, so a moved file comes back as
-// a new track without its plays and stars.
-export function losesPlaysOnMove(version) {
+// a new track without its plays and stars. A build that does not report a
+// parseable version (a develop hash) is unknown, not "new enough to be safe".
+export function navidromeMoveRisk(version) {
   const v = parseServerVersion(version)
-  if (!v) return false
-  return v[0] === 0 && v[1] < 55
+  return {
+    losesPlays: Boolean(v && v[0] === 0 && v[1] < 55),
+    versionUnknown: !v,
+  }
+}
+
+export function losesPlaysOnMove(version) {
+  return navidromeMoveRisk(version).losesPlays
 }
 
 /**
