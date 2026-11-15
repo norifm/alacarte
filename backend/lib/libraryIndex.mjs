@@ -24,7 +24,7 @@ const SCAN_TTL_MS = 30_000
 // edits (re-tagged files, mtime-preserving moves) are eventually picked up.
 // Bump when readAudioIdentityTags learns a new format, so cached rows are
 // re-read by one full scan instead of waiting for files to change.
-const IDENTITY_TAGS_VERSION = '3'
+const IDENTITY_TAGS_VERSION = '4'
 const FULL_RESCAN_MS =
   Math.max(1, Number(process.env.AMDL_FULL_RESCAN_HOURS) || 24) *
   60 *
@@ -329,7 +329,11 @@ async function scanAudioDir(dirPath, kind, artistName, ctx, acc) {
         albumKey,
         isrc: tags.isrc || null,
         upc: tags.upc || null,
-        meta: dirGroup ? { hasLyrics, version: dirGroup } : { hasLyrics },
+        meta: {
+          hasLyrics,
+          ...(dirGroup ? { version: dirGroup } : {}),
+          ...(tags.album ? { album: tags.album } : {}),
+        },
       })
       if (ctx.persist) upsertFileRow(ctx.db, row)
     }
@@ -396,10 +400,14 @@ function aggregateAudioDirFromRows(rawRows, kind, artistName, dirPath, dirAddedA
       if (row.metaParsed.hasLyrics) lyricsCount += 1
       if (row.song_key) trackSet.add(row.song_key)
     }
+    const title = mostCommon(rows.map((r) => r.metaParsed.album))
     acc.albums.push({
       id: rel,
       artistName,
       albumName,
+      // The album as tagged; albumName is the folder, which a scheme or a
+      // hand rename may decorate ("Meta - EP (2021)").
+      title: title || null,
       relPath: rel,
       trackCount: rows.length,
       lyricsCount,
@@ -467,6 +475,16 @@ function aggregateAudioDirFromRows(rawRows, kind, artistName, dirPath, dirAddedA
       if (kind === 'album' && !acc.upcDirs.has(row.upc)) acc.upcDirs.set(row.upc, rel)
     }
   }
+}
+
+function mostCommon(values) {
+  const counts = new Map()
+  for (const v of values) if (v) counts.set(v, (counts.get(v) || 0) + 1)
+  let best = null
+  for (const [v, n] of counts) {
+    if (!best || n > best[1] || (n === best[1] && v < best[0])) best = [v, n]
+  }
+  return best?.[0] || null
 }
 
 function aggregatePlaylistRow(rawRow, acc) {

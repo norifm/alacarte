@@ -233,3 +233,29 @@ test('scanLibrary returns one playlist row per m3u8 with track counts', async ()
     assert.equal(byName.get('Q')?.trackCount, 2)
   })
 })
+
+test('albums carry the tagged album name next to the folder name', async () => {
+  const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-title-'))
+  const prev = process.env.AMDL_MUSIC_PATH
+  process.env.AMDL_MUSIC_PATH = root
+  try {
+    const { buildMinimalFlacWithTags } = await import('../lib/audioTags.mjs')
+    const mod = await import(`../lib/libraryIndex.mjs?title=${Date.now()}`)
+    const write = async (rel, extra) => {
+      const abs = path.join(root, rel)
+      await fsp.mkdir(path.dirname(abs), { recursive: true })
+      await fsp.writeFile(abs, buildMinimalFlacWithTags({ extra }))
+    }
+    await write('2hollis/Meta - EP (2021)/01. Place.flac', { ALBUM: 'Meta - EP' })
+    await write('2hollis/Meta - EP (2021)/02. Meta.flac', { ALBUM: 'Meta - EP' })
+    await write('Untagged/Folder Name/01. Song.flac', {})
+    const index = await mod.scanLibrary()
+    const meta = index.albums.find((a) => a.artistName === '2hollis')
+    assert.equal(meta.albumName, 'Meta - EP (2021)')
+    assert.equal(meta.title, 'Meta - EP')
+    assert.equal(index.albums.find((a) => a.artistName === 'Untagged').title, null)
+  } finally {
+    process.env.AMDL_MUSIC_PATH = prev
+    await fsp.rm(root, { recursive: true, force: true })
+  }
+})

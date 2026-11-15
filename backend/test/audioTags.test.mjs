@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 import {
   buildMinimalFlacWithTags,
@@ -354,4 +355,19 @@ test('findSongPathInLibrary title fallback respects album and ISRC', async () =>
     assert.equal(await find('Loose', null, 'Loose - Single'), path.join(singlesDir, 'Loose.flac'))
     assert.equal(await find('Loose', 'USRC18888888', 'Loose - Single'), null)
   })
+})
+
+test('readAudioIdentityTags also returns the album tag of flac and m4a files', async () => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-album-tag-'))
+  try {
+    const flacPath = path.join(dir, 'a.flac')
+    await fsp.writeFile(flacPath, buildMinimalFlacWithTags({ isrc: 'USRC17607839', extra: { ALBUM: 'Meta - EP' } }))
+    assert.deepEqual(await readAudioIdentityTags(flacPath), { isrc: 'USRC17607839', upc: '', album: 'Meta - EP' })
+
+    const m4aPath = path.join(dir, 'a.m4a')
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono', '-t', '0.1', '-c:a', 'aac', '-metadata', 'album=Indie Rock', m4aPath])
+    assert.equal((await readAudioIdentityTags(m4aPath)).album, 'Indie Rock')
+  } finally {
+    await fsp.rm(dir, { recursive: true, force: true })
+  }
 })

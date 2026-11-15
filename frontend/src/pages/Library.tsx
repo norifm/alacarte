@@ -38,6 +38,12 @@ function compareText(a: string, b: string) {
   return a.localeCompare(b, undefined, { sensitivity: 'base' })
 }
 
+// The tagged album name; the folder name may carry a scheme's decoration
+// ("Meta - EP (2021)") or a hand rename.
+function albumTitle(album: LibraryAlbum) {
+  return album.title || album.albumName
+}
+
 function matchesQuery(query: string, ...fields: Array<string | undefined>) {
   if (!query) return true
   return fields.some((field) => String(field || '').toLowerCase().includes(query))
@@ -115,13 +121,13 @@ export function LibraryPage() {
 
   const visibleAlbums = useMemo(() => {
     const filtered = albums.filter((a) =>
-      matchesQuery(normalizedQuery, a.albumName, a.artistName, a.relPath),
+      matchesQuery(normalizedQuery, albumTitle(a), a.albumName, a.artistName, a.relPath),
     )
     return [...filtered].sort((a, b) =>
       compareLibraryItems(
         sortBy,
-        { name: a.albumName, artist: a.artistName, addedAt: a.addedAt },
-        { name: b.albumName, artist: b.artistName, addedAt: b.addedAt },
+        { name: albumTitle(a), artist: a.artistName, addedAt: a.addedAt },
+        { name: albumTitle(b), artist: b.artistName, addedAt: b.addedAt },
       ),
     )
   }, [albums, normalizedQuery, sortBy])
@@ -349,7 +355,7 @@ export function LibraryPage() {
                           kind="album"
                           artistId={a.artistId}
                           artistName={a.artistName}
-                          albumName={a.albumName}
+                          albumName={albumTitle(a)}
                           className="plate flex h-10 w-10 shrink-0 items-center justify-center rounded-cover"
                         >
                           <BookAudio className="h-5 w-5" />
@@ -360,10 +366,10 @@ export function LibraryPage() {
                               kind="album"
                               artistId={a.artistId}
                               artistName={a.artistName}
-                              albumName={a.albumName}
+                              albumName={albumTitle(a)}
                               className="hover:text-white transition-colors"
                             >
-                              {a.albumName}
+                              {albumTitle(a)}
                             </ResolvedMediaLink>
                           </div>
                           <div className="truncate text-[13px] text-quiet">
@@ -523,7 +529,7 @@ export function LibraryPage() {
           {deleteTarget?.kind === 'album' ? (
             <>
               <h3 className="text-lg font-semibold leading-tight">
-                {t('library.deleteAlbumTitle', { name: deleteTarget.item.albumName })}
+                {t('library.deleteAlbumTitle', { name: albumTitle(deleteTarget.item) })}
               </h3>
               <p className="text-sm text-quiet">
                 {t('library.deleteAlbumBody', { artist: deleteTarget.item.artistName })}

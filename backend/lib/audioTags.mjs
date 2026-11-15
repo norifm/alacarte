@@ -24,7 +24,7 @@ export function normalizeUpc(value) {
 }
 
 /**
- * Read ISRC / UPC / BARCODE from a FLAC Vorbis comment block, the comment
+ * Read ISRC / UPC / BARCODE (and the album name, as `album`, when tagged) from a FLAC Vorbis comment block, the comment
  * packet of an Ogg file, or the iTunes freeform atoms amdp writes into .m4a
  * files. Walks the FLAC
  * metadata block chain with seeks, so comment blocks after large PICTURE
@@ -192,6 +192,12 @@ export function parseMp4MoovIdentity(moov) {
   const ilst = findMp4Box(moov, meta.start + 4, meta.end, 'ilst')
   if (!ilst) return out
   for (const item of mp4Boxes(moov, ilst.start, ilst.end)) {
+    if (item.type === '\xa9alb' && !out.album) {
+      const data = findMp4Box(moov, item.start, item.end, 'data')
+      const album = data ? moov.toString('utf8', data.start + 8, data.end).trim() : ''
+      if (album) out.album = album
+      continue
+    }
     if (item.type !== '----') continue
     let name = ''
     let value = ''
@@ -244,6 +250,7 @@ function extractVorbisIdentity(block) {
 
     let isrc = ''
     let upc = ''
+    let album = ''
     for (let i = 0; i < commentCount; i++) {
       if (o + 4 > block.length) break
       const len = block.readUInt32LE(o)
@@ -258,8 +265,10 @@ function extractVorbisIdentity(block) {
       if (!val) continue
       if (key === 'ISRC' && !isrc) isrc = normalizeIsrc(val)
       else if ((key === 'UPC' || key === 'BARCODE') && !upc) upc = normalizeUpc(val)
+      else if (key === 'ALBUM' && !album) album = val
     }
-    return { isrc, upc }
+    // album only when tagged, so callers comparing { isrc, upc } keep working
+    return album ? { isrc, upc, album } : { isrc, upc }
   } catch {
     return empty
   }

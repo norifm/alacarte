@@ -328,7 +328,9 @@ export type LibraryAlbum = {
   id: string
   artistName: string
   artistId?: string | null
+  // Folder name. `title` is the album as tagged, null when untagged.
   albumName: string
+  title?: string | null
   relPath: string
   trackCount: number
   lyricsCount: number
