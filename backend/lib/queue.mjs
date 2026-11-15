@@ -9,8 +9,10 @@ import { readSettings, readAppleCreds } from './settingsStore.mjs'
 import {
   artworkUrl,
   getAlbum,
+  getAlbumsByUpc,
   getPlaylist,
   getSong,
+  getSongsByIsrc,
   iterateCatalogPlaylistTracks,
   normalizeAlbum,
   normalizePlaylist,
@@ -41,12 +43,12 @@ import {
   sanitizeSegment,
   writeVersionMarker,
 } from './folderLayout.mjs'
-import { findExistingReleaseDir, findSongPathInLibrary, getAlbumTrackPresence, getAlbumVersionGroups, hasSongInLibrary, invalidateLibraryCache, isPlaylistInLibrary, songNameFromFilename, stripTrailingYear } from './libraryIndex.mjs'
+import { findExistingReleaseDir, findSongPathInLibrary, getAlbumTrackPresence, getAlbumVersionGroups, hasSongInLibrary, invalidateLibraryCache, isPlaylistInLibrary, noteImportedTrack, scanLibraryOnce, songNameFromFilename, stripTrailingYear } from './libraryIndex.mjs'
 import { inferFilePattern, isLegacyFileStem, parsePathTemplate, primaryFolderArtist, renderFileStem, renderSegment } from './pathTemplate.mjs'
 import { writePlaylistM3U } from './playlistExport.mjs'
 import { getDb, getMeta, setMeta } from './db.mjs'
 import { amdpNameCharLimit, normalizeForMatchKey, restoreTruncatedName } from './libraryMatchKey.mjs'
-import { readAudioMetaTags, readTrackTags, writeAudioIdentityTags } from './audioTags.mjs'
+import { normalizeIsrc, normalizeUpc, readAudioMetaTags, readTrackTags, writeAudioIdentityTags } from './audioTags.mjs'
 import { probeWrapperPorts } from './wrapperHealth.mjs'
 import { resolveMetadataName } from './metadataLanguage.mjs'
 import { getOriginalAlbumMeta, getOriginalPlaylistMeta } from './originalMetadataCache.mjs'
@@ -1261,6 +1263,9 @@ export const __test__ = {
   catalogPlaylistTracksIfAnyOwned,
   updateJob,
   handleAmdpLine,
+  setPlaylistAlbumLookup: (fn) => {
+    playlistAlbumLookup = fn || lookupPlaylistAlbums
+  },
   createProgressState,
   state,
   wakeAndWaitForWrapper,
@@ -2331,6 +2336,7 @@ async function runLibraryPlaylistFill({
   })
 
   const importedPaths = []
+  let importContext = null
 
   for (let i = 0; i < tracks.length; i += 1) {
     throwIfCancelled(job)
@@ -2415,10 +2421,12 @@ async function runLibraryPlaylistFill({
     }
 
     beginLibraryImport(job)
+    importContext ||= await createPlaylistImportContext()
     const importedHere = await importPlaylistTracks({
       job,
       jobStaging: trackStaging,
       onProgress: () => {},
+      context: importContext,
     })
     if (fillTrackIsrc) {
       for (const importedPath of importedHere) {
@@ -2915,43 +2923,147 @@ function detectAmdpRemuxError(output) {
   return null
 }
 
-async function importPlaylistTracks({ job, jobStaging, onProgress }) {
+// Apple's album record for playlist tracks whose tags lack the year or the
+// separate album artists: one paced lookup per batch of barcodes (and of
+// ISRCs for tracks without one), cached for the whole import.
+async function lookupPlaylistAlbums({ upcs, isrcs, settings }) {
+  const storefront = settings?.storefront || 'us'
+  const language = settings?.language || 'en-US'
+  const byUpc = new Map()
+  const byIsrc = new Map()
+  const record = (album) => {
+    const a = album?.attributes || {}
+    return {
+      year: a.releaseDate ? String(a.releaseDate).slice(0, 4) : null,
+      artistName: a.artistName || null,
+      artists: (album?.relationships?.artists?.data || []).map((x) => x.attributes?.name).filter(Boolean),
+      isCompilation: Boolean(a.isCompilation),
+      upc: normalizeUpc(a.upc) || null,
+    }
+  }
+  const wantUpcs = new Set(upcs)
+  for (let i = 0; i < isrcs.length; i += 25) {
+    const json = await getSongsByIsrc({ storefront, isrcs: isrcs.slice(i, i + 25), language, include: 'albums' })
+    for (const song of json?.data || []) {
+      const isrc = normalizeIsrc(song.attributes?.isrc)
+      const album = song.relationships?.albums?.data?.[0]
+      if (!isrc || !album || byIsrc.has(isrc)) continue
+      const info = record(album)
+      byIsrc.set(isrc, info)
+      if (info.upc) wantUpcs.add(info.upc)
+    }
+  }
+  const list = [...wantUpcs]
+  for (let i = 0; i < list.length; i += 25) {
+    const json = await getAlbumsByUpc({ storefront, upcs: list.slice(i, i + 25), language, include: 'artists' })
+    for (const album of json?.data || []) {
+      const info = record(album)
+      if (info.upc && !byUpc.has(info.upc)) byUpc.set(info.upc, info)
+    }
+  }
+  for (const [isrc, info] of byIsrc) {
+    if (info.upc && byUpc.has(info.upc)) byIsrc.set(isrc, byUpc.get(info.upc))
+  }
+  return { byUpc, byIsrc }
+}
+
+let playlistAlbumLookup = lookupPlaylistAlbums
+
+// State one playlist import shares across its tracks (and, for library
+// playlists, across the per-track downloads): a single library scan kept
+// current as tracks land, Apple album records, and per-folder file styles.
+async function createPlaylistImportContext() {
   const settings = await readSettings().catch(() => null)
+  invalidateLibraryCache()
+  return {
+    settings,
+    layout: parsePathTemplate(settings?.pathTemplate),
+    index: await scanLibraryOnce(),
+    albums: { byUpc: new Map(), byIsrc: new Map() },
+    asked: new Set(),
+    styles: new Map(),
+  }
+}
+
+async function fillPlaylistAlbumInfo(ctx, items) {
+  const wantsYear = /\$year\b/i.test(ctx.settings?.pathTemplate || '') && ctx.layout.custom
+  const wantsArtists = Boolean(ctx.settings?.primaryAlbumArtist)
+  if (!wantsYear && !wantsArtists) return
+  const upcs = new Set()
+  const isrcs = new Set()
+  for (const { tags } of items) {
+    if (!tags.album) continue
+    const missing = (wantsYear && !tags.year) || (wantsArtists && tags.albumArtists.length < 2)
+    if (!missing) continue
+    if (tags.upc && !ctx.asked.has(`u:${tags.upc}`)) upcs.add(tags.upc)
+    else if (!tags.upc && tags.isrc && !ctx.asked.has(`i:${tags.isrc}`)) isrcs.add(tags.isrc)
+  }
+  if (!upcs.size && !isrcs.size) return
+  for (const u of upcs) ctx.asked.add(`u:${u}`)
+  for (const i of isrcs) ctx.asked.add(`i:${i}`)
+  try {
+    const found = await playlistAlbumLookup({ upcs: [...upcs], isrcs: [...isrcs], settings: ctx.settings })
+    for (const [k, v] of found.byUpc) ctx.albums.byUpc.set(k, v)
+    for (const [k, v] of found.byIsrc) ctx.albums.byIsrc.set(k, v)
+  } catch (err) {
+    console.error('playlist album lookup failed:', err.message)
+  }
+}
+
+async function importPlaylistTracks({ job, jobStaging, onProgress, context = null }) {
+  const ctx = context || (await createPlaylistImportContext())
+  const { settings, layout, index } = ctx
   const convention = settings?.namingConvention || 'apple'
   const candidates = await collectAudioFiles(jobStaging)
   const imported = []
 
-  for (let i = 0; i < candidates.length; i++) {
-    const srcPath = candidates[i].path
+  // Tags first, so Apple is asked once for every track that needs it.
+  const items = []
+  for (const candidate of candidates) {
+    items.push({ srcPath: candidate.path, tags: await readTrackTags(candidate.path) })
+  }
+  await fillPlaylistAlbumInfo(ctx, items)
+
+  for (let i = 0; i < items.length; i++) {
+    const { srcPath, tags } = items[i]
     const relParts = path
       .relative(jobStaging, srcPath)
       .split(path.sep)
       .filter(Boolean)
     const parsed = inferArtistAlbumFromPath(relParts)
-    const tags = await readAudioMetaTags(srcPath)
 
     // Album artist, like album downloads, so featured tracks share the folder.
     const artistName =
       tags.albumArtist || tags.artist || parsed.artist || job.artist || 'Unknown Artist'
     const albumName = tags.album || parsed.album || null
+    const apple = (tags.upc && ctx.albums.byUpc.get(tags.upc)) || (tags.isrc && ctx.albums.byIsrc.get(tags.isrc)) || null
+    const year = tags.year || apple?.year || null
+    const albumArtists = tags.albumArtists.length > 1 ? tags.albumArtists : apple?.artists || []
+    const folderArtist = primaryFolderArtist(
+      {
+        artistName,
+        artists: albumArtists.map((name) => ({ name })),
+        isCompilation: tags.compilation || apple?.isCompilation,
+      },
+      settings?.primaryAlbumArtist,
+    )
 
     const existingPath = await findSongPathInLibrary(
       artistName,
       tags.title || songNameFromFilename(path.basename(srcPath)),
       tags.isrc,
-      null,
+      index,
       { album: albumName },
     )
     if (existingPath) {
       job.stats.reused = (job.stats.reused || 0) + 1
       imported.push(existingPath)
-      onProgress?.({ done: i + 1, total: candidates.length })
+      onProgress?.({ done: i + 1, total: items.length })
       continue
     }
 
     // Every playlist track imports into the same Artist/Album structure as
     // album and song downloads; the playlist m3u8 references these files.
-    const layout = parsePathTemplate(settings?.pathTemplate)
     let destDir
     let targetName = restoreTrackFileName(path.basename(srcPath), tags.title)
     if (albumName) {
@@ -2959,17 +3071,24 @@ async function importPlaylistTracks({ job, jobStaging, onProgress }) {
       const placed = await libraryDestination(settings, {
         artist: artistName,
         album: albumName,
+        year,
         quality: job.quality,
-        folderArtist: job.folderArtist,
-        alsoArtists: [job.artist],
+        upc: tags.upc,
+        folderArtist,
+        index,
       })
       destDir = placed.dir
+      if (!ctx.styles.has(destDir)) ctx.styles.set(destDir, await existingFileStyle(destDir, layout))
+      const style = ctx.styles.get(destDir)
+      const pattern = style?.legacy ? null : style?.pattern || (layout.customFile ? layout.file : null)
       const ext = path.extname(targetName)
-      if (layout.customFile) {
-        const stem = renderFileStem(layout.file, {
-          artist: job.folderArtist || artistName,
+      if (pattern) {
+        const stem = renderFileStem(pattern, {
+          artist: folderArtist || artistName,
           album: albumName,
+          year,
           track: tags.track,
+          disc: tags.disc,
           title: applyNamingConvention(tags.title || songNameFromFilename(targetName), convention),
         }, ext)
         if (stem) targetName = `${stem}${ext}`
@@ -2977,24 +3096,18 @@ async function importPlaylistTracks({ job, jobStaging, onProgress }) {
         targetName = `${applyNamingConvention(path.basename(targetName, ext), 'qobuz')}${ext}`
       }
     } else {
+      const folderName = folderArtist || artistName
       const artistForDir = layout.custom
-        ? renderSegment(layout.artist, { artist: artistName }) || artistName
-        : artistName
+        ? renderSegment(layout.artist, { artist: folderName, year }) || folderName
+        : folderName
       const artistDir = await resolveArtistDir(MUSIC_ROOT, artistForDir)
       destDir = path.join(MUSIC_ROOT, artistDir, 'Singles')
       const ext = path.extname(srcPath)
-      if (layout.customFile) {
-        const stem = renderFileStem(layout.file, {
-          artist: artistForDir,
-          title: tags.title || path.basename(srcPath, ext),
-          track: tags.track,
-        }, ext)
-        const title = sanitizeSegment(tags.title || path.basename(srcPath, ext))
-        targetName = stem ? `${stem}${ext}` : `${title}${ext}`
-      } else {
-        const title = sanitizeSegment(tags.title || path.basename(srcPath, ext))
-        targetName = `${title}${ext}`
-      }
+      const title = sanitizeSegment(tags.title || path.basename(srcPath, ext))
+      const stem = layout.customFile
+        ? renderFileStem(layout.file, { artist: artistForDir, title: tags.title || path.basename(srcPath, ext), track: tags.track, year }, ext)
+        : ''
+      targetName = stem ? `${stem}${ext}` : `${title}${ext}`
     }
     await ensureDir(destDir)
 
@@ -3002,9 +3115,10 @@ async function importPlaylistTracks({ job, jobStaging, onProgress }) {
     await moveFileSafe(srcPath, destPath)
     await moveLyricsSidecars(srcPath, destPath)
     await copyFolderArtIfAny(path.dirname(srcPath), destDir)
+    noteImportedTrack(index, destPath, { isrc: tags.isrc, upc: tags.upc, album: albumName, songName: tags.title })
 
     imported.push(destPath)
-    onProgress?.({ done: i + 1, total: candidates.length })
+    onProgress?.({ done: i + 1, total: items.length })
   }
 
   return imported
