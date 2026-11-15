@@ -160,3 +160,42 @@ export function primaryFolderArtist(meta, enabled) {
   if (!combined || names[0].toLowerCase() === combined.toLowerCase()) return null
   return names[0]
 }
+
+// amdp's own "01. Title" stem, which the historical layout keeps as is
+// (qobuz and language renames included).
+export function isLegacyFileStem(stem) {
+  return /^\d{1,3}\.\s/.test(String(stem || ''))
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// The file pattern an existing name was written with, worked out from the
+// track's own tags: "03 - GORO" with track 3 and title GORO is
+// "$track - $title". Null when the tags cannot explain the name, so a
+// pattern is never guessed that would not reproduce the file.
+export function inferFilePattern(stem, vars) {
+  const values = valuesFrom(vars)
+  const name = String(stem || '')
+  if (!name || name.includes('$')) return null
+  // Longest values first, so a title holding the album or a number is
+  // taken whole before its parts.
+  const order = ['title', 'album', 'artist', 'year', 'track', 'disc']
+    .filter((k) => values[k])
+    .sort((a, b) => values[b].length - values[a].length)
+  const slots = []
+  let pending = name
+  for (const key of order) {
+    const value = values[key]
+    const numeric = key === 'track' || key === 'disc' || key === 'year'
+    const re = new RegExp(numeric ? `(?<!\\d)${escapeRegExp(value)}(?!\\d)` : escapeRegExp(value), 'i')
+    const m = re.exec(pending)
+    if (!m) continue
+    slots.push(key)
+    pending = `${pending.slice(0, m.index)}\u0001${slots.length - 1}\u0001${pending.slice(m.index + m[0].length)}`
+  }
+  if (!slots.includes('title') && !slots.includes('track')) return null
+  const pattern = pending.replace(/\u0001(\d+)\u0001/g, (_, i) => `$${slots[Number(i)]}`)
+  return renderFileStem(pattern, vars) === name ? pattern : null
+}

@@ -42,11 +42,11 @@ import {
   writeVersionMarker,
 } from './folderLayout.mjs'
 import { findExistingReleaseDir, findSongPathInLibrary, getAlbumTrackPresence, getAlbumVersionGroups, hasSongInLibrary, invalidateLibraryCache, isPlaylistInLibrary, songNameFromFilename, stripTrailingYear } from './libraryIndex.mjs'
-import { parsePathTemplate, primaryFolderArtist, renderFileStem, renderSegment } from './pathTemplate.mjs'
+import { inferFilePattern, isLegacyFileStem, parsePathTemplate, primaryFolderArtist, renderFileStem, renderSegment } from './pathTemplate.mjs'
 import { writePlaylistM3U } from './playlistExport.mjs'
 import { getDb, getMeta, setMeta } from './db.mjs'
 import { amdpNameCharLimit, normalizeForMatchKey, restoreTruncatedName } from './libraryMatchKey.mjs'
-import { readAudioMetaTags, writeAudioIdentityTags } from './audioTags.mjs'
+import { readAudioMetaTags, readTrackTags, writeAudioIdentityTags } from './audioTags.mjs'
 import { probeWrapperPorts } from './wrapperHealth.mjs'
 import { resolveMetadataName } from './metadataLanguage.mjs'
 import { getOriginalAlbumMeta, getOriginalPlaylistMeta } from './originalMetadataCache.mjs'
@@ -1278,22 +1278,16 @@ export const __test__ = {
 function matchTrackForFile(fileName, tracks) {
   if (!Array.isArray(tracks) || tracks.length === 0) return null
   const base = path.basename(fileName, path.extname(fileName))
+  const fileTitle = normalizeForMatchKey(songNameFromFilename(fileName)).toLowerCase()
+  const sameTitle = (t) => Boolean(fileTitle) && normalizeForMatchKey(t?.name || '').toLowerCase() === fileTitle
   const numMatch = base.match(/^(\d{1,3})[.\- ]/)
   if (numMatch) {
-    const byNumber = tracks.find(
-      (t) => t && Number(t.trackNumber) === Number(numMatch[1]),
-    )
-    if (byNumber) return byNumber
+    // Every disc restarts at 1, so the title decides between the discs.
+    const byNumber = tracks.filter((t) => t && Number(t.trackNumber) === Number(numMatch[1]))
+    if (byNumber.length) return byNumber.find(sameTitle) || byNumber[0]
   }
-  const fileTitle = normalizeForMatchKey(songNameFromFilename(fileName)).toLowerCase()
   if (!fileTitle) return null
-  return (
-    tracks.find(
-      (t) =>
-        t &&
-        normalizeForMatchKey(t.name || '').toLowerCase() === fileTitle,
-    ) || null
-  )
+  return tracks.find((t) => t && sameTitle(t)) || null
 }
 
 async function stampAlbumIdentityTags(dir, upc, tracks, { originalAlbum, originalArtist } = {}) {
@@ -1451,13 +1445,61 @@ async function applyCustomFileNames(dir, { pattern, tracks, convention, artist, 
   }
 }
 
+const STYLE_SAMPLE = 12
+
+// How the audio already in `dir` is named, so tracks filled into an
+// existing folder match their neighbours instead of the configured scheme:
+// { legacy: true } for amdp's "01. Title", { pattern } for a file scheme
+// worked out from the files' tags, null for a folder with no audio (the
+// configured scheme applies). The most common style among a sample wins.
+export async function existingFileStyle(dir, layout) {
+  const files = (await fsp.readdir(dir).catch(() => []))
+    .filter((f) => /\.(flac|m4a|mp3|opus|ogg)$/i.test(f))
+    .sort()
+    .slice(0, STYLE_SAMPLE)
+  if (files.length === 0) return null
+  const stems = files.map((f) => path.basename(f, path.extname(f)))
+  // The default layout over amdp names needs no tag reads.
+  if (!layout?.customFile && stems.every(isLegacyFileStem)) return { legacy: true }
+  const votes = new Map()
+  const vote = (key) => votes.set(key, (votes.get(key) || 0) + 1)
+  for (let i = 0; i < files.length; i += 1) {
+    const stem = stems[i]
+    const tags = await readTrackTags(path.join(dir, files[i]))
+    const vars = {
+      artist: tags.albumArtist || tags.artist,
+      album: tags.album,
+      year: tags.year,
+      track: tags.track || trackNumberFromFile(files[i]),
+      disc: tags.disc,
+      title: tags.title || songNameFromFilename(files[i]),
+    }
+    if (layout?.customFile && renderFileStem(layout.file, vars) === stem) vote(`p:${layout.file}`)
+    else if (isLegacyFileStem(stem)) vote('legacy')
+    else if (tags.title) {
+      // Only tags can explain a name; the name itself would explain anything.
+      const inferred = inferFilePattern(stem, vars)
+      if (inferred) vote(`p:${inferred}`)
+    }
+  }
+  let best = null
+  for (const [key, n] of votes) {
+    if (!best || n > best[1] || (n === best[1] && key === 'legacy')) best = [key, n]
+  }
+  if (!best) return null
+  return best[0] === 'legacy' ? { legacy: true } : { pattern: best[0].slice(2) }
+}
+
 // Custom file schemes take the place of the qobuz and language renames,
 // which both assume amdp's "01. Title" stem. The historical stem keeps both.
-async function renameImportedFiles(dir, settings, job, { artist, album, language = true }) {
+// `style` (from existingFileStyle) overrides the configured scheme when the
+// files land in a folder that already has audio.
+async function renameImportedFiles(dir, settings, job, { artist, album, language = true, style = null }) {
   const layout = parsePathTemplate(settings?.pathTemplate)
-  if (layout.customFile) {
+  const pattern = style?.legacy ? null : style?.pattern || (layout.customFile ? layout.file : null)
+  if (pattern) {
     await applyCustomFileNames(dir, {
-      pattern: layout.file,
+      pattern,
       tracks: tracksForFileNames(job),
       convention: settings?.namingConvention || 'apple',
       artist,
@@ -1834,11 +1876,13 @@ async function runJob(job) {
         alsoArtists: [job.artist],
       })
       finalDir = placed.dir
+      const style = await existingFileStyle(finalDir, placed.layout)
       await ensureDir(finalDir)
 
       await renameImportedFiles(albumPath, settings, job, {
         artist: job.folderArtist || stagedArtist,
         album: albumDirName,
+        style,
       })
 
       const movedFiles = await fsp.readdir(albumPath)
@@ -1891,6 +1935,7 @@ async function runJob(job) {
       await renameImportedFiles(albumPath, settings, job, {
         artist: job.folderArtist || stagedArtist,
         album: albumDirName,
+        style: await existingFileStyle(finalDir, placed.layout),
       })
 
       progressState.finalizeProgress = Math.max(progressState.finalizeProgress, 0.75)
@@ -2204,7 +2249,7 @@ async function runPartialAlbumFill({
   beginLibraryImport(job)
   const albumDirName = restoreTruncatedName(firstAlbumName, job.albumTitle).replace(/\s*\(\d{4}\)\s*$/, '')
   const stagedArtist = restoreTruncatedName(firstArtistName, job.artist)
-  const { dir: finalDir } = await libraryDestination(settings, {
+  const { dir: finalDir, layout } = await libraryDestination(settings, {
     artist: stagedArtist,
     album: albumDirName,
     year: job.year,
@@ -2214,12 +2259,14 @@ async function runPartialAlbumFill({
     folderArtist: job.folderArtist,
     alsoArtists: [job.artist],
   })
+  const style = await existingFileStyle(finalDir, layout)
   for (const albumPath of trackAlbumPaths) {
     await restoreTrackFileNames(albumPath)
     await renameImportedFiles(albumPath, settings, job, {
       artist: job.folderArtist || stagedArtist,
       album: albumDirName,
       language: false,
+      style,
     })
   }
   progressState.finalizeProgress = Math.max(progressState.finalizeProgress, 0.5)

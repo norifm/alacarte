@@ -628,3 +628,60 @@ async function rewriteFlacComments(filePath, fields) {
     return false
   }
 }
+
+function splitList(values) {
+  const out = []
+  for (const v of values || []) {
+    for (const part of String(v).split(';')) {
+      const name = part.trim()
+      if (name && !out.includes(name)) out.push(name)
+    }
+  }
+  return out
+}
+
+/**
+ * Tags that name a track's place in the library: album, album artist(s),
+ * year, disc, track and title. FLACs are parsed directly; other formats go
+ * through ffprobe. Missing values are null; albumArtists is the ALBUMARTISTS
+ * list the artist credit fix writes, empty when untagged. Fail-soft.
+ */
+export async function readTrackTags(filePath) {
+  let get = () => []
+  if (/\.flac$/i.test(filePath)) {
+    const comments = await readFlacComments(filePath)
+    if (comments) get = (...keys) => keys.flatMap((k) => comments[k] || [])
+  } else {
+    try {
+      const { stdout } = await execFileAsync(
+        'ffprobe',
+        ['-v', 'error', '-show_entries', 'format_tags', '-of', 'json', filePath],
+        { timeout: 10_000 },
+      )
+      const raw = JSON.parse(stdout)?.format?.tags || {}
+      const tags = {}
+      for (const [key, value] of Object.entries(raw)) (tags[key.toUpperCase()] ||= []).push(String(value))
+      get = (...keys) => keys.flatMap((k) => tags[k] || [])
+    } catch {}
+  }
+  const first = (...keys) => get(...keys).map((v) => v.trim()).find(Boolean) || null
+  const number = (...keys) => {
+    const m = /^\s*(\d{1,3})/.exec(first(...keys) || '')
+    return m && Number(m[1]) > 0 ? Number(m[1]) : null
+  }
+  const year = /\b(\d{4})\b/.exec(first('DATE', 'YEAR', 'ORIGINALDATE', 'RELEASETIME') || '')?.[1] || null
+  const compilation = first('COMPILATION')
+  return {
+    title: first('TITLE'),
+    album: first('ALBUM'),
+    artist: first('ARTIST'),
+    albumArtist: first('ALBUMARTIST', 'ALBUM_ARTIST', 'ALBUM ARTIST'),
+    albumArtists: splitList(get('ALBUMARTISTS')),
+    year,
+    track: number('TRACKNUMBER', 'TRACK'),
+    disc: number('DISCNUMBER', 'DISC'),
+    isrc: normalizeIsrc(first('ISRC')) || null,
+    upc: normalizeUpc(first('BARCODE', 'UPC')) || null,
+    compilation: compilation === '1' || /^true$/i.test(compilation || ''),
+  }
+}

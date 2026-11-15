@@ -183,3 +183,19 @@ test('the frontend validator gives the same codes as the backend', { skip: !fron
   }
   assert.equal(frontendValidator.pathTemplateErrorFromCode('pathTemplate.parts'), 'parts')
 })
+
+test('the file pattern of an existing name is worked out from its tags', async () => {
+  const { inferFilePattern, isLegacyFileStem } = await import('../lib/pathTemplate.mjs')
+  assert.equal(inferFilePattern('03 - GORO', { track: '3/5', title: 'GORO' }), '$track - $title')
+  assert.equal(inferFilePattern('2-08. Get Lucky', { disc: 2, track: 8, title: 'Get Lucky' }), '$disc-$track. $title')
+  assert.equal(
+    inferFilePattern('Westside Gunn - 2025 - 04 DAVEY', { artist: 'Westside Gunn', year: '2025-04-18', track: 4, title: 'DAVEY' }),
+    '$artist - $year - $track $title',
+  )
+  // A title that is a number is still the title.
+  assert.equal(inferFilePattern('01. 1999', { track: 1, title: '1999' }), '$track. $title')
+  assert.equal(inferFilePattern('random name', { track: 1, title: 'Song' }), null)
+  assert.equal(inferFilePattern('$track', { track: 1, title: 'x' }), null)
+  assert.equal(isLegacyFileStem('01. FISHSCALE FRIDAY'), true)
+  assert.equal(isLegacyFileStem('03 - GORO'), false)
+})
