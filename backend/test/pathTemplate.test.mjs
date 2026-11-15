@@ -199,3 +199,26 @@ test('the file pattern of an existing name is worked out from its tags', async (
   assert.equal(isLegacyFileStem('01. FISHSCALE FRIDAY'), true)
   assert.equal(isLegacyFileStem('03 - GORO'), false)
 })
+
+test('a rendered name can be read back into the values that made it', async () => {
+  const { matchSegment } = await import('../lib/pathTemplate.mjs')
+  assert.deepEqual(matchSegment('$album ($year)', 'Random Access Memories (2013)'), {
+    album: 'Random Access Memories',
+    year: '2013',
+  })
+  assert.deepEqual(matchSegment('$track. $title', '08. Get Lucky'), { track: '08', title: 'Get Lucky' })
+  assert.deepEqual(matchSegment('$disc-$track. $title', '2-08. Get Lucky'), {
+    disc: '2',
+    track: '08',
+    title: 'Get Lucky',
+  })
+  assert.deepEqual(matchSegment('$album', 'Above (non-deluxe, removed)'), {
+    album: 'Above (non-deluxe, removed)',
+  })
+  // With the track dropped, `$track. $title` is just a title, so this name
+  // is a possible reading. A required separator that is not there is not.
+  assert.deepEqual(matchSegment('$track. $title', '03 - GORO'), { title: '03 - GORO' })
+  assert.deepEqual(matchSegment('$artist - $title', '03 - GORO'), { artist: '03', title: 'GORO' })
+  assert.equal(matchSegment('$artist - $title', 'GORO'), null)
+  assert.equal(matchSegment('$album ($year)', ''), null)
+})

@@ -107,8 +107,32 @@ function queueSeq(job) {
   return job?.queueSeq ?? job?.createdAt ?? 0
 }
 
+// Holds keep jobs from starting while library maintenance (a library move)
+// runs, without touching the user's own pause.
+const holds = new Set()
+
 export function getQueueState() {
-  return { paused: state.paused }
+  return { paused: state.paused, held: holds.size > 0 }
+}
+
+export function holdQueue(reason) {
+  holds.add(reason)
+  emitEvent('queue.state', getQueueState())
+}
+
+export function releaseQueue(reason) {
+  if (!holds.delete(reason)) return
+  emitEvent('queue.state', getQueueState())
+  setImmediate(tickQueue)
+}
+
+export function isQueueHeld() {
+  return holds.size > 0
+}
+
+// True once no job is running or importing; a held queue starts none.
+export function isQueueIdle() {
+  return state.active.size === 0 && importingJobs.size === 0
 }
 
 // Pausing only stops new jobs from starting; the running one finishes.
@@ -1555,7 +1579,7 @@ async function cleanupStaleStagingDirs(stagingRoot) {
 }
 
 async function tickQueue() {
-  while (!state.paused && state.active.size < MAX_CONCURRENT && state.queue.length > 0) {
+  while (!state.paused && holds.size === 0 && state.active.size < MAX_CONCURRENT && state.queue.length > 0) {
     const id = state.queue.shift()
     const job = state.jobs.get(id)
     if (!job || job.status !== 'queued') continue

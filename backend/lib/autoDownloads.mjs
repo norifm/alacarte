@@ -3,7 +3,7 @@ import { runInLane } from './appleGateway.mjs'
 import { loadArtistCatalogCached } from './artistCatalogCache.mjs'
 import { resolveIntervalMs } from './checkInterval.mjs'
 import { makeAlbumKey, scanLibraryOnce, stripTrailingYear } from './libraryIndex.mjs'
-import { enqueueAlbum } from './queue.mjs'
+import { enqueueAlbum, isQueueHeld } from './queue.mjs'
 import { readSettings } from './settingsStore.mjs'
 import { readFollowingStore, updateFollowedArtist } from './followedArtistsStore.mjs'
 import { readPlaylistsStore } from './followedPlaylistsStore.mjs'
@@ -34,6 +34,8 @@ export function runAutoDownloadCheck(opts) {
 
 async function runAutoDownloadCheckNow({ reason = 'manual', force = false } = {}) {
   if (running) return { ok: true, skipped: true, reason: 'already-running' }
+  // A library move holds the queue and renames folders under the scan.
+  if (isQueueHeld()) return { ok: true, skipped: true, reason: 'library-busy' }
   running = true
   try {
     const settings = await readSettings()

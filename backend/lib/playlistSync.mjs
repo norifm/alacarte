@@ -7,7 +7,7 @@ import {
 } from './appleApi.mjs'
 import { getLibraryPlaylistDetail } from './appleLibraryApi.mjs'
 import { hasSongInLibrary, invalidateLibraryCache, scanLibraryOnce } from './libraryIndex.mjs'
-import { enqueueSong } from './queue.mjs'
+import { enqueueSong, isQueueHeld } from './queue.mjs'
 import { readSettings, readAppleCreds } from './settingsStore.mjs'
 import { resolveIntervalMs } from './checkInterval.mjs'
 import { readFollowingStore } from './followedArtistsStore.mjs'
@@ -64,6 +64,7 @@ async function runPlaylistSyncCheckNow({
     deps = defaultDeps,
 } = {}) {
     if (running) return { ok: true, skipped: true, reason: 'already-running' }
+    if (isQueueHeld()) return { ok: true, skipped: true, reason: 'library-busy' }
     running = true
     try {
         const settings = await readSettings()

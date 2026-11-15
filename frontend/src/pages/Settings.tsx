@@ -28,6 +28,8 @@ import {
   type AppleStatus,
   type ArtistBackfillStatus,
   type LyricsBackfillStatus,
+  type LibraryMovePreview,
+  type LibraryMoveStatus,
   type PublicSettings,
   type TagBackfillStatus,
 } from '../api/client'
@@ -95,6 +97,10 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [pathDraft, setPathDraft] = useState<string | null>(null)
+  const [primaryDraft, setPrimaryDraft] = useState<boolean | null>(null)
+  const [moveRequest, setMoveRequest] = useState<{ pathTemplate: string; primaryAlbumArtist: boolean } | null>(null)
+  const [moveRunning, setMoveRunning] = useState(false)
+  const [moveEpoch, setMoveEpoch] = useState(0)
   const flashTimeoutRef = useRef<number | null>(null)
 
   const reload = () =>
@@ -125,20 +131,6 @@ export function SettingsPage() {
     }
   }, [])
 
-  const savePathTemplate = async (raw: string) => {
-    try {
-      const next = await api.saveSettings({ pathTemplate: raw })
-      setSettings(next)
-      setAppSettingsCache(next)
-      setPathDraft(null)
-      flash(t('settings.saved'))
-    } catch (err: any) {
-      const code = pathTemplateErrorFromCode(err?.code)
-      const message = code ? t(`settings.pathTemplateErrors.${code}`) : err.message
-      flash(t('settings.errorPrefix', { message }), true)
-    }
-  }
-
   const update = async (patch: Partial<PublicSettings>) => {
     if (!settings) return
     setSettings({ ...settings, ...patch } as PublicSettings)
@@ -161,6 +153,24 @@ export function SettingsPage() {
       setMessage(null)
       flashTimeoutRef.current = null
     }, 2500)
+  }
+
+  const requestMove = (pathTemplate: string, primaryAlbumArtist: boolean) => {
+    if (!settings || moveRunning) return
+    if (pathTemplateError(pathTemplate)) return
+    if (pathTemplate === (settings.pathTemplate || '') && primaryAlbumArtist === Boolean(settings.primaryAlbumArtist)) {
+      setPathDraft(null)
+      setPrimaryDraft(null)
+      setMoveRequest(null)
+      return
+    }
+    setMoveRequest({ pathTemplate, primaryAlbumArtist })
+  }
+
+  const cancelMove = () => {
+    setMoveRequest(null)
+    setPathDraft(null)
+    setPrimaryDraft(null)
   }
 
   if (!settings) {
@@ -354,15 +364,11 @@ export function SettingsPage() {
                   placeholder="$artist/$album/$track. $title"
                   spellCheck={false}
                   aria-invalid={Boolean(pathError)}
+                  disabled={moveRunning}
                   onChange={(e) => setPathDraft(e.target.value)}
                   onBlur={() => {
                     const raw = (pathDraft ?? settings.pathTemplate ?? '').trim()
-                    if (raw === (settings.pathTemplate || '')) {
-                      setPathDraft(null)
-                      return
-                    }
-                    if (pathTemplateError(raw)) return
-                    void savePathTemplate(raw)
+                    requestMove(raw, primaryDraft ?? Boolean(settings.primaryAlbumArtist))
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') e.currentTarget.blur()
@@ -372,17 +378,39 @@ export function SettingsPage() {
                 <div className="text-[13px] text-quiet">{t('settings.pathTemplateHelp')}</div>
               </div>
               <div>
-                <label className="flex cursor-pointer items-center justify-between gap-4">
+                <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
                   <div className="text-[15px]">{t('settings.primaryAlbumArtist')}</div>
                   <input
                     type="checkbox"
-                    checked={Boolean(settings.primaryAlbumArtist)}
-                    onChange={(e) => update({ primaryAlbumArtist: e.target.checked })}
+                    checked={primaryDraft ?? Boolean(settings.primaryAlbumArtist)}
+                    disabled={moveRunning}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                      setPrimaryDraft(next)
+                      const raw = (pathDraft ?? settings.pathTemplate ?? '').trim()
+                      requestMove(raw, next)
+                    }}
                     className="switch"
                   />
                 </label>
                 <div className="mt-1 text-[13px] text-quiet">{t('settings.primaryAlbumArtistHelp')}</div>
               </div>
+              <LibraryMovePanel
+                epoch={moveEpoch}
+                onRunning={setMoveRunning}
+                onSettled={reload}
+              />
+              <LibraryMoveDialog
+                request={moveRequest}
+                onClose={cancelMove}
+                onStarted={() => {
+                  setMoveRequest(null)
+                  setPathDraft(null)
+                  setPrimaryDraft(null)
+                  setMoveEpoch((n) => n + 1)
+                  reload()
+                }}
+              />
               <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
                 <div>
                   <div
@@ -2150,6 +2178,253 @@ function AppleStatusCard({ flash }: { flash: (msg: string, err?: boolean) => voi
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+function moveErrorText(t: (key: string) => string, err: { code?: string | null; message?: string }) {
+  const code = err?.code || ''
+  if (code === 'libraryMove.busy') return t('settings.moveLibraryBusy')
+  if (code === 'libraryMove.running') return t('settings.moveLibraryRunning')
+  if (code === 'libraryMove.nothingToUndo') return t('settings.moveLibraryNothingToUndo')
+  const pathCode = pathTemplateErrorFromCode(code)
+  if (pathCode) return t(`settings.pathTemplateErrors.${pathCode}`)
+  return err?.message || t('settings.failed')
+}
+
+function skipReason(t: (key: string, opts?: Record<string, unknown>) => string, reason: string) {
+  const key = `settings.moveSkip.${reason}`
+  const text = t(key)
+  return text === key ? reason : text
+}
+
+function LibraryMoveDialog({
+  request,
+  onClose,
+  onStarted,
+}: {
+  request: { pathTemplate: string; primaryAlbumArtist: boolean } | null
+  onClose: () => void
+  onStarted: () => void
+}) {
+  const { t } = useTranslation()
+  const [preview, setPreview] = useState<LibraryMovePreview | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!request) {
+      setPreview(null)
+      setError(null)
+      return
+    }
+    let cancelled = false
+    setPreview(null)
+    setError(null)
+    api
+      .previewLibraryMove(request)
+      .then((next) => {
+        if (!cancelled) setPreview(next)
+      })
+      .catch((err: any) => {
+        if (!cancelled) setError(moveErrorText(t, err))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [request, t])
+
+  const confirm = async () => {
+    if (!request) return
+    setBusy(true)
+    setError(null)
+    try {
+      await api.startLibraryMove(request)
+      onStarted()
+    } catch (err: any) {
+      setError(moveErrorText(t, err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal open={Boolean(request)} onClose={onClose} label={t('settings.moveLibraryTitle')} placement="center" className="!max-w-[36rem]">
+      <div className="p-6">
+        <h2 className="text-lg font-semibold text-white">{t('settings.moveLibraryTitle')}</h2>
+        {preview && (
+          <div className="mt-4 space-y-3">
+            <div className="space-y-1">
+              {preview.samples.map((sample) => (
+                <div key={sample.kind} className="break-all font-mono text-[13px] text-white/80">
+                  {sample.path}
+                </div>
+              ))}
+            </div>
+            <div className="text-[13px] text-quiet">
+              {preview.move === 0
+                ? t('settings.moveLibraryNone')
+                : t('settings.moveLibraryCounts', { move: preview.move, inPlace: preview.inPlace })}
+            </div>
+            {preview.skipped > 0 && (
+              <div className="space-y-1">
+                <div className="text-[13px] text-quiet">{t('settings.moveLibrarySkipped', { count: preview.skipped })}</div>
+                {preview.skippedItems.map((item) => (
+                  <div key={`${item.path}:${item.reason}`} className="truncate text-xs text-quiet" title={item.path}>
+                    {item.path} · {skipReason(t, item.reason)}
+                  </div>
+                ))}
+              </div>
+            )}
+            {preview.navidrome.losesPlays && (
+              <div className="text-[13px] text-amber-200/80">
+                {t('settings.moveLibraryNavidrome', { version: preview.navidrome.version })}
+              </div>
+            )}
+            {preview.navidrome.versionUnknown && (
+              <div className="text-[13px] text-amber-200/80">{t('settings.moveLibraryNavidromeUnknown')}</div>
+            )}
+          </div>
+        )}
+        {request && !preview && !error && (
+          <div className="mt-4 text-[13px] text-quiet">{t('settings.moveLibraryPlanning')}</div>
+        )}
+        {error && <div className="mt-4 text-[13px] text-rose-300">{error}</div>}
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button onClick={onClose} disabled={busy} variant="ghost">
+            {t('settings.cancel')}
+          </Button>
+          <Button onClick={confirm} disabled={busy || !preview || Boolean(error)}>
+            {busy ? t('settings.starting') : t('settings.moveLibraryConfirm')}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function LibraryMovePanel({
+  epoch,
+  onRunning,
+  onSettled,
+}: {
+  epoch: number
+  onRunning: (running: boolean) => void
+  onSettled: () => void
+}) {
+  const { t } = useTranslation()
+  const [status, setStatus] = useState<LibraryMoveStatus | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const onRunningRef = useRef(onRunning)
+  const onSettledRef = useRef(onSettled)
+  const wasRunning = useRef(false)
+  onRunningRef.current = onRunning
+  onSettledRef.current = onSettled
+
+  const refresh = useCallback(() => {
+    api.libraryMoveStatus().then(setStatus).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh, epoch])
+
+  useEventStream((type, data) => {
+    if (type !== 'library.move.progress') return
+    setStatus(data)
+  })
+
+  useEffect(() => {
+    const running = Boolean(status?.running)
+    onRunningRef.current(running)
+    if (wasRunning.current && !running) onSettledRef.current()
+    wasRunning.current = running
+  }, [status?.running])
+
+  useEffect(() => {
+    if (!status?.running) return
+    const timer = setInterval(refresh, 2000)
+    return () => clearInterval(timer)
+  }, [status?.running, refresh])
+
+  if (!status || (!status.running && !status.canUndo)) return null
+
+  const pct = status.total > 0 ? Math.min(100, Math.round((status.scanned / status.total) * 100)) : 0
+  const label =
+    status.phase === 'planning'
+      ? t('settings.moveLibraryPlanning')
+      : status.phase === 'waiting'
+        ? t('settings.moveLibraryWaiting')
+        : status.phase === 'playlists'
+          ? t('settings.moveLibraryPlaylists')
+          : status.phase === 'scanning'
+            ? t('settings.moveLibraryScanning')
+            : t('settings.moveLibraryProgress', { pct, scanned: status.scanned, total: status.total })
+
+  const stop = async () => {
+    setBusy(true)
+    try {
+      await api.stopLibraryMove()
+    } catch {}
+    setBusy(false)
+    refresh()
+  }
+
+  const undo = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      setStatus(await api.undoLibraryMove())
+    } catch (err: any) {
+      setError(moveErrorText(t, err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {status.running && (
+        <>
+          <ProgressBar value={status.phase === 'moving' ? pct : 0} label={label} />
+          {status.current && (
+            <div className="truncate text-xs text-quiet" title={status.current}>
+              {status.current}
+            </div>
+          )}
+          {status.stopRequested && <div className="text-xs text-quiet">{t('settings.stoppingAfterCurrentFile')}</div>}
+        </>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        <Badge variant="ok">{t('settings.moveLibraryMoved', { count: status.moved })}</Badge>
+        <Badge>{t('settings.moveLibraryInPlace', { count: status.inPlace })}</Badge>
+        {status.skipped > 0 && <Badge variant="warn">{t('settings.moveLibrarySkipped', { count: status.skipped })}</Badge>}
+        {status.failed > 0 && <Badge variant="bad">{t('settings.moveLibraryFailed', { count: status.failed })}</Badge>}
+      </div>
+      {!status.running && status.skippedItems.length > 0 && (
+        <div className="space-y-1">
+          {status.skippedItems.slice(0, 4).map((item) => (
+            <div key={`${item.path}:${item.reason}`} className="truncate text-xs text-quiet" title={item.path}>
+              {item.path} · {skipReason(t, item.reason)}
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <div className="text-[13px] text-rose-300">{error}</div>}
+      <div>
+        {status.running ? (
+          <Button onClick={stop} disabled={busy || status.stopRequested} variant="ghost" className="!text-rose-500">
+            {status.stopRequested ? t('settings.stopping') : t('settings.moveLibraryStop')}
+          </Button>
+        ) : (
+          status.canUndo && (
+            <Button onClick={undo} disabled={busy} variant="ghost">
+              {t('settings.moveLibraryUndo')}
+            </Button>
+          )
+        )}
+      </div>
     </div>
   )
 }

@@ -199,3 +199,58 @@ export function inferFilePattern(stem, vars) {
   const pattern = pending.replace(/\u0001(\d+)\u0001/g, (_, i) => `$${slots[Number(i)]}`)
   return renderFileStem(pattern, vars) === name ? pattern : null
 }
+
+// Placeholders that survive renderSegment's cleanup, so a rendered pattern
+// shows where each value went.
+const PLACEHOLDER = {
+  artist: 'Qzartistzq',
+  album: 'Qzalbumzq',
+  title: 'Qztitlezq',
+  year: '9173',
+  track: '83',
+  disc: '79',
+}
+const CAPTURE = {
+  artist: '.+?',
+  album: '.+?',
+  title: '.+?',
+  year: '\\d{4}',
+  track: '\\d{1,3}',
+  disc: '\\d{1,3}',
+}
+const OPTIONAL = ['year', 'track', 'disc']
+
+// The inverse of renderSegment: the values a name was rendered from, or
+// null when the pattern cannot have produced it. Year, track and disc may
+// be missing, as renderSegment drops them with their separators; readings
+// with more values are tried first.
+export function matchSegment(pattern, name) {
+  const target = String(name ?? '')
+  if (!target) return null
+  const tokens = [...new Set(tokenNames(pattern))].filter((t) => KNOWN.has(t))
+  const optional = tokens.filter((t) => OPTIONAL.includes(t))
+  const subsets = []
+  for (let mask = (1 << optional.length) - 1; mask >= 0; mask -= 1) {
+    subsets.push(optional.filter((_, i) => mask & (1 << i)))
+  }
+  subsets.sort((a, b) => b.length - a.length)
+  for (const present of subsets) {
+    const vars = {}
+    for (const t of tokens) if (!OPTIONAL.includes(t) || present.includes(t)) vars[t] = PLACEHOLDER[t]
+    const rendered = renderSegment(pattern, vars)
+    if (!rendered) continue
+    const used = new Set()
+    let source = escapeRegExp(rendered)
+    for (const t of tokens) {
+      const ph = escapeRegExp(PLACEHOLDER[t])
+      source = source.replace(new RegExp(ph, 'g'), () => {
+        if (used.has(t)) return `\\k<${t}>`
+        used.add(t)
+        return `(?<${t}>${CAPTURE[t]})`
+      })
+    }
+    const m = new RegExp(`^${source}$`).exec(target)
+    if (m) return { ...m.groups }
+  }
+  return null
+}

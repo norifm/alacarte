@@ -47,8 +47,8 @@ const DEFAULTS = {
   autoDownloadCheckFrequency: 'auto',
   stagingInsideMusicLibrary: false,
   namingConvention: 'apple',
-  // Empty keeps Artist/Album/01. Title. A scheme never rewrites folders
-  // that are already in the library.
+  // Empty keeps Artist/Album/01. Title. Changing this asks before the
+  // library move rewrites folders that are already on disk.
   pathTemplate: '',
   primaryAlbumArtist: false,
   versionOptionsEnabled: false,
