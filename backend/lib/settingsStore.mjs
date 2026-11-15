@@ -11,6 +11,7 @@ import {
   DEFAULT_NAMING_LANGUAGE_MODE,
   MAX_ACCEPTED_LANGUAGES,
 } from './metadataLanguage.mjs'
+import { parsePathTemplate } from './pathTemplate.mjs'
 
 export {
   UI_LANGUAGE_VALUES,
@@ -46,6 +47,10 @@ const DEFAULTS = {
   autoDownloadCheckFrequency: 'auto',
   stagingInsideMusicLibrary: false,
   namingConvention: 'apple',
+  // Empty keeps Artist/Album/01. Title. A scheme never rewrites folders
+  // that are already in the library.
+  pathTemplate: '',
+  primaryAlbumArtist: false,
   versionOptionsEnabled: false,
   versionOptions: ['atmos', 'lossless', 'aac'],
   uiLanguage: 'system',
@@ -234,6 +239,13 @@ export function writeSettings(patch) {
 // settings files on the next save.
 const RETIRED_KEYS = ['albumFolderFormat', 'artistFolderFormat', 'songFileFormat', 'keepAlac', 'maxFileNameBytes']
 
+// A scheme that is not artist/album/file, or that is just the historical
+// layout, is stored as empty so the write path stays on the old code.
+function storedPathTemplate(value) {
+  const parsed = parsePathTemplate(value)
+  return parsed.error ? '' : parsed.stored
+}
+
 function normalizeSettings(input) {
   const parsed = { ...input }
   for (const key of RETIRED_KEYS) delete parsed[key]
@@ -268,6 +280,8 @@ function normalizeSettings(input) {
     namingConvention: NAMING_CONVENTION_VALUES.has(parsed?.namingConvention)
       ? parsed.namingConvention
       : DEFAULTS.namingConvention,
+    pathTemplate: storedPathTemplate(parsed?.pathTemplate),
+    primaryAlbumArtist: toBool(parsed?.primaryAlbumArtist, false),
     versionOptionsEnabled: toBool(
       parsed?.versionOptionsEnabled,
       DEFAULTS.versionOptionsEnabled,
@@ -335,6 +349,8 @@ export async function readPublicSettings() {
     autoDownloadCheckFrequency: s.autoDownloadCheckFrequency || 'auto',
     stagingInsideMusicLibrary: Boolean(s.stagingInsideMusicLibrary),
     namingConvention: s.namingConvention || 'apple',
+    pathTemplate: s.pathTemplate || '',
+    primaryAlbumArtist: Boolean(s.primaryAlbumArtist),
     versionOptionsEnabled: Boolean(s.versionOptionsEnabled),
     versionOptions: Array.isArray(s.versionOptions)
       ? s.versionOptions.filter((g) => VERSION_GROUP_VALUES.has(g))

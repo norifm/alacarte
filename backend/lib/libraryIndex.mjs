@@ -95,6 +95,7 @@ function emptyIndex() {
     isrcPaths: new Map(),
     songVersionPaths: new Map(),
     albumVersionGroups: new Map(),
+    upcDirs: new Map(),
   }
 }
 
@@ -461,7 +462,10 @@ function aggregateAudioDirFromRows(rawRows, kind, artistName, dirPath, dirAddedA
       acc.isrcs.add(row.isrc)
       if (!acc.isrcPaths.has(row.isrc)) acc.isrcPaths.set(row.isrc, toRel(row.path))
     }
-    if (row.upc) acc.upcs.add(row.upc)
+    if (row.upc) {
+      acc.upcs.add(row.upc)
+      if (kind === 'album' && !acc.upcDirs.has(row.upc)) acc.upcDirs.set(row.upc, rel)
+    }
   }
 }
 
@@ -801,6 +805,80 @@ export async function findSongPathInLibrary(
 // names in the same form.
 function albumMatchName(name) {
   return normalizeForMatchKey(stripTrailingYear(sanitizeSegment(name))).toLowerCase()
+}
+
+function plainAlbumKey(name) {
+  const base = String(name || '').replace(/\s*\((FLAC|ALAC|Atmos|AAC)\)$/i, '')
+  return albumMatchName(base)
+}
+
+function nameTokens(name) {
+  return sanitizeSegment(normalizeForMatchKey(name))
+    .toLowerCase()
+    .split(' ')
+    .filter((t) => t && t !== '_')
+}
+
+function artistOverlaps(existingName, wanted) {
+  const have = nameTokens(existingName)
+  if (!have.length) return false
+  const haveKey = have.join(' ')
+  for (const name of wanted) {
+    const need = nameTokens(name)
+    if (!need.length) continue
+    if (need.join(' ') === haveKey) return true
+    if (need.every((t) => have.includes(t)) || have.every((t) => need.includes(t))) return true
+  }
+  return false
+}
+
+function albumDirFromRel(root, rel) {
+  if (!rel || typeof rel !== 'string') return null
+  const parts = rel.split('/').filter(Boolean)
+  if (parts.length !== 2) return null
+  if (parts[0] === 'Playlists' || parts.some((p) => p === '.' || p === '..' || p.startsWith('.'))) return null
+  const abs = path.resolve(root, parts[0], parts[1])
+  const rootResolved = path.resolve(root)
+  if (abs !== rootResolved && !abs.startsWith(`${rootResolved}${path.sep}`)) return null
+  return abs
+}
+
+// Where this release already lives, or null. Used only when a custom scheme
+// or the primary-artist option would otherwise write a second copy. A barcode
+// match wins. Otherwise one artist/album folder (year and "A" vs "A & B"
+// aside) is reused, and two equally plausible folders are not guessed at.
+export async function findExistingReleaseDir({ upc, artists, album, variant = null } = {}) {
+  let index
+  try {
+    index = await scanLibrary()
+  } catch {
+    return null
+  }
+  const root = getMusicRoot()
+  const wantVariant = variant || null
+  const exists = async (abs) => {
+    if (!abs) return false
+    const st = await fsp.stat(abs).catch(() => null)
+    return Boolean(st?.isDirectory())
+  }
+  const upcNorm = normalizeUpc(upc)
+  if (upcNorm && index.upcDirs?.has(upcNorm)) {
+    const abs = albumDirFromRel(root, index.upcDirs.get(upcNorm))
+    if ((await exists(abs)) && parseVariantSuffix(path.basename(abs)) === wantVariant) return abs
+  }
+  const wantAlbum = plainAlbumKey(album)
+  if (!wantAlbum) return null
+  const wanted = (Array.isArray(artists) ? artists : [artists]).filter(Boolean)
+  const hits = []
+  for (const row of index.albums || []) {
+    if (plainAlbumKey(row.albumName) !== wantAlbum) continue
+    if ((parseVariantSuffix(row.albumName) || null) !== wantVariant) continue
+    if (!artistOverlaps(row.artistName, wanted)) continue
+    const abs = albumDirFromRel(root, row.relPath)
+    if (await exists(abs)) hits.push(abs)
+  }
+  const unique = [...new Set(hits)]
+  return unique.length === 1 ? unique[0] : null
 }
 
 export async function getAlbumVersionGroups(artistName, albumName, upc = null, preScannedIndex = null) {

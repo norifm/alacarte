@@ -49,6 +49,7 @@ import {
   getArtistBackfillStatus,
   stopArtistBackfill,
 } from '../lib/artistCredits.mjs'
+import { parsePathTemplate } from '../lib/pathTemplate.mjs'
 
 export const settingsRouter = express.Router()
 
@@ -72,6 +73,8 @@ export const WRITABLE_KEYS = new Set([
   'autoDownloadCheckFrequency',
   'stagingInsideMusicLibrary',
   'namingConvention',
+  'pathTemplate',
+  'primaryAlbumArtist',
   'versionOptionsEnabled',
   'versionOptions',
   'uiLanguage',
@@ -112,6 +115,13 @@ settingsRouter.get('/storefronts', async (req, res) => {
 settingsRouter.put('/', async (req, res) => {
   try {
     const body = req.body || {}
+    if (Object.prototype.hasOwnProperty.call(body, 'pathTemplate')) {
+      const parsed = parsePathTemplate(body.pathTemplate)
+      if (parsed.error) {
+        res.status(400).json({ error: parsed.error })
+        return
+      }
+    }
     const patch = {}
     for (const [k, v] of Object.entries(body)) {
       if (!WRITABLE_KEYS.has(k)) continue
@@ -119,6 +129,11 @@ settingsRouter.put('/', async (req, res) => {
       if (k === 'lyricsFormat' && !LYRICS_FORMAT_VALUES.has(v)) continue
       if (k === 'quality' && !QUALITY_VALUES.has(v)) continue
       if (k === 'namingConvention' && !NAMING_CONVENTION_VALUES.has(v)) continue
+      if (k === 'pathTemplate') {
+        patch[k] = parsePathTemplate(v).stored
+        continue
+      }
+      if (k === 'primaryAlbumArtist' && typeof v !== 'boolean') continue
       if (APPLE_GATEWAY_FLAGS.has(k) && typeof v !== 'boolean') continue
       if (k === 'autoStorefront' && typeof v !== 'boolean') continue
       if (k in APPLE_GATEWAY_LIMITS) {

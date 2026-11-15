@@ -93,6 +93,7 @@ export function SettingsPage() {
   const [storefronts, setStorefronts] = useState<Array<{ id: string; name: string }>>([])
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [pathDraft, setPathDraft] = useState<string | null>(null)
   const flashTimeoutRef = useRef<number | null>(null)
 
   const reload = () =>
@@ -122,6 +123,18 @@ export function SettingsPage() {
       }
     }
   }, [])
+
+  const savePathTemplate = async (raw: string) => {
+    try {
+      const next = await api.saveSettings({ pathTemplate: raw })
+      setSettings(next)
+      setAppSettingsCache(next)
+      setPathDraft(null)
+      flash(t('settings.saved'))
+    } catch (err: any) {
+      flash(t('settings.errorPrefix', { message: err.message }), true)
+    }
+  }
 
   const update = async (patch: Partial<PublicSettings>) => {
     if (!settings) return
@@ -328,6 +341,39 @@ export function SettingsPage() {
                     <option value="qobuz">{t('settings.qobuzCompatible')}</option>
                   </select>
                 </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <div className="text-[15px]">{t('settings.pathTemplate')}</div>
+                <Input
+                  value={pathDraft ?? settings.pathTemplate ?? ''}
+                  placeholder="$artist/$album/$track. $title"
+                  spellCheck={false}
+                  onChange={(e) => setPathDraft(e.target.value)}
+                  onBlur={() => {
+                    const raw = (pathDraft ?? settings.pathTemplate ?? '').trim()
+                    if (raw === (settings.pathTemplate || '')) {
+                      setPathDraft(null)
+                      return
+                    }
+                    void savePathTemplate(raw)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.blur()
+                  }}
+                />
+                <div className="text-[13px] text-quiet">{t('settings.pathTemplateHelp')}</div>
+              </div>
+              <div>
+                <label className="flex cursor-pointer items-center justify-between gap-4">
+                  <div className="text-[15px]">{t('settings.primaryAlbumArtist')}</div>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(settings.primaryAlbumArtist)}
+                    onChange={(e) => update({ primaryAlbumArtist: e.target.checked })}
+                    className="switch"
+                  />
+                </label>
+                <div className="mt-1 text-[13px] text-quiet">{t('settings.primaryAlbumArtistHelp')}</div>
               </div>
               <label className="flex cursor-pointer items-center justify-between gap-4 has-[:disabled]:cursor-not-allowed">
                 <div>

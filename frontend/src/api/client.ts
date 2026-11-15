@@ -243,6 +243,8 @@ export type PublicSettings = {
   autoDownloadCheckFrequency: AutoCheckFrequency
   stagingInsideMusicLibrary: boolean
   namingConvention: 'apple' | 'qobuz'
+  pathTemplate: string
+  primaryAlbumArtist: boolean
   versionOptionsEnabled: boolean
   versionOptions: QualityGroup[]
   uiLanguage: UiLanguage

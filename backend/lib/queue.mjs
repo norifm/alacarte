@@ -21,7 +21,7 @@ import { getLibraryPlaylistDetail } from './appleLibraryApi.mjs'
 import { triggerNavidromeScan } from './navidromeApi.mjs'
 import { creditImportedFiles } from './artistCredits.mjs'
 import { probeMp4Box, writeAmdpConfig, spawnAmdp, stripAnsi } from './amdpRunner.mjs'
-import { applyVariantSuffix, groupOf } from './qualityGroups.mjs'
+import { groupOf } from './qualityGroups.mjs'
 import {
   convertDirToFlac,
   extractFolderArt,
@@ -32,16 +32,17 @@ import {
   assertFreeSpace,
   assertWritableTarget,
   estimateJobBytes,
-  computeFinalDir,
   detectNameByteLimit,
   ensureDir,
   fitFileName,
   mergeMove,
   resolveArtistDir,
+  resolveLibraryDir,
   sanitizeSegment,
   writeVersionMarker,
 } from './folderLayout.mjs'
-import { findSongPathInLibrary, getAlbumTrackPresence, getAlbumVersionGroups, hasSongInLibrary, invalidateLibraryCache, isPlaylistInLibrary, songNameFromFilename, stripTrailingYear } from './libraryIndex.mjs'
+import { findExistingReleaseDir, findSongPathInLibrary, getAlbumTrackPresence, getAlbumVersionGroups, hasSongInLibrary, invalidateLibraryCache, isPlaylistInLibrary, songNameFromFilename, stripTrailingYear } from './libraryIndex.mjs'
+import { parsePathTemplate, primaryFolderArtist, renderFileStem, renderSegment } from './pathTemplate.mjs'
 import { writePlaylistM3U } from './playlistExport.mjs'
 import { getDb, getMeta, setMeta } from './db.mjs'
 import { amdpNameCharLimit, normalizeForMatchKey, restoreTruncatedName } from './libraryMatchKey.mjs'
@@ -163,22 +164,66 @@ function createProgressState(job, { convertEnabled }) {
 // legacy root-owned artist folders from a rootful -> rootless migration).
 // Check the target before the amdl run so the job fails in seconds with an
 // actionable message instead of after the whole album is in staging.
+async function libraryDestination(settings, {
+  artist,
+  album,
+  year = null,
+  variant = null,
+  quality = null,
+  upc = null,
+  folderArtist = null,
+  alsoArtists = [],
+} = {}) {
+  const layout = parsePathTemplate(settings?.pathTemplate)
+  const folderName = folderArtist || artist || 'Unknown Artist'
+  const namedAlbum = applyNamingConvention(
+    stripTrailingYear(album || '') || album || '',
+    settings?.namingConvention || 'apple',
+  )
+  let existingDir = null
+  // Only when the write would differ from the historical layout. An empty
+  // scheme never looks an album up, so the destination stays computeFinalDir.
+  if (layout.custom || settings?.primaryAlbumArtist) {
+    try {
+      existingDir = await findExistingReleaseDir({
+        upc,
+        artists: [folderName, artist, ...alsoArtists],
+        album: namedAlbum,
+        variant: variant ? groupOf(quality) : null,
+      })
+    } catch (err) {
+      console.error('existing album lookup failed:', err.message)
+    }
+  }
+  const dir = await resolveLibraryDir(MUSIC_ROOT, {
+    artist: folderName,
+    album: namedAlbum,
+    year,
+    layout: layout.custom ? layout : null,
+    variant,
+    quality,
+    existingDir,
+  })
+  return { dir, layout, existingDir }
+}
+
 async function preflightMusicTarget(settings, job) {
   if (job.kind === 'playlist' || !job.artist) {
     await assertWritableTarget(MUSIC_ROOT)
     return
   }
-  const convention = settings.namingConvention || 'apple'
-  let finalDir = await computeFinalDir(
-    MUSIC_ROOT,
-    job.artist,
-    applyNamingConvention(stripTrailingYear(job.albumTitle || ''), convention),
-    job.year,
-  )
-  if (job.variant) {
-    finalDir = applyVariantSuffix(finalDir, job.variant, job.quality)
-  }
-  await assertWritableTarget(finalDir)
+  const album = job.kind === 'song' ? (job.resolvedAlbumTitle || job.albumTitle) : job.albumTitle
+  const { dir } = await libraryDestination(settings, {
+    artist: job.artist,
+    album,
+    year: job.year,
+    variant: job.variant,
+    quality: job.quality,
+    upc: job.upc,
+    folderArtist: job.folderArtist,
+    alsoArtists: [job.artist],
+  })
+  await assertWritableTarget(dir)
 }
 
 function resolveStagingRoot(settings) {
@@ -293,6 +338,7 @@ async function resolveAlbumNaming({ settings, storefront, albumId, meta }) {
       id: t.id,
       name: t.name, // display name — matches the name amdp itself writes
       trackNumber: t.trackNumber,
+      discNumber: t.discNumber,
       isrc: t.isrc || null,
       resolvedName,
       originalName: originalTrack?.name || null,
@@ -726,7 +772,7 @@ async function createAlbumJob({ albumId, storefront, quality, expectedArtistId }
       if (presence.present > 0) {
         missingTracks = meta.tracks
           .filter((t) => !presence.tracks[t.id])
-          .map((t) => ({ id: t.id, name: t.name, isrc: t.isrc }))
+          .map((t) => ({ id: t.id, name: t.name, isrc: t.isrc, trackNumber: t.trackNumber, discNumber: t.discNumber }))
       }
     } else if (
       (existingGroups.size > 0 || activeDifferentGroupJob) &&
@@ -742,7 +788,7 @@ async function createAlbumJob({ albumId, storefront, quality, expectedArtistId }
     const wantedIds = new Set((missingTracks || allTracks).map((t) => t.id))
     const wanted = allTracks.filter((t) => t.released && wantedIds.has(t.id))
     if (wanted.length === 0) throw notReleasedError(meta?.releaseDate)
-    missingTracks = wanted.map((t) => ({ id: t.id, name: t.name, isrc: t.isrc }))
+    missingTracks = wanted.map((t) => ({ id: t.id, name: t.name, isrc: t.isrc, trackNumber: t.trackNumber, discNumber: t.discNumber }))
   }
 
   const job = {
@@ -754,6 +800,7 @@ async function createAlbumJob({ albumId, storefront, quality, expectedArtistId }
     albumTitle: naming.albumTitle || 'Unknown album',
     albumName: meta?.name || null,
     artist: naming.artist || 'Unknown artist',
+    folderArtist: primaryFolderArtist(meta, settings.primaryAlbumArtist),
     originalAlbumTitle: naming.originalAlbumTitle,
     originalArtist: naming.originalArtist,
     trackNameOverrides: naming.trackNameOverrides,
@@ -778,7 +825,7 @@ async function createAlbumJob({ albumId, storefront, quality, expectedArtistId }
     upc: meta?.upc || null,
     trackIsrcs: (meta?.tracks || [])
       .filter((t) => t.isrc)
-      .map((t) => ({ name: t.name || '', trackNumber: t.trackNumber || null, isrc: t.isrc })),
+      .map((t) => ({ name: t.name || '', trackNumber: t.trackNumber || null, discNumber: t.discNumber || null, isrc: t.isrc })),
     stats: { total: missingTracks?.length || meta?.trackCount || 0, done: 0, failed: 0 },
   }
   state.jobs.set(id, job)
@@ -1091,6 +1138,7 @@ async function createSongJob({ songId, albumId, storefront, quality, followedPla
     originalTrackTitle: trackOverride?.originalName || null,
     trackNameOverrides: trackOverride ? [trackOverride] : [],
     artist: naming.artist || 'Unknown artist',
+    folderArtist: primaryFolderArtist(meta, settings.primaryAlbumArtist),
     artistId: meta?.artistId || null,
     year: meta?.year || null,
     artworkUrl: meta?.artworkTemplate
@@ -1343,6 +1391,71 @@ async function applyQobuzFileNames(dir) {
         await fsp.rename(path.join(dir, fn), dst)
       }
     }
+  }
+}
+
+function trackNumberFromFile(fileName) {
+  const base = path.basename(fileName, path.extname(fileName))
+  const m = base.match(/^\s*(\d{1,3})[.\- ]/)
+  return m ? m[1] : ''
+}
+
+function tracksForFileNames(job) {
+  if (job?.trackNameOverrides?.length) return job.trackNameOverrides
+  if (job?.trackIsrcs?.length) return job.trackIsrcs
+  if (job?.missingTracks?.length) return job.missingTracks
+  return []
+}
+
+// Replaces amdp's "01. Title" stem. Sidecars follow the audio file. A name
+// that is already taken is left alone so two tracks cannot clobber each other.
+async function applyCustomFileNames(dir, { pattern, tracks, convention, artist, album, year }) {
+  const files = await fsp.readdir(dir).catch(() => [])
+  for (const fn of files) {
+    if (!/\.(flac|m4a|mp3)$/i.test(fn)) continue
+    const ext = path.extname(fn)
+    const track = matchTrackForFile(fn, tracks)
+    const title = applyNamingConvention(
+      track?.resolvedName || track?.name || songNameFromFilename(fn),
+      convention,
+    )
+    const stem = renderFileStem(pattern, {
+      artist,
+      album,
+      year,
+      track: track?.trackNumber || trackNumberFromFile(fn),
+      title,
+      disc: track?.discNumber,
+    }, ext)
+    if (!stem) continue
+    const newName = fitFileName(`${stem}${ext}`)
+    if (newName === fn) continue
+    const src = path.join(dir, fn)
+    const dst = path.join(dir, newName)
+    if (await fsp.stat(dst).catch(() => null)) continue
+    await moveFileSafe(src, dst)
+    await moveLyricsSidecars(src, dst)
+  }
+}
+
+// Custom file schemes take the place of the qobuz and language renames,
+// which both assume amdp's "01. Title" stem. The historical stem keeps both.
+async function renameImportedFiles(dir, settings, job, { artist, album, language = true }) {
+  const layout = parsePathTemplate(settings?.pathTemplate)
+  if (layout.customFile) {
+    await applyCustomFileNames(dir, {
+      pattern: layout.file,
+      tracks: tracksForFileNames(job),
+      convention: settings?.namingConvention || 'apple',
+      artist,
+      album,
+      year: job?.year,
+    })
+    return
+  }
+  if ((settings?.namingConvention || 'apple') === 'qobuz') await applyQobuzFileNames(dir)
+  if (language && settings?.namingLanguageMode !== 'display' && job?.trackNameOverrides?.length) {
+    await renameTrackFilesForLanguage(dir, job.trackNameOverrides)
   }
 }
 
@@ -1690,30 +1803,30 @@ async function runJob(job) {
     if (audioCount === 0) throw await explainNoAudio(job)
 
     beginLibraryImport(job)
-    const convention = settings.namingConvention || 'apple'
 
     let finalDir
     if (isSong) {
-      // Songs import straight into their parent album folder so every
-      // download lands in the same Artist/Album/Track structure with the
-      // original amdp filenames (and their embedded metadata) preserved.
+      // Songs import into the parent album folder, same layout as an album.
       const albumDirName =
         (useLanguageNaming && job.resolvedAlbumTitle) ||
         restoreTruncatedName(firstAlbum.name, job.resolvedAlbumTitle).replace(/\s*\(\d{4}\)\s*$/, '')
-      const rawAlbumName = applyNamingConvention(albumDirName, convention)
-      finalDir = await computeFinalDir(
-        MUSIC_ROOT,
-        (useLanguageNaming && job.artist) || restoreTruncatedName(firstArtist.name, job.artist),
-        rawAlbumName,
-        job.year,
-      )
+      const stagedArtist = (useLanguageNaming && job.artist) || restoreTruncatedName(firstArtist.name, job.artist)
+      const placed = await libraryDestination(settings, {
+        artist: stagedArtist,
+        album: albumDirName,
+        year: job.year,
+        quality: job.quality,
+        upc: job.upc,
+        folderArtist: job.folderArtist,
+        alsoArtists: [job.artist],
+      })
+      finalDir = placed.dir
       await ensureDir(finalDir)
 
-      if (convention === 'qobuz') await applyQobuzFileNames(albumPath)
-
-      if (settings.namingLanguageMode !== 'display' && job.trackNameOverrides?.length) {
-        await renameTrackFilesForLanguage(albumPath, job.trackNameOverrides)
-      }
+      await renameImportedFiles(albumPath, settings, job, {
+        artist: job.folderArtist || stagedArtist,
+        album: albumDirName,
+      })
 
       const movedFiles = await fsp.readdir(albumPath)
       const audioFiles = movedFiles.filter((f) => /\.(flac|m4a|mp3)$/i.test(f))
@@ -1748,22 +1861,23 @@ async function runJob(job) {
       const albumDirName =
         (useLanguageNaming && job.albumTitle) ||
         restoreTruncatedName(firstAlbum.name, job.albumTitle).replace(/\s*\(\d{4}\)\s*$/, '')
-      const rawAlbumName = applyNamingConvention(albumDirName, convention)
-      finalDir = await computeFinalDir(
-        MUSIC_ROOT,
-        (useLanguageNaming && job.artist) || restoreTruncatedName(firstArtist.name, job.artist),
-        rawAlbumName,
-        job.year,
-      )
-      if (job.variant) {
-        finalDir = applyVariantSuffix(finalDir, job.variant, job.quality)
-      }
+      const stagedArtist = (useLanguageNaming && job.artist) || restoreTruncatedName(firstArtist.name, job.artist)
+      const placed = await libraryDestination(settings, {
+        artist: stagedArtist,
+        album: albumDirName,
+        year: job.year,
+        variant: job.variant,
+        quality: job.quality,
+        upc: job.upc,
+        folderArtist: job.folderArtist,
+        alsoArtists: [job.artist],
+      })
+      finalDir = placed.dir
 
-      if (convention === 'qobuz') await applyQobuzFileNames(albumPath)
-
-      if (settings.namingLanguageMode !== 'display' && job.trackNameOverrides?.length) {
-        await renameTrackFilesForLanguage(albumPath, job.trackNameOverrides)
-      }
+      await renameImportedFiles(albumPath, settings, job, {
+        artist: job.folderArtist || stagedArtist,
+        album: albumDirName,
+      })
 
       progressState.finalizeProgress = Math.max(progressState.finalizeProgress, 0.75)
       applyProgress(job, progressState, {
@@ -2074,17 +2188,24 @@ async function runPartialAlbumFill({
   }
 
   beginLibraryImport(job)
-  const convention = settings?.namingConvention || 'apple'
-  const albumDirName = restoreTruncatedName(firstAlbumName, job.albumTitle)
-  const finalDir = await computeFinalDir(
-    MUSIC_ROOT,
-    restoreTruncatedName(firstArtistName, job.artist),
-    applyNamingConvention(albumDirName.replace(/\s*\(\d{4}\)\s*$/, ''), convention),
-    job.year,
-  )
-  for (const albumPath of trackAlbumPaths) await restoreTrackFileNames(albumPath)
-  if (convention === 'qobuz') {
-    for (const albumPath of trackAlbumPaths) await applyQobuzFileNames(albumPath)
+  const albumDirName = restoreTruncatedName(firstAlbumName, job.albumTitle).replace(/\s*\(\d{4}\)\s*$/, '')
+  const stagedArtist = restoreTruncatedName(firstArtistName, job.artist)
+  const { dir: finalDir } = await libraryDestination(settings, {
+    artist: stagedArtist,
+    album: albumDirName,
+    year: job.year,
+    quality: job.quality,
+    upc: job.upc,
+    folderArtist: job.folderArtist,
+    alsoArtists: [job.artist],
+  })
+  for (const albumPath of trackAlbumPaths) {
+    await restoreTrackFileNames(albumPath)
+    await renameImportedFiles(albumPath, settings, job, {
+      artist: job.folderArtist || stagedArtist,
+      album: albumDirName,
+      language: false,
+    })
   }
   progressState.finalizeProgress = Math.max(progressState.finalizeProgress, 0.5)
   applyProgress(job, progressState, {
@@ -2768,25 +2889,50 @@ async function importPlaylistTracks({ job, jobStaging, onProgress }) {
 
     // Every playlist track imports into the same Artist/Album structure as
     // album and song downloads; the playlist m3u8 references these files.
+    const layout = parsePathTemplate(settings?.pathTemplate)
     let destDir
     let targetName = restoreTrackFileName(path.basename(srcPath), tags.title)
     if (albumName) {
       targetName = renumberFromTrackTag(targetName, tags.track)
-      destDir = await computeFinalDir(
-        MUSIC_ROOT,
-        artistName,
-        applyNamingConvention(stripTrailingYear(albumName), convention),
-        null,
-      )
-      if (convention === 'qobuz') {
-        const ext = path.extname(targetName)
+      const placed = await libraryDestination(settings, {
+        artist: artistName,
+        album: albumName,
+        quality: job.quality,
+        folderArtist: job.folderArtist,
+        alsoArtists: [job.artist],
+      })
+      destDir = placed.dir
+      const ext = path.extname(targetName)
+      if (layout.customFile) {
+        const stem = renderFileStem(layout.file, {
+          artist: job.folderArtist || artistName,
+          album: albumName,
+          track: tags.track,
+          title: applyNamingConvention(tags.title || songNameFromFilename(targetName), convention),
+        }, ext)
+        if (stem) targetName = `${stem}${ext}`
+      } else if (convention === 'qobuz') {
         targetName = `${applyNamingConvention(path.basename(targetName, ext), 'qobuz')}${ext}`
       }
     } else {
-      const artistDir = await resolveArtistDir(MUSIC_ROOT, artistName)
+      const artistForDir = layout.custom
+        ? renderSegment(layout.artist, { artist: artistName }) || artistName
+        : artistName
+      const artistDir = await resolveArtistDir(MUSIC_ROOT, artistForDir)
       destDir = path.join(MUSIC_ROOT, artistDir, 'Singles')
-      const title = sanitizeSegment(tags.title || path.basename(srcPath, path.extname(srcPath)))
-      targetName = `${title}${path.extname(srcPath)}`
+      const ext = path.extname(srcPath)
+      if (layout.customFile) {
+        const stem = renderFileStem(layout.file, {
+          artist: artistForDir,
+          title: tags.title || path.basename(srcPath, ext),
+          track: tags.track,
+        }, ext)
+        const title = sanitizeSegment(tags.title || path.basename(srcPath, ext))
+        targetName = stem ? `${stem}${ext}` : `${title}${ext}`
+      } else {
+        const title = sanitizeSegment(tags.title || path.basename(srcPath, ext))
+        targetName = `${title}${ext}`
+      }
     }
     await ensureDir(destDir)
 

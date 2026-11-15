@@ -9,7 +9,8 @@ import {
   sanitizeSegment,
   setNameByteLimit,
 } from './libraryMatchKey.mjs'
-import { groupOf } from './qualityGroups.mjs'
+import { parsePathTemplate, renderSegment } from './pathTemplate.mjs'
+import { applyVariantSuffix, groupOf } from './qualityGroups.mjs'
 
 export { fitFileName, sanitizeSegment }
 
@@ -35,6 +36,55 @@ export async function computeFinalDir(musicRoot, artist, album, _year) {
   const artistDir = await resolveArtistDir(musicRoot, artist)
   const albumSeg = sanitizeSegment(album)
   return path.join(musicRoot, artistDir, albumSeg)
+}
+
+// An album that is already on disk wins over the scheme, and the directory
+// has to be a real artist/album folder inside the library. Anything else
+// (a symlink out of the library, a file, a deeper path) is ignored.
+async function existingAlbumDir(musicRoot, existingDir) {
+  if (!existingDir) return null
+  let root
+  try {
+    root = await fsp.realpath(musicRoot)
+  } catch {
+    return null
+  }
+  let real
+  try {
+    real = await fsp.realpath(existingDir)
+  } catch {
+    return null
+  }
+  if (real !== root && !real.startsWith(`${root}${path.sep}`)) return null
+  const parts = path.relative(root, real).split(path.sep).filter(Boolean)
+  if (parts.length !== 2) return null
+  if (parts[0] === 'Playlists' || parts.some((p) => p.startsWith('.'))) return null
+  const st = await fsp.stat(real).catch(() => null)
+  if (!st?.isDirectory()) return null
+  return real
+}
+
+// `layout` comes from parsePathTemplate. A missing or legacy layout is the
+// historical Artist/Album directory, year and all, with no scheme applied.
+export async function resolveLibraryDir(musicRoot, {
+  artist,
+  album,
+  year = null,
+  layout = null,
+  variant = null,
+  quality = null,
+  existingDir = null,
+} = {}) {
+  const kept = await existingAlbumDir(musicRoot, existingDir)
+  if (kept) return kept
+  const parsed = typeof layout === 'string' ? parsePathTemplate(layout) : layout
+  const useScheme = Boolean(parsed?.custom)
+  const vars = { artist, album, year }
+  const artistName = useScheme ? renderSegment(parsed.artist, vars) || artist : artist
+  const albumName = useScheme ? renderSegment(parsed.album, vars) || album : album
+  let dir = await computeFinalDir(musicRoot, artistName, albumName, year)
+  if (variant) dir = applyVariantSuffix(dir, variant, quality)
+  return dir
 }
 
 export async function ensureDir(p) {
