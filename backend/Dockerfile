@@ -49,6 +49,8 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && 
 # App
 WORKDIR /app
 COPY --from=node-build /app /app
+COPY backend/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod 755 /app/docker-entrypoint.sh
 
 # Build-time sanity checks so regressions are caught early.
 RUN MP4Box -version 2>&1 | grep -q 'GPAC version' || (echo 'MP4Box runtime check failed' && exit 1)
@@ -58,5 +60,6 @@ RUN command -v apple-music-dl >/dev/null
 RUN rc=0; apple-music-dl --help >/dev/null 2>&1 || rc=$?; if [ "$rc" = "127" ]; then echo 'apple-music-dl cannot be executed (wrong libc / missing loader)' >&2; exit 1; fi
 
 EXPOSE 7373
-ENTRYPOINT ["/usr/bin/tini","--"]
+# The entrypoint drops to PUID/PGID when they are set (see .env.example).
+ENTRYPOINT ["/usr/bin/tini","--","/app/docker-entrypoint.sh"]
 CMD ["node","server.mjs"]

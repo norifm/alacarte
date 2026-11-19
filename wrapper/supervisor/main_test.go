@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -542,5 +543,40 @@ func TestLoginReportsWhenCredentialsNeverPersist(t *testing.T) {
 	waitForMode(t, srv, ModeIdle)
 	if h := health(t, srv); h.Authenticated {
 		t.Errorf("expected Authenticated=false, got %+v", h)
+	}
+}
+
+func TestShareControlTokenWithoutPuidLeavesOwner(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret", "token")
+	if _, err := loadControlToken(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := shareControlToken(path, "", "1000"); err != nil {
+		t.Fatalf("no PUID should be a no-op: %v", err)
+	}
+}
+
+func TestShareControlTokenRejectsBadIds(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret", "token")
+	if _, err := loadControlToken(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := shareControlToken(path, "abc", ""); err == nil {
+		t.Error("non-numeric PUID was accepted")
+	}
+	if err := shareControlToken(path, "1000", "-1"); err == nil {
+		t.Error("negative PGID was accepted")
+	}
+}
+
+func TestShareControlTokenChownsToCurrentUser(t *testing.T) {
+	// Chowning to the ids we already have works without root.
+	path := filepath.Join(t.TempDir(), "secret", "token")
+	if _, err := loadControlToken(path); err != nil {
+		t.Fatal(err)
+	}
+	uid, gid := strconv.Itoa(os.Getuid()), strconv.Itoa(os.Getgid())
+	if err := shareControlToken(path, uid, gid); err != nil {
+		t.Fatal(err)
 	}
 }

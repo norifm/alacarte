@@ -136,6 +136,8 @@ The "original" name is what Apple shows in your storefront's own language, so th
 - If your host's `/tmp` is tmpfs (RAM-backed), large downloads can exhaust memory. Either bind-mount a disk path to `/tmp/alacarte-staging` in your compose override, or toggle "Store temp staging inside music library" on.
 - If you intentionally point staging inside your music library, configure your scanner to ignore hidden directories.
 
+**File ownership** Downloads are owned by root unless you set `PUID` and `PGID` in `.env` (e.g. the output of `id -u` and `id -g`). The web container then runs as that user, the wrapper stays root and only shares its token with it. The music folder must be writable by that user, so albums downloaded before need a one-time `sudo chown -R <uid>:<gid>` of your music folder. `UMASK=002` keeps new files group writable. On rootless Podman leave both unset: root in the container is already your own user.
+
 **Sharing a network with Jellyfin/Plex/etc.** By default alacarte creates its own `alacarte-net` Docker network. If you'd rather attach to an existing network (e.g. the one your media server already uses), set `DOCKER_NETWORK=<name>` and `DOCKER_NETWORK_EXTERNAL=true` in `.env`.
 
 **Local compose tweaks** If you need to change things the `.env` variables don't cover (extra volumes, additional environment, etc.), drop a `docker-compose.override.yml` next to the main compose file. Docker Compose auto-merges it and it's gitignored, so you can run `docker compose up` normally without polluting the committed config.

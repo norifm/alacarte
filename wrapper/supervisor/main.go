@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -676,6 +677,29 @@ func loadControlToken(path string) (string, error) {
 	return token, nil
 }
 
+// shareControlToken hands the token and its folder to PUID/PGID so a web
+// container running as that user can read them. Without PUID they stay
+// root-only. PGID defaults to PUID, the same as in the web container.
+func shareControlToken(path, puid, pgid string) error {
+	if puid == "" {
+		return nil
+	}
+	uid, err := strconv.Atoi(puid)
+	if err != nil || uid < 0 {
+		return fmt.Errorf("PUID %q is not a numeric user id", puid)
+	}
+	gid := uid
+	if pgid != "" {
+		if gid, err = strconv.Atoi(pgid); err != nil || gid < 0 {
+			return fmt.Errorf("PGID %q is not a numeric group id", pgid)
+		}
+	}
+	if err := os.Chown(filepath.Dir(path), uid, gid); err != nil {
+		return err
+	}
+	return os.Chown(path, uid, gid)
+}
+
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -701,6 +725,9 @@ func main() {
 		token, err := loadControlToken(tokenFile)
 		if err != nil {
 			log.Fatalf("[supervisor] cannot load the control token from %s: %v", tokenFile, err)
+		}
+		if err := shareControlToken(tokenFile, os.Getenv("PUID"), os.Getenv("PGID")); err != nil {
+			log.Fatalf("[supervisor] cannot share the control token with PUID/PGID: %v", err)
 		}
 		sup.controlToken = token
 	} else {

@@ -33,6 +33,10 @@ services:
     environment:
       - LD_PRELOAD=/app/libwrapper_login_fix.so
       - SUPERVISOR_TOKEN_FILE=/app/supervisor-secret/token
+      # The wrapper itself stays root; these only hand the token to the
+      # user the web container runs as.
+      - PUID=${PUID:-}
+      - PGID=${PGID:-}
     expose:
       - "10020"
       - "20020"
@@ -67,6 +71,10 @@ services:
       - AMDL_SECRET_KEY=${AMDL_SECRET_KEY:-}
       - AUTH_DISABLED=${AUTH_DISABLED:-false}
       - TRUST_PROXY=${TRUST_PROXY:-loopback}
+      # Owner of downloads and settings. Unset runs as root, as before.
+      - PUID=${PUID:-}
+      - PGID=${PGID:-}
+      - UMASK=${UMASK:-}
     volumes:
       - ${ALACARTE_DATA_PATH:-./data}/web:/config
       - ${ALACARTE_DATA_PATH:-./data}/supervisor:/supervisor-secret:ro
