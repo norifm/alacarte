@@ -629,6 +629,51 @@ async function rewriteFlacComments(filePath, fields) {
   }
 }
 
+export async function writeAlbumArtistTag(filePath, albumArtist, { credit, albumArtists } = {}) {
+  const clean = String(albumArtist || '').replace(/[\r\n]+/g, ' ').trim()
+  if (!clean) return false
+  if (/\.flac$/i.test(filePath)) {
+    const fields = {
+      ALBUMARTIST: [clean],
+      ALBUM_ARTIST: [],
+      'ALBUM ARTIST': [],
+    }
+    if (credit !== undefined) {
+      const cleanCredit = credit ? String(credit).replace(/[\r\n]+/g, ' ').trim() : ''
+      fields.ALBUMARTIST_CREDIT = cleanCredit ? [cleanCredit] : []
+    }
+    if (Array.isArray(albumArtists) && albumArtists.length > 1) {
+      fields.ALBUMARTISTS = albumArtists.map((a) => String(a).trim()).filter(Boolean)
+    }
+    return writeFlacComments(filePath, fields)
+  }
+  if (/\.m4a$/i.test(filePath)) {
+    const key = path.resolve(filePath)
+    const previous = stampQueues.get(key) || Promise.resolve()
+    const run = previous.catch(() => {}).then(() => writeMp4AlbumArtist(filePath, clean))
+    stampQueues.set(key, run)
+    const release = () => {
+      if (stampQueues.get(key) === run) stampQueues.delete(key)
+    }
+    run.then(release, release)
+    return run
+  }
+  return false
+}
+
+async function writeMp4AlbumArtist(filePath, albumArtist) {
+  const tagsPath = `${filePath}.albumartist.tags.txt`
+  try {
+    await fsp.writeFile(tagsPath, `album_artist=${albumArtist}\n`, 'utf8')
+    await execFileAsync('MP4Box', ['-itags', tagsPath, filePath], { timeout: 60_000 })
+    return true
+  } catch {
+    return false
+  } finally {
+    await fsp.rm(tagsPath, { force: true }).catch(() => {})
+  }
+}
+
 function splitList(values) {
   const out = []
   for (const v of values || []) {
@@ -676,6 +721,7 @@ export async function readTrackTags(filePath) {
     album: first('ALBUM'),
     artist: first('ARTIST'),
     albumArtist: first('ALBUMARTIST', 'ALBUM_ARTIST', 'ALBUM ARTIST'),
+    albumArtistCredit: first('ALBUMARTIST_CREDIT'),
     albumArtists: splitList(get('ALBUMARTISTS')),
     year,
     track: number('TRACKNUMBER', 'TRACK'),

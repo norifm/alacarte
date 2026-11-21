@@ -76,8 +76,8 @@
       "albumToken": "专辑文件夹需要 $album",
       "fileToken": "文件名需要 $title 或 $track"
     },
-    "primaryAlbumArtist": "主艺人文件夹",
-    "primaryAlbumArtistHelp": "文件夹用第一位专辑艺人（Anyma & Joji → Anyma）。合辑保持原样。更改时会先确认再移动。",
+    "primaryAlbumArtist": "主专辑艺人",
+    "primaryAlbumArtistHelp": "文件夹名和 Album Artist 标签都使用第一位专辑艺人（Anyma & Joji → Anyma）。合辑保持原样。更改时会先确认再更新已有专辑。",
     "moveLibraryTitle": "移动资料库？",
     "moveLibraryConfirm": "移动",
     "moveLibraryNone": "无需移动",
@@ -85,6 +85,7 @@
     "moveLibrarySkipped": "跳过 {{count}} 张",
     "moveLibraryNavidrome": "Navidrome {{version}} 会丢掉移动后曲目的播放次数和星标。",
     "moveLibraryNavidromeUnknown": "Navidrome 没有报告版本。低于 0.55 时，移动后的曲目会失去播放次数和星标。",
+    "moveLibraryNavidromeRetag": "修改 Album Artist 标签会给这些专辑分配新的 Navidrome ID，从而丢失播放次数和星标。",
     "moveLibraryStop": "停止移动",
     "moveLibraryUndo": "撤销移动",
     "moveLibraryWaiting": "等待下载结束…",

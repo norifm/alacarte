@@ -76,8 +76,8 @@
       "albumToken": "Le dossier album doit contenir $album",
       "fileToken": "Le nom de fichier doit contenir $title ou $track"
     },
-    "primaryAlbumArtist": "Dossier de l'artiste principal",
-    "primaryAlbumArtistHelp": "Le dossier porte le premier artiste de l'album (Anyma & Joji → Anyma). Les compilations restent telles quelles. Un changement demande confirmation avant de déplacer.",
+    "primaryAlbumArtist": "Artiste principal de l'album",
+    "primaryAlbumArtistHelp": "Utilise le premier artiste de l'album pour le dossier et le tag Album Artist (Anyma & Joji → Anyma). Les compilations restent telles quelles. Un changement demande confirmation avant de mettre à jour la bibliothèque.",
     "moveLibraryTitle": "Déplacer la bibliothèque ?",
     "moveLibraryConfirm": "Déplacer",
     "moveLibraryNone": "Rien à déplacer",
@@ -85,6 +85,7 @@
     "moveLibrarySkipped": "{{count}} ignorés",
     "moveLibraryNavidrome": "Navidrome {{version}} oublie lectures et favoris des morceaux déplacés.",
     "moveLibraryNavidromeUnknown": "Navidrome n'a pas donné de version. Avant 0.55, les morceaux déplacés perdent lectures et favoris.",
+    "moveLibraryNavidromeRetag": "Modifier le tag Album Artist donne de nouveaux identifiants Navidrome à ces albums et efface leurs lectures et favoris.",
     "moveLibraryStop": "Arrêter",
     "moveLibraryUndo": "Annuler le déplacement",
     "moveLibraryWaiting": "En attente de la fin des téléchargements…",

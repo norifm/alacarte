@@ -18,7 +18,7 @@ const collab = path.join(fixtures, 'collab.m4a')
 execFileSync('ffmpeg', [
   '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'alac', '-movflags', 'use_metadata_tags',
   '-metadata', 'title=Beautiful', '-metadata', 'album=Beautiful - Single', '-metadata', 'album_artist=Anyma & Joji',
-  '-metadata', 'artist=Anyma & Joji', '-metadata', 'track=1/1', '-metadata', 'UPC=197190551068', '-metadata', 'ISRC=QZ0000000009',
+  '-metadata', 'artist=Anyma & Joji', '-metadata', 'track=1/1', '-metadata', 'UPC=000000000009', '-metadata', 'ISRC=QZ0000000009',
   collab,
 ])
 
@@ -66,7 +66,7 @@ const { loadSecretsAtBoot } = await import('../lib/secretKey.mjs')
 await ensureConfigDir(tmpConfig)
 loadSecretsAtBoot(tmpConfig)
 const { __test__ } = await import('../lib/queue.mjs')
-const { buildMinimalFlacWithTags } = await import('../lib/audioTags.mjs')
+const { buildMinimalFlacWithTags, readTrackTags } = await import('../lib/audioTags.mjs')
 const { state, tickQueue, applyQobuzFileNames } = __test__
 
 test.after(() => {
@@ -184,18 +184,34 @@ test('the primary artist is the folder only when that album is not already filed
   await resetLibrarySettings()
   try {
     await writeSettings({ primaryAlbumArtist: true })
-    const fresh = await runAlbumJob({ artist: 'Anyma & Joji', folderArtist: 'Anyma' })
+    const fresh = await runAlbumJob({
+      artist: 'Anyma & Joji',
+      folderArtist: 'Anyma',
+      albumArtists: ['Anyma', 'Joji'],
+    })
     assert.equal(fresh.status, 'done', fresh.error)
     assert.equal(fresh.finalDir, path.join(tmpMusic, 'Anyma', 'Record'))
+    const freshTags = await readTrackTags(path.join(fresh.finalDir, '01. Song (feat. Guest).flac'))
+    assert.equal(freshTags.albumArtist, 'Anyma')
+    assert.equal(freshTags.albumArtistCredit, 'Anyma & Joji')
+    assert.deepEqual(freshTags.albumArtists, ['Anyma', 'Joji'])
     await fsp.rm(path.join(tmpMusic, 'Anyma'), { recursive: true, force: true })
 
     const existing = path.join(tmpMusic, 'Anyma & Joji', 'Record')
     await fsp.mkdir(existing, { recursive: true })
-    await fsp.writeFile(path.join(existing, '00. Keep.flac'), 'keep')
-    const again = await runAlbumJob({ artist: 'Anyma & Joji', folderArtist: 'Anyma' })
+    await fsp.writeFile(
+      path.join(existing, '00. Keep.flac'),
+      buildMinimalFlacWithTags({ extra: { TITLE: 'Keep', ALBUM: 'Record', ALBUMARTIST: 'Anyma & Joji' } }),
+    )
+    const again = await runAlbumJob({
+      artist: 'Anyma & Joji',
+      folderArtist: 'Anyma',
+      albumArtists: ['Anyma', 'Joji'],
+    })
     assert.equal(again.status, 'done', again.error)
     assert.equal(again.finalDir, existing)
-    assert.equal(await fsp.readFile(path.join(existing, '00. Keep.flac'), 'utf8'), 'keep')
+    assert.equal((await readTrackTags(path.join(existing, '00. Keep.flac'))).albumArtist, 'Anyma & Joji')
+    assert.equal((await readTrackTags(path.join(existing, '01. Song (feat. Guest).flac'))).albumArtist, null)
     assert.equal(await fsp.stat(path.join(tmpMusic, 'Anyma')).catch(() => null), null)
   } finally {
     await resetLibrarySettings()
@@ -209,8 +225,8 @@ test('playlist tracks get the primary artist folder and a year from Apple', asyn
   const asked = []
   __test__.setPlaylistAlbumLookup(async (req) => {
     asked.push(req)
-    const info = { year: '2024', artistName: 'Anyma & Joji', artists: ['Anyma', 'Joji'], isCompilation: false, upc: '197190551068' }
-    return { byUpc: new Map([['197190551068', info]]), byIsrc: new Map() }
+    const info = { year: '2024', artistName: 'Anyma & Joji', artists: ['Anyma', 'Joji'], isCompilation: false, upc: '000000000009' }
+    return { byUpc: new Map([['000000000009', info]]), byIsrc: new Map() }
   })
   try {
     await writeSettings({ pathTemplate: '$artist/$album ($year)/$track. $title', primaryAlbumArtist: true })
@@ -218,8 +234,13 @@ test('playlist tracks get the primary artist folder and a year from Apple', asyn
     assert.equal(job.status, 'done', job.error)
     const file = path.join(tmpMusic, 'Anyma', 'Beautiful - Single (2024)', '01. Beautiful.flac')
     assert.ok(await fsp.stat(file).catch(() => null), (await fsp.readdir(tmpMusic, { recursive: true })).join(', '))
+    const playlistTags = await readTrackTags(file)
+    assert.equal(playlistTags.albumArtist, 'Anyma')
+    assert.equal(playlistTags.albumArtistCredit, 'Anyma & Joji')
+    assert.deepEqual(playlistTags.albumArtists, ['Anyma', 'Joji'])
+    assert.equal(playlistTags.artist, 'Anyma & Joji')
     assert.equal(asked.length, 1)
-    assert.deepEqual(asked[0].upcs, ['197190551068'])
+    assert.deepEqual(asked[0].upcs, ['000000000009'])
     // The curator is not an artist the release is looked up under.
     assert.equal(await fsp.stat(path.join(tmpMusic, 'Some Curator')).catch(() => null), null)
   } finally {

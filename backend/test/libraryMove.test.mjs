@@ -23,7 +23,7 @@ const {
 } = await import('../lib/libraryMove.mjs')
 const { parsePathTemplate } = await import('../lib/pathTemplate.mjs')
 const { readSettings } = await import('../lib/settingsStore.mjs')
-const { buildMinimalFlacWithTags } = await import('../lib/audioTags.mjs')
+const { buildMinimalFlacWithTags, readTrackTags } = await import('../lib/audioTags.mjs')
 const { losesPlaysOnMove, navidromeMoveRisk, parseServerVersion } = await import('../lib/navidromeApi.mjs')
 const { isQueueHeld, releaseQueue } = await import('../lib/queue.mjs')
 
@@ -217,6 +217,7 @@ describe('library move', { concurrency: 1 }, () => {
     assert.equal(preview.samples[0].path, 'Daft Punk/Random Access Memories (2013)/08. Get Lucky.flac')
     assert.equal(preview.samples[1].path, 'Anyma/Beautiful - Single (2024)/01. Beautiful.flac')
     assert.equal(preview.move, 2)
+    assert.equal(preview.retag, 1)
     assert.equal(preview.navidrome.losesPlays, false)
 
     await startLibraryMove({ pathTemplate: YEAR, primaryAlbumArtist: true })
@@ -229,7 +230,11 @@ describe('library move', { concurrency: 1 }, () => {
     assert.equal(await fsp.readFile(path.join(music, 'Daft Punk/Random Access Memories (2013)/08. Get Lucky.lrc'), 'utf8'), 'line')
     assert.equal(await fsp.readFile(path.join(music, 'Daft Punk/Random Access Memories (2013)/cover.jpg'), 'utf8'), 'cover')
     assert.equal(await fsp.readFile(path.join(music, 'Daft Punk/Random Access Memories (2013)/.alacarte-version'), 'utf8'), 'lossless')
-    assert.equal(await fsp.readFile(path.join(music, 'Anyma/Beautiful - Single (2024)/01. Beautiful.flac')).then((b) => b.length), collab.length)
+    assert.equal(await fsp.readFile(path.join(music, 'Daft Punk/Random Access Memories (2013)/08. Get Lucky.flac')).then((b) => b.equals(audio)), true)
+    const collabTags = await readTrackTags(path.join(music, 'Anyma/Beautiful - Single (2024)/01. Beautiful.flac'))
+    assert.equal(collabTags.albumArtist, 'Anyma')
+    assert.equal(collabTags.albumArtistCredit, 'Anyma & Joji')
+    assert.deepEqual(collabTags.albumArtists, ['Anyma', 'Joji'])
     await assert.rejects(fsp.stat(path.join(music, 'Anyma & Joji')))
     const playlistNow = await fsp.readFile(path.join(music, 'Playlists/mix.m3u8'), 'utf8')
     assert.match(playlistNow, /\.\.\/Daft Punk\/Random Access Memories \(2013\)\/08\. Get Lucky\.flac/)
@@ -241,7 +246,12 @@ describe('library move', { concurrency: 1 }, () => {
     await undoLibraryMove()
     await waitForLibraryMove()
     assert.equal(__test__.state.error, null)
-    assert.equal(await tree(), before)
+    assert.equal(await fsp.readFile(path.join(music, 'Daft Punk/Random Access Memories/08. Get Lucky.flac')).then((b) => b.equals(audio)), true)
+    const undoneTags = await readTrackTags(path.join(music, 'Anyma & Joji/Beautiful - Single/01. Beautiful.flac'))
+    assert.equal(undoneTags.albumArtist, 'Anyma & Joji')
+    assert.equal(undoneTags.albumArtistCredit, null)
+    assert.deepEqual(undoneTags.albumArtists, ['Anyma', 'Joji'])
+    await assert.rejects(fsp.stat(path.join(music, 'Anyma')))
     const restored = await readSettings()
     assert.equal(restored.pathTemplate, '')
     assert.equal(restored.primaryAlbumArtist, false)
@@ -272,20 +282,58 @@ describe('library move', { concurrency: 1 }, () => {
     assert.equal(await tree(), before)
   })
 
-  test('only the primary artist switch moves the collab folder', async () => {
+  test('only the primary artist switch moves and retags the collab folder, and turning it off restores both', async () => {
     await put('Daft Punk/Random Access Memories/08. Get Lucky.flac', flac({ TITLE: 'Get Lucky', TRACKNUMBER: '8', ALBUMARTIST: 'Daft Punk' }))
     await put(
       'Anyma & Joji/Beautiful - Single/01. Beautiful.flac',
-      flac({ TITLE: 'Beautiful', TRACKNUMBER: '1', ALBUMARTIST: 'Anyma & Joji', ALBUMARTISTS: 'Anyma;Joji' }),
+      flac({ TITLE: 'Beautiful', TRACKNUMBER: '1', ARTIST: 'Anyma & Joji', ALBUMARTIST: 'Anyma & Joji', ALBUMARTISTS: 'Anyma;Joji' }),
     )
     await put('Anyma & Joji/Singles/01. Loose.flac', flac({ TITLE: 'Loose', TRACKNUMBER: '1', ALBUMARTIST: 'Anyma & Joji', ALBUMARTISTS: 'Anyma;Joji' }))
     await startLibraryMove({ pathTemplate: '', primaryAlbumArtist: true })
     await waitForLibraryMove()
     assert.equal(__test__.state.moved, 1)
     await fsp.stat(path.join(music, 'Daft Punk/Random Access Memories/08. Get Lucky.flac'))
-    await fsp.stat(path.join(music, 'Anyma/Beautiful - Single/01. Beautiful.flac'))
+    const movedFile = path.join(music, 'Anyma/Beautiful - Single/01. Beautiful.flac')
+    await fsp.stat(movedFile)
+    const movedTags = await readTrackTags(movedFile)
+    assert.equal(movedTags.albumArtist, 'Anyma')
+    assert.equal(movedTags.albumArtistCredit, 'Anyma & Joji')
+    assert.equal(movedTags.artist, 'Anyma & Joji')
+    assert.deepEqual(movedTags.albumArtists, ['Anyma', 'Joji'])
     await fsp.stat(path.join(music, 'Anyma & Joji/Singles/01. Loose.flac'))
     await assert.rejects(fsp.stat(path.join(music, 'Anyma & Joji/Beautiful - Single')))
+
+    // Switching primaryAlbumArtist back off moves the folder back and restores ALBUMARTIST
+    await startLibraryMove({ pathTemplate: '', primaryAlbumArtist: false })
+    await waitForLibraryMove()
+    assert.equal(__test__.state.moved, 1)
+    const restoredFile = path.join(music, 'Anyma & Joji/Beautiful - Single/01. Beautiful.flac')
+    const restoredTags = await readTrackTags(restoredFile)
+    assert.equal(restoredTags.albumArtist, 'Anyma & Joji')
+    assert.equal(restoredTags.albumArtistCredit, null)
+    assert.deepEqual(restoredTags.albumArtists, ['Anyma', 'Joji'])
+    await assert.rejects(fsp.stat(path.join(music, 'Anyma')))
+  })
+
+  test('an album already in the primary artist folder still gets its ALBUMARTIST tag aligned', async () => {
+    await put(
+      'Anyma/Beautiful - Single/01. Beautiful.flac',
+      flac({ TITLE: 'Beautiful', TRACKNUMBER: '1', ALBUMARTIST: 'Anyma & Joji', ALBUMARTISTS: 'Anyma;Joji' }),
+    )
+    const plan = await planLibraryMove({
+      from: { pathTemplate: '', primaryAlbumArtist: false },
+      to: { pathTemplate: '', primaryAlbumArtist: true },
+    })
+    assert.equal(plan.items.length, 1)
+    assert.equal(plan.items[0].from, 'Anyma/Beautiful - Single')
+    assert.equal(plan.items[0].to, 'Anyma/Beautiful - Single')
+    assert.equal(plan.items[0].retag?.to, 'Anyma')
+
+    await startLibraryMove({ pathTemplate: '', primaryAlbumArtist: true })
+    await waitForLibraryMove()
+    const tags = await readTrackTags(path.join(music, 'Anyma/Beautiful - Single/01. Beautiful.flac'))
+    assert.equal(tags.albumArtist, 'Anyma')
+    assert.equal(tags.albumArtistCredit, 'Anyma & Joji')
   })
 
   test('a folder that already has the new name is skipped and not overwritten', async () => {

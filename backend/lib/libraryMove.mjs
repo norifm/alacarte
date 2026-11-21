@@ -2,7 +2,7 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 
 import { emitEvent } from './eventBus.mjs'
-import { readTrackTags } from './audioTags.mjs'
+import { readTrackTags, writeAlbumArtistTag } from './audioTags.mjs'
 import { fitFileName, sanitizeSegment } from './libraryMatchKey.mjs'
 import { invalidateLibraryCache, scanLibrary } from './libraryIndex.mjs'
 import { getNavidromeVersion, navidromeMoveRisk, triggerNavidromeScan } from './navidromeApi.mjs'
@@ -189,19 +189,37 @@ export function targetFor(album, from, to) {
   }
   year = year || TRAILING_YEAR_RE.exec(base)?.[1] || null
 
-  // The primary artist folder is the first ALBUMARTISTS credit of an album
-  // filed under the full credit; switching it off files it back under the
-  // full credit. Untagged collabs are skipped rather than guessed at.
+  // The primary artist folder (and ALBUMARTIST tag) uses the first ALBUMARTISTS
+  // credit of a collab; switching it off files the album back under the full
+  // credit (preserved in ALBUMARTIST_CREDIT when the tag was shortened).
+  // Untagged collabs are skipped rather than guessed at.
   const credits = tags.albumArtists || []
   const display = tags.albumArtist || null
+  const savedCredit = tags.albumArtistCredit || null
+  const fullCredit = savedCredit || (display && credits.length >= 2 && !sameName(display, credits[0]) ? display : null)
   let artist = fromArtist
+  let retag = null
   // Singles is one folder of loose tracks, so one file's credits cannot
   // decide a new artist for the whole folder.
   if (album.kind !== 'singles' && !tags.compilation && from.primary !== to.primary) {
     if (credits.length >= 2) {
-      if (to.primary && sameName(fromArtist, display) && !sameName(display, credits[0])) artist = credits[0]
-      if (!to.primary && sameName(fromArtist, credits[0]) && display && !sameName(display, credits[0])) artist = display
-    } else if (to.primary && looksCombined(fromArtist)) {
+      if (to.primary) {
+        const folderSource = fullCredit || display
+        if (folderSource && sameName(fromArtist, folderSource) && !sameName(fromArtist, credits[0])) {
+          artist = credits[0]
+        }
+        if (display && !sameName(display, credits[0])) {
+          retag = { from: display, to: credits[0], fromCredit: savedCredit, toCredit: savedCredit || display }
+        }
+      } else if (fullCredit) {
+        if (sameName(fromArtist, credits[0]) && !sameName(fullCredit, credits[0])) {
+          artist = fullCredit
+        }
+        if (display && !sameName(display, fullCredit)) {
+          retag = { from: display, to: fullCredit, fromCredit: savedCredit, toCredit: null }
+        }
+      }
+    } else if (to.primary && (looksCombined(fromArtist) || looksCombined(display))) {
       return { skip: 'noArtistCredits' }
     }
   }
@@ -246,7 +264,7 @@ export function targetFor(album, from, to) {
       if (newName !== file.name) files.push({ from: file.name, to: newName })
     }
   }
-  return { artistName, albumName, files }
+  return { artistName, albumName, files, retag }
 }
 
 async function listAlbums(root) {
@@ -325,7 +343,7 @@ export async function planLibraryMove({ from, to, root = musicRoot() } = {}) {
     const createParent = !known
     if (!known) artistDirs.set(artistName.toLowerCase(), artistName)
     const destDir = path.join(root, artistName, target.albumName)
-    candidates.push({ album, destDir, files: target.files, createParent })
+    candidates.push({ album, destDir, files: target.files, retag: target.retag, createParent })
   }
 
   // Two albums that would share a folder both stay where they are.
@@ -336,9 +354,15 @@ export async function planLibraryMove({ from, to, root = musicRoot() } = {}) {
   }
 
   for (const c of candidates) {
-    const { album, destDir, files, createParent } = c
+    const { album, destDir, files, retag, createParent } = c
     const moving = destDir !== album.dir
-    if (!moving && files.length === 0) {
+    const retagFiles = retag
+      ? album.audio
+          .filter((name) => /\.(flac|m4a)$/i.test(name))
+          .map((name) => files.find((f) => f.from === name)?.to || name)
+      : []
+    const retagging = Boolean(retag && retagFiles.length > 0)
+    if (!moving && files.length === 0 && !retagging) {
       plan.inPlace += 1
       continue
     }
@@ -367,6 +391,7 @@ export async function planLibraryMove({ from, to, root = musicRoot() } = {}) {
       from: rel(album.dir),
       to: rel(destDir),
       files: renames,
+      retag: retagging ? { ...retag, files: retagFiles } : null,
       createParent: moving && createParent,
     })
   }
@@ -466,6 +491,19 @@ function albumSteps(item, { caseInsensitive, createdDirs }) {
   } else {
     for (const f of item.files) steps.push({ op: 'rename', from: `${dir}/${f.from}`, to: `${dir}/${f.to}`, album: item.from })
   }
+  if (item.retag?.files?.length) {
+    for (const name of item.retag.files) {
+      steps.push({
+        op: 'retag',
+        path: `${dir}/${name}`,
+        from: item.retag.from,
+        to: item.retag.to,
+        fromCredit: item.retag.fromCredit ?? null,
+        toCredit: item.retag.toCredit ?? null,
+        album: item.from,
+      })
+    }
+  }
   return steps
 }
 
@@ -500,6 +538,14 @@ async function applyStep(step, { reverse = false } = {}) {
     }
     await fsp.rmdir(abs(step.path)).catch(() => {})
     return 'done'
+  }
+  if (step.op === 'retag') {
+    const file = abs(step.path)
+    if (!(await statSafe(file))) return 'missing'
+    const albumArtist = reverse ? step.from : step.to
+    const credit = reverse ? step.fromCredit : step.toCredit
+    const ok = await writeAlbumArtistTag(file, albumArtist, { credit: credit ?? null })
+    return ok ? 'done' : 'failed'
   }
   const from = abs(reverse ? step.to : step.from)
   const to = abs(reverse ? step.from : step.to)
@@ -642,13 +688,13 @@ async function removeEmptyParents(steps, done, journal) {
   }
 }
 
-async function finishRescan() {
+async function finishRescan({ fullNavidromeScan = false } = {}) {
   state.phase = 'scanning'
   emit(true)
   invalidateLibraryCache()
   await scanLibrary().catch((err) => console.error('library rescan after move failed:', err.message))
   invalidateLibraryCache()
-  await triggerNavidromeScan().catch(() => {})
+  await triggerNavidromeScan({ fullScan: fullNavidromeScan }).catch(() => {})
 }
 
 async function runMove(journal) {
@@ -706,7 +752,7 @@ async function runMove(journal) {
     journal.state = state.stopRequested ? 'stopped' : 'done'
     journal.result = { moved: state.moved, failed: state.failed, playlistsUpdated: state.playlistsUpdated }
     await writeJsonAtomic(JOURNAL(), journal)
-    await finishRescan()
+    await finishRescan({ fullNavidromeScan: steps.some((s) => s.op === 'retag') })
   } finally {
     releaseQueue(HOLD_REASON)
   }
@@ -771,7 +817,7 @@ async function runUndo(journal) {
       // Files put back stay back. Undo again finishes the rest.
       journal.state = journal.undoFrom || 'done'
       await writeJsonAtomic(JOURNAL(), journal)
-      await finishRescan()
+      await finishRescan({ fullNavidromeScan: steps.some((s) => s.op === 'retag') })
       return
     }
     await writeSettings({
@@ -780,7 +826,7 @@ async function runUndo(journal) {
     })
     journal.state = 'undone'
     await writeJsonAtomic(JOURNAL(), journal)
-    await finishRescan()
+    await finishRescan({ fullNavidromeScan: steps.some((s) => s.op === 'retag') })
   } finally {
     releaseQueue(HOLD_REASON)
   }
@@ -946,11 +992,13 @@ export async function previewLibraryMove({ pathTemplate, primaryAlbumArtist }) {
   })
   const [plan, navidrome] = await Promise.all([planLibraryMove({ from, to }), getNavidromeVersion()])
   const risk = navidromeMoveRisk(navidrome.version)
+  const retag = plan.items.filter((item) => item.retag).length
   return {
     error: null,
     samples,
     albums: plan.albums,
     move: plan.items.length,
+    retag,
     inPlace: plan.inPlace,
     skipped: plan.skipped.length,
     skippedItems: plan.skipped.slice(0, 8),
@@ -958,6 +1006,7 @@ export async function previewLibraryMove({ pathTemplate, primaryAlbumArtist }) {
       connected: navidrome.connected,
       version: navidrome.version,
       losesPlays: navidrome.connected && risk.losesPlays,
+      retagLosesPlays: navidrome.connected && retag > 0,
       // A develop build can answer the ping with a hash and no number.
       versionUnknown: navidrome.connected && risk.versionUnknown,
     },

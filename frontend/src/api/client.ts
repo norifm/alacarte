@@ -492,10 +492,17 @@ export type LibraryMovePreview = {
   samples: { kind: string; path: string }[]
   albums: number
   move: number
+  retag?: number
   inPlace: number
   skipped: number
   skippedItems: LibraryMoveSkip[]
-  navidrome: { connected: boolean; version: string | null; losesPlays: boolean; versionUnknown: boolean }
+  navidrome: {
+    connected: boolean
+    version: string | null
+    losesPlays: boolean
+    retagLosesPlays?: boolean
+    versionUnknown: boolean
+  }
 }
 
 export type ArtistBackfillStatus = {

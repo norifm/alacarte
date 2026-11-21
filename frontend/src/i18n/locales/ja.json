@@ -76,8 +76,8 @@
       "albumToken": "アルバムフォルダには $album が必要です",
       "fileToken": "ファイル名には $title か $track が必要です"
     },
-    "primaryAlbumArtist": "主アーティストのフォルダ",
-    "primaryAlbumArtistHelp": "フォルダ名を最初のアルバムアーティストにします（Anyma & Joji → Anyma）。コンピレーションはそのままです。変えると、移す前に確認します。",
+    "primaryAlbumArtist": "主アルバムアーティスト",
+    "primaryAlbumArtistHelp": "フォルダ名と Album Artist タグに最初のアルバムアーティストを使います（Anyma & Joji → Anyma）。コンピレーションはそのままです。変えると、既存のアルバムを更新する前に確認します。",
     "moveLibraryTitle": "ライブラリを移動しますか？",
     "moveLibraryConfirm": "移動する",
     "moveLibraryNone": "移動するものはありません",
@@ -85,6 +85,7 @@
     "moveLibrarySkipped": "{{count}} 件スキップ",
     "moveLibraryNavidrome": "Navidrome {{version}} では移動した曲の再生回数とスターが消えます。",
     "moveLibraryNavidromeUnknown": "Navidrome のバージョンが不明です。0.55 より前では、移動した曲の再生回数とスターが消えます。",
+    "moveLibraryNavidromeRetag": "Album Artist タグを変更すると、対象アルバムに新しい Navidrome ID が振られ、再生回数とスターが消えます。",
     "moveLibraryStop": "移動を停止",
     "moveLibraryUndo": "移動を元に戻す",
     "moveLibraryWaiting": "ダウンロードの終了を待っています…",

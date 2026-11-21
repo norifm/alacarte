@@ -401,8 +401,68 @@ test('readTrackTags reads the fields that place a track in the library', async (
     assert.equal(m4a.track, 11)
     assert.equal(m4a.year, '2025')
     assert.equal(m4a.albumArtist, 'Jane Remover')
+    assert.equal(m4a.albumArtistCredit, null)
     assert.deepEqual(m4a.albumArtists, [])
   } finally {
     await fsp.rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('writeAlbumArtistTag updates flac and m4a album artist cleanly', async () => {
+  const { readFlacComments, readTrackTags, writeAlbumArtistTag } = await import('../lib/audioTags.mjs')
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-write-aa-'))
+  const bin = await fsp.mkdtemp(path.join(os.tmpdir(), 'alacarte-aa-bin-'))
+  const prevPath = process.env.PATH
+  try {
+    const audio = Buffer.from('audio-tail')
+    const flacPath = path.join(dir, 'collab.flac')
+    await fsp.writeFile(
+      flacPath,
+      Buffer.concat([
+        buildMinimalFlacWithTags({
+          extra: {
+            TITLE: 'Beautiful',
+            ARTIST: 'Anyma & Joji',
+            ALBUMARTIST: 'Anyma & Joji',
+            ALBUM_ARTIST: 'Anyma & Joji',
+          },
+        }),
+        audio,
+      ]),
+    )
+    assert.equal(
+      await writeAlbumArtistTag(flacPath, 'Anyma', { credit: 'Anyma & Joji', albumArtists: ['Anyma', 'Joji'] }),
+      true,
+    )
+    const comments = await readFlacComments(flacPath)
+    assert.deepEqual(comments.ALBUMARTIST, ['Anyma'])
+    assert.equal(comments.ALBUM_ARTIST, undefined)
+    assert.deepEqual(comments.ALBUMARTIST_CREDIT, ['Anyma & Joji'])
+    assert.deepEqual(comments.ALBUMARTISTS, ['Anyma', 'Joji'])
+    assert.deepEqual(comments.ARTIST, ['Anyma & Joji'])
+    const raw = await fsp.readFile(flacPath)
+    assert.ok(raw.subarray(raw.length - audio.length).equals(audio))
+    const tags = await readTrackTags(flacPath)
+    assert.equal(tags.albumArtist, 'Anyma')
+    assert.equal(tags.albumArtistCredit, 'Anyma & Joji')
+
+    // Clearing credit restores original ALBUMARTIST and removes ALBUMARTIST_CREDIT
+    assert.equal(await writeAlbumArtistTag(flacPath, 'Anyma & Joji', { credit: null }), true)
+    const restored = await readFlacComments(flacPath)
+    assert.deepEqual(restored.ALBUMARTIST, ['Anyma & Joji'])
+    assert.equal(restored.ALBUMARTIST_CREDIT, undefined)
+
+    // M4A uses MP4Box -itags with a single-line tag file and cleans it up
+    await fsp.writeFile(path.join(bin, 'MP4Box'), '#!/bin/sh\ncp "$2" "$3.seen"\n', { mode: 0o755 })
+    process.env.PATH = `${bin}:${prevPath}`
+    const m4aPath = path.join(dir, 'collab.m4a')
+    await fsp.writeFile(m4aPath, 'm4a')
+    assert.equal(await writeAlbumArtistTag(m4aPath, 'Anyma'), true)
+    assert.equal(await fsp.readFile(`${m4aPath}.seen`, 'utf8'), 'album_artist=Anyma\n')
+    assert.equal(await fsp.stat(`${m4aPath}.albumartist.tags.txt`).catch(() => null), null)
+  } finally {
+    process.env.PATH = prevPath
+    await fsp.rm(dir, { recursive: true, force: true })
+    await fsp.rm(bin, { recursive: true, force: true })
   }
 })

@@ -76,8 +76,8 @@
       "albumToken": "La carpeta del álbum necesita $album",
       "fileToken": "El nombre del archivo necesita $title o $track"
     },
-    "primaryAlbumArtist": "Carpeta del artista principal",
-    "primaryAlbumArtistHelp": "La carpeta usa el primer artista del álbum (Anyma & Joji → Anyma). Los recopilatorios se quedan igual. Un cambio pide confirmación antes de mover.",
+    "primaryAlbumArtist": "Artista principal del álbum",
+    "primaryAlbumArtistHelp": "Usa el primer artista del álbum para la carpeta y la etiqueta Album Artist (Anyma & Joji → Anyma). Los recopilatorios se quedan igual. Un cambio pide confirmación antes de actualizar los álbumes.",
     "moveLibraryTitle": "¿Mover la biblioteca?",
     "moveLibraryConfirm": "Mover",
     "moveLibraryNone": "Nada que mover",
@@ -85,6 +85,7 @@
     "moveLibrarySkipped": "{{count}} omitidos",
     "moveLibraryNavidrome": "Navidrome {{version}} olvida reproducciones y favoritos al mover.",
     "moveLibraryNavidromeUnknown": "Navidrome no dio versión. Antes de 0.55, lo movido pierde reproducciones y favoritos.",
+    "moveLibraryNavidromeRetag": "Cambiar la etiqueta Album Artist asigna nuevos ID en Navidrome a esos álbumes y pierde sus reproducciones y favoritos.",
     "moveLibraryStop": "Detener",
     "moveLibraryUndo": "Deshacer",
     "moveLibraryWaiting": "Esperando a que terminen las descargas…",

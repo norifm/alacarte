@@ -76,8 +76,8 @@
       "albumToken": "專輯資料夾需要 $album",
       "fileToken": "檔名需要 $title 或 $track"
     },
-    "primaryAlbumArtist": "主要藝人資料夾",
-    "primaryAlbumArtistHelp": "資料夾用第一位專輯藝人（Anyma & Joji → Anyma）。合輯維持原樣。變更時會先確認再移動。",
+    "primaryAlbumArtist": "主要專輯藝人",
+    "primaryAlbumArtistHelp": "資料夾名與 Album Artist 標籤都使用第一位專輯藝人（Anyma & Joji → Anyma）。合輯維持原樣。變更時會先確認再更新現有專輯。",
     "moveLibraryTitle": "移動資料庫？",
     "moveLibraryConfirm": "移動",
     "moveLibraryNone": "無需移動",
@@ -85,6 +85,7 @@
     "moveLibrarySkipped": "略過 {{count}} 張",
     "moveLibraryNavidrome": "Navidrome {{version}} 會丟掉移動後曲目的播放次數和星號。",
     "moveLibraryNavidromeUnknown": "Navidrome 沒有回報版本。低於 0.55 時，移動後的曲目會失去播放次數和星號。",
+    "moveLibraryNavidromeRetag": "修改 Album Artist 標籤會讓這些專輯取得新的 Navidrome ID，並遺失播放次數和星號。",
     "moveLibraryStop": "停止移動",
     "moveLibraryUndo": "還原移動",
     "moveLibraryWaiting": "等待下載結束…",

@@ -2284,6 +2284,9 @@ function LibraryMoveDialog({
             {preview.navidrome.versionUnknown && (
               <div className="text-[13px] text-amber-200/80">{t('settings.moveLibraryNavidromeUnknown')}</div>
             )}
+            {preview.navidrome.retagLosesPlays && (
+              <div className="text-[13px] text-amber-200/80">{t('settings.moveLibraryNavidromeRetag')}</div>
+            )}
           </div>
         )}
         {request && !preview && !error && (

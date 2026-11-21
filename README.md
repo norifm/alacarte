@@ -21,7 +21,7 @@ alacarte is a browser-based tool that downloads lossless audio from Apple Music,
 
 Settings → Library maintenance fixes artist credits, lyrics and tags for tracks that are already in your library.
 
-By default output lands in `/music/<Artist>/<Album>/01. Track.flac` (or `/music/<Artist>/Singles/` for songs with no album). Settings → Library output can set another `artist/album/file` scheme, such as `$artist/$album ($year)/$track. $title`, and can name the artist folder after the first album artist. Changing the scheme or the primary-artist option asks before moving albums that are already on disk. A later download of one of those albums still fills its current folder. Playlist downloads are merged into that same artist/album library and also emit `/music/Playlists/<Playlist>.m3u8` with relative paths so Jellyfin/Navidrome can import playlist order.
+By default output lands in `/music/<Artist>/<Album>/01. Track.flac` (or `/music/<Artist>/Singles/` for songs with no album). Settings → Library output can set another `artist/album/file` scheme, such as `$artist/$album ($year)/$track. $title`, and can use the first album artist for both the artist folder and the `ALBUMARTIST` tag (while keeping all album artists in `ALBUMARTISTS`). Changing the scheme or the primary-artist option asks before updating albums that are already on disk. A later download of one of those albums still fills its current folder. Playlist downloads are merged into that same artist/album library and also emit `/music/Playlists/<Playlist>.m3u8` with relative paths so Jellyfin/Navidrome can import playlist order.
 
 ---
 

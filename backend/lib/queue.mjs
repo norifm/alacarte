@@ -48,7 +48,7 @@ import { inferFilePattern, isLegacyFileStem, parsePathTemplate, primaryFolderArt
 import { writePlaylistM3U } from './playlistExport.mjs'
 import { getDb, getMeta, setMeta } from './db.mjs'
 import { amdpNameCharLimit, normalizeForMatchKey, restoreTruncatedName } from './libraryMatchKey.mjs'
-import { normalizeIsrc, normalizeUpc, readAudioMetaTags, readTrackTags, writeAudioIdentityTags } from './audioTags.mjs'
+import { normalizeIsrc, normalizeUpc, readAudioMetaTags, readTrackTags, writeAlbumArtistTag, writeAudioIdentityTags } from './audioTags.mjs'
 import { probeWrapperPorts } from './wrapperHealth.mjs'
 import { resolveMetadataName } from './metadataLanguage.mjs'
 import { getOriginalAlbumMeta, getOriginalPlaylistMeta } from './originalMetadataCache.mjs'
@@ -840,6 +840,10 @@ async function createAlbumJob({ albumId, storefront, quality, expectedArtistId }
     albumName: meta?.name || null,
     artist: naming.artist || 'Unknown artist',
     folderArtist: primaryFolderArtist(meta, settings.primaryAlbumArtist),
+    albumArtists:
+      !meta?.isCompilation && (meta?.artists?.length || 0) > 1
+        ? meta.artists.map((a) => a?.name?.trim()).filter(Boolean)
+        : null,
     originalAlbumTitle: naming.originalAlbumTitle,
     originalArtist: naming.originalArtist,
     trackNameOverrides: naming.trackNameOverrides,
@@ -1178,6 +1182,10 @@ async function createSongJob({ songId, albumId, storefront, quality, followedPla
     trackNameOverrides: trackOverride ? [trackOverride] : [],
     artist: naming.artist || 'Unknown artist',
     folderArtist: primaryFolderArtist(meta, settings.primaryAlbumArtist),
+    albumArtists:
+      !meta?.isCompilation && (meta?.artists?.length || 0) > 1
+        ? meta.artists.map((a) => a?.name?.trim()).filter(Boolean)
+        : null,
     artistId: meta?.artistId || null,
     year: meta?.year || null,
     artworkUrl: meta?.artworkTemplate
@@ -1317,6 +1325,45 @@ function matchTrackForFile(fileName, tracks) {
   }
   if (!fileTitle) return null
   return tracks.find((t) => t && sameTitle(t)) || null
+}
+
+async function shouldUsePrimaryAlbumArtistTag(existingDir, primary) {
+  if (!primary) return false
+  if (!existingDir) return true
+  const parentArtist = path.basename(path.dirname(existingDir))
+  if (sanitizeSegment(parentArtist).toLowerCase() === sanitizeSegment(primary).toLowerCase()) return true
+  const entries = await fsp.readdir(existingDir).catch(() => [])
+  const sample = entries.find((f) => /\.(flac|m4a|mp3|opus|ogg)$/i.test(f))
+  if (!sample) return true
+  const tags = await readTrackTags(path.join(existingDir, sample))
+  if (!tags.albumArtist) return true
+  return tags.albumArtist.trim().toLowerCase() === primary.trim().toLowerCase()
+}
+
+async function stampPrimaryAlbumArtist(filePaths, { primary, credit = null, albumArtists = null }) {
+  if (!primary) return
+  for (const filePath of filePaths) {
+    if (!/\.(flac|m4a)$/i.test(filePath)) continue
+    const tags = await readTrackTags(filePath)
+    if (tags.compilation) continue
+    const current = tags.albumArtist
+    if (current && current.toLowerCase() === primary.toLowerCase()) continue
+    const fullCredit =
+      tags.albumArtistCredit ||
+      (current && current.toLowerCase() !== primary.toLowerCase() ? current : null) ||
+      (credit && credit.toLowerCase() !== primary.toLowerCase() ? credit : null)
+    await writeAlbumArtistTag(filePath, primary, {
+      credit: fullCredit || undefined,
+      albumArtists: Array.isArray(albumArtists) && albumArtists.length > 1 ? albumArtists : undefined,
+    })
+  }
+}
+
+async function stampPrimaryAlbumArtistInDir(dir, opts) {
+  if (!opts?.primary) return
+  const entries = await fsp.readdir(dir).catch(() => [])
+  const targets = entries.filter((f) => /\.(flac|m4a)$/i.test(f)).map((f) => path.join(dir, f))
+  await stampPrimaryAlbumArtist(targets, opts)
 }
 
 async function stampAlbumIdentityTags(dir, upc, tracks, { originalAlbum, originalArtist } = {}) {
@@ -1889,6 +1936,7 @@ async function runJob(job) {
     beginLibraryImport(job)
 
     let finalDir
+    let usePrimaryTag = Boolean(settings.primaryAlbumArtist)
     if (isSong) {
       // Songs import into the parent album folder, same layout as an album.
       const albumDirName =
@@ -1905,6 +1953,10 @@ async function runJob(job) {
         alsoArtists: [job.artist],
       })
       finalDir = placed.dir
+      usePrimaryTag = Boolean(
+        settings.primaryAlbumArtist &&
+          (!job.folderArtist || (await shouldUsePrimaryAlbumArtistTag(placed.existingDir, job.folderArtist))),
+      )
       const style = await existingFileStyle(finalDir, placed.layout)
       await ensureDir(finalDir)
 
@@ -1922,11 +1974,13 @@ async function runJob(job) {
         message: 'Moving into library',
         currentTrack: null,
       })
+      const destAudioPaths = []
       for (const fn of audioFiles) {
         const srcAudioPath = path.join(albumPath, fn)
         const destAudioPath = path.join(finalDir, fitFileName(fn))
         await moveFileSafe(srcAudioPath, destAudioPath)
         await moveLyricsSidecars(srcAudioPath, destAudioPath)
+        destAudioPaths.push(destAudioPath)
       }
       await copyFolderArtIfAny(albumPath, finalDir)
       const songExtra = {}
@@ -1934,13 +1988,20 @@ async function runJob(job) {
       if (job.originalAlbumTitle) songExtra.ORIGINAL_ALBUM = job.originalAlbumTitle
       if (job.originalArtist) songExtra.ORIGINAL_ARTIST = job.originalArtist
       if (job.isrc || job.upc || Object.keys(songExtra).length > 0) {
-        for (const fn of audioFiles) {
-          await writeAudioIdentityTags(path.join(finalDir, fn), {
+        for (const destAudioPath of destAudioPaths) {
+          await writeAudioIdentityTags(destAudioPath, {
             isrc: job.isrc,
             upc: job.upc,
             extra: Object.keys(songExtra).length ? songExtra : undefined,
           })
         }
+      }
+      if (usePrimaryTag && job.folderArtist) {
+        await stampPrimaryAlbumArtist(destAudioPaths, {
+          primary: job.folderArtist,
+          credit: job.artist,
+          albumArtists: job.albumArtists,
+        })
       }
       await writeVersionMarker(finalDir, job.quality, { ifMissing: true })
     } else {
@@ -1960,12 +2021,23 @@ async function runJob(job) {
         alsoArtists: [job.artist],
       })
       finalDir = placed.dir
+      usePrimaryTag = Boolean(
+        settings.primaryAlbumArtist &&
+          (!job.folderArtist || (await shouldUsePrimaryAlbumArtistTag(placed.existingDir, job.folderArtist))),
+      )
 
       await renameImportedFiles(albumPath, settings, job, {
         artist: job.folderArtist || stagedArtist,
         album: albumDirName,
         style: await existingFileStyle(finalDir, placed.layout),
       })
+      if (usePrimaryTag && job.folderArtist) {
+        await stampPrimaryAlbumArtistInDir(albumPath, {
+          primary: job.folderArtist,
+          credit: job.artist,
+          albumArtists: job.albumArtists,
+        })
+      }
 
       progressState.finalizeProgress = Math.max(progressState.finalizeProgress, 0.75)
       applyProgress(job, progressState, {
@@ -1998,7 +2070,7 @@ async function runJob(job) {
     })
     invalidateLibraryCache()
     await appendHistory(job)
-    await creditImportedFiles([finalDir])
+    await creditImportedFiles([finalDir], { primaryAlbumArtist: usePrimaryTag })
     triggerNavidromeScan().catch(console.error)
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -2278,7 +2350,7 @@ async function runPartialAlbumFill({
   beginLibraryImport(job)
   const albumDirName = restoreTruncatedName(firstAlbumName, job.albumTitle).replace(/\s*\(\d{4}\)\s*$/, '')
   const stagedArtist = restoreTruncatedName(firstArtistName, job.artist)
-  const { dir: finalDir, layout } = await libraryDestination(settings, {
+  const { dir: finalDir, layout, existingDir } = await libraryDestination(settings, {
     artist: stagedArtist,
     album: albumDirName,
     year: job.year,
@@ -2288,6 +2360,10 @@ async function runPartialAlbumFill({
     folderArtist: job.folderArtist,
     alsoArtists: [job.artist],
   })
+  const usePrimaryTag = Boolean(
+    settings.primaryAlbumArtist &&
+      (!job.folderArtist || (await shouldUsePrimaryAlbumArtistTag(existingDir, job.folderArtist))),
+  )
   const style = await existingFileStyle(finalDir, layout)
   for (const albumPath of trackAlbumPaths) {
     await restoreTrackFileNames(albumPath)
@@ -2297,6 +2373,13 @@ async function runPartialAlbumFill({
       language: false,
       style,
     })
+    if (usePrimaryTag && job.folderArtist) {
+      await stampPrimaryAlbumArtistInDir(albumPath, {
+        primary: job.folderArtist,
+        credit: job.artist,
+        albumArtists: job.albumArtists,
+      })
+    }
   }
   progressState.finalizeProgress = Math.max(progressState.finalizeProgress, 0.5)
   applyProgress(job, progressState, {
@@ -2327,7 +2410,7 @@ async function runPartialAlbumFill({
   })
   invalidateLibraryCache()
   await appendHistory(job)
-  await creditImportedFiles(trackAlbumPaths)
+  await creditImportedFiles([finalDir], { primaryAlbumArtist: usePrimaryTag })
   triggerNavidromeScan().catch(console.error)
 }
 
@@ -3089,6 +3172,7 @@ async function importPlaylistTracks({ job, jobStaging, onProgress, context = nul
     // Every playlist track imports into the same Artist/Album structure as
     // album and song downloads; the playlist m3u8 references these files.
     let destDir
+    let existingDir = null
     let targetName = restoreTrackFileName(path.basename(srcPath), tags.title)
     if (albumName) {
       targetName = renumberFromTrackTag(targetName, tags.track)
@@ -3102,6 +3186,7 @@ async function importPlaylistTracks({ job, jobStaging, onProgress, context = nul
         index,
       })
       destDir = placed.dir
+      existingDir = placed.existingDir
       if (!ctx.styles.has(destDir)) ctx.styles.set(destDir, await existingFileStyle(destDir, layout))
       const style = ctx.styles.get(destDir)
       const pattern = style?.legacy ? null : style?.pattern || (layout.customFile ? layout.file : null)
@@ -3139,6 +3224,13 @@ async function importPlaylistTracks({ job, jobStaging, onProgress, context = nul
     await moveFileSafe(srcPath, destPath)
     await moveLyricsSidecars(srcPath, destPath)
     await copyFolderArtIfAny(path.dirname(srcPath), destDir)
+    if (settings?.primaryAlbumArtist && folderArtist && (await shouldUsePrimaryAlbumArtistTag(existingDir, folderArtist))) {
+      await stampPrimaryAlbumArtist([destPath], {
+        primary: folderArtist,
+        credit: tags.albumArtist || artistName,
+        albumArtists,
+      })
+    }
     noteImportedTrack(index, destPath, { isrc: tags.isrc, upc: tags.upc, album: albumName, songName: tags.title })
 
     imported.push(destPath)

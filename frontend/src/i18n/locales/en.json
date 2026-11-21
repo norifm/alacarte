@@ -76,8 +76,8 @@
       "albumToken": "The album folder needs $album",
       "fileToken": "The file name needs $title or $track"
     },
-    "primaryAlbumArtist": "Primary artist folder",
-    "primaryAlbumArtistHelp": "Name the folder after the first album artist (Anyma & Joji → Anyma). Compilations stay as they are. Changing this asks before moving folders.",
+    "primaryAlbumArtist": "Primary album artist",
+    "primaryAlbumArtistHelp": "Use the first album artist for the folder and the Album Artist tag (Anyma & Joji → Anyma). Compilations stay as they are. Changing this asks before updating existing albums.",
     "moveLibraryTitle": "Move the library?",
     "moveLibraryConfirm": "Move library",
     "moveLibraryNone": "Nothing to move",
@@ -85,6 +85,7 @@
     "moveLibrarySkipped": "{{count}} skipped",
     "moveLibraryNavidrome": "Navidrome {{version}} drops plays and stars on moved tracks.",
     "moveLibraryNavidromeUnknown": "Navidrome gave no version. Before 0.55, moved tracks lose plays and stars.",
+    "moveLibraryNavidromeRetag": "Changing the Album Artist tag gives those albums new Navidrome IDs, dropping their plays and stars.",
     "moveLibraryStop": "Stop move",
     "moveLibraryUndo": "Undo move",
     "moveLibraryWaiting": "Waiting for downloads to finish…",

@@ -2,7 +2,15 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 
 import { emitEvent } from './eventBus.mjs'
-import { normalizeIsrc, normalizeUpc, readFlacComments, writeFlacComments } from './audioTags.mjs'
+import {
+  normalizeIsrc,
+  normalizeUpc,
+  readAudioIdentityTags,
+  readFlacComments,
+  readTrackTags,
+  writeAlbumArtistTag,
+  writeFlacComments,
+} from './audioTags.mjs'
 import { readSettings } from './settingsStore.mjs'
 import { getAlbumsByUpc, getSongsByIsrc } from './appleApi.mjs'
 import { triggerNavidromeScan } from './navidromeApi.mjs'
@@ -16,9 +24,11 @@ const PROGRESS_MIN_INTERVAL_MS = 400
 // amdp tags a multi-artist song with one display string ("A & B"), which
 // Navidrome turns into a fake combined artist. Apple lists each artist and
 // composer separately, so those names go into repeated ARTISTS / COMPOSER /
-// ALBUMARTISTS (and PERFORMER) fields; ARTIST and ALBUMARTIST keep the
-// display string. Changing that display string would give albums and their
-// tracks new navidrome ids (dropping plays and stars), so it is never touched.
+// ALBUMARTISTS (and PERFORMER) fields; ARTIST keeps the display string, and
+// ALBUMARTIST does too by default (changing it gives albums new Navidrome ids).
+// When primaryAlbumArtist is enabled, ALBUMARTIST is set to the first album
+// artist for non-compilation collabs while the combined display string is kept
+// in ALBUMARTIST_CREDIT so turning the option off can restore it.
 
 const defaultDeps = {
   getSongsByIsrc,
@@ -37,9 +47,29 @@ function sameList(a = [], b = []) {
   return a.length === b.length && a.every((v, i) => v === b[i])
 }
 
+function splitList(values) {
+  const out = []
+  for (const v of values || []) {
+    for (const part of String(v).split(';')) {
+      const name = part.trim()
+      if (name && !out.includes(name)) out.push(name)
+    }
+  }
+  return out
+}
+
+function isCompilationTags(current, isCompilation = false) {
+  if (isCompilation) return true
+  const raw = current?.COMPILATION?.[0]?.trim() || ''
+  return raw === '1' || /^true$/i.test(raw)
+}
+
 // Only fields with more than one name are written; a single name already
 // links fine through ARTIST / COMPOSER / ALBUMARTIST.
-export function creditFields(current, { artists, composers, albumArtists }) {
+export function creditFields(
+  current,
+  { artists, composers, albumArtists, albumArtistName = null, isCompilation = false, primaryAlbumArtist = false },
+) {
   const fields = {}
   if (artists?.length > 1 && !sameList(current.ARTISTS, artists)) fields.ARTISTS = artists
   // amdp also copies the display string into PERFORMER; real performer
@@ -50,6 +80,35 @@ export function creditFields(current, { artists, composers, albumArtists }) {
   if (albumArtists?.length > 1 && !sameList(current.ALBUMARTISTS, albumArtists)) {
     fields.ALBUMARTISTS = albumArtists
   }
+
+  const currentAlbumArtist =
+    current.ALBUMARTIST?.[0]?.trim() ||
+    current.ALBUM_ARTIST?.[0]?.trim() ||
+    current['ALBUM ARTIST']?.[0]?.trim() ||
+    ''
+  const currentCredit = current.ALBUMARTIST_CREDIT?.[0]?.trim() || ''
+  if (primaryAlbumArtist) {
+    if (!isCompilationTags(current, isCompilation) && albumArtists?.length > 1) {
+      const primary = albumArtists[0]
+      const hasAlias = Boolean(current.ALBUM_ARTIST?.length || current['ALBUM ARTIST']?.length)
+      if (currentAlbumArtist !== primary || hasAlias) {
+        fields.ALBUMARTIST = [primary]
+        if (current.ALBUM_ARTIST?.length) fields.ALBUM_ARTIST = []
+        if (current['ALBUM ARTIST']?.length) fields['ALBUM ARTIST'] = []
+        const credit =
+          currentCredit ||
+          (currentAlbumArtist && currentAlbumArtist.toLowerCase() !== primary.toLowerCase() ? currentAlbumArtist : null) ||
+          (albumArtistName && albumArtistName.toLowerCase() !== primary.toLowerCase() ? albumArtistName : null)
+        if (credit && currentCredit !== credit) fields.ALBUMARTIST_CREDIT = [credit]
+      }
+    }
+  } else if (currentCredit) {
+    if (currentAlbumArtist !== currentCredit) fields.ALBUMARTIST = [currentCredit]
+    if (current.ALBUM_ARTIST?.length) fields.ALBUM_ARTIST = []
+    if (current['ALBUM ARTIST']?.length) fields['ALBUM ARTIST'] = []
+    fields.ALBUMARTIST_CREDIT = []
+  }
+
   return fields
 }
 
@@ -72,44 +131,71 @@ async function lookupBatch(items, { storefront, language, deps, retry = (fn) => 
     const json = await retry(() => deps.getAlbumsByUpc({ storefront, upcs, language, include: 'artists' }))
     for (const a of json?.data || []) {
       const upc = normalizeUpc(a.attributes?.upc)
-      if (upc && !albums.has(upc)) albums.set(upc, names(a.relationships?.artists))
+      if (upc && !albums.has(upc)) {
+        albums.set(upc, {
+          albumArtists: names(a.relationships?.artists),
+          albumArtistName: a.attributes?.artistName?.trim() || null,
+          isCompilation: Boolean(a.attributes?.isCompilation),
+        })
+      }
     }
     await sleep(deps.delayMs)
   }
   return { songs, albums }
 }
 
-async function collectFlacs(target, out) {
+async function collectFiles(target, out, { includeM4a = false } = {}) {
   const stat = await fsp.stat(target).catch(() => null)
   if (!stat) return
   if (stat.isFile()) {
-    if (/\.flac$/i.test(target)) out.push(target)
+    if (/\.flac$/i.test(target) || (includeM4a && /\.m4a$/i.test(target))) out.push(target)
     return
   }
   const entries = await fsp.readdir(target, { withFileTypes: true }).catch(() => [])
   for (const e of entries) {
     if (e.name.startsWith('.')) continue
-    await collectFlacs(path.join(target, e.name), out)
+    await collectFiles(path.join(target, e.name), out, { includeM4a })
   }
 }
 
 /**
- * Writes per-artist credits into the given FLAC files (or folders of them).
+ * Writes per-artist credits into the given FLAC files (or folders of them),
+ * and aligns ALBUMARTIST on collab FLAC/M4A files when primaryAlbumArtist is on.
  * onFile(result) is called per file with one of: updated, unchanged,
  * noMatch, failed. Never throws for a single file.
  */
 export async function creditArtists(
   targets,
-  { deps = defaultDeps, shouldStop = () => false, onFile = () => {}, onWait = null, albumArtists: withAlbumArtists = true } = {},
+  {
+    deps = defaultDeps,
+    shouldStop = () => false,
+    onFile = () => {},
+    onWait = null,
+    albumArtists: withAlbumArtists = true,
+    primaryAlbumArtist: primaryOverride = undefined,
+  } = {},
 ) {
   const settings = await deps.readSettings()
   const storefront = settings.storefront || 'us'
   const language = settings.language || 'en-US'
+  const usePrimary = primaryOverride === undefined ? Boolean(settings.primaryAlbumArtist) : Boolean(primaryOverride)
+  const includeM4a = Boolean(usePrimary && withAlbumArtists)
   const files = []
-  for (const t of targets) await collectFlacs(t, files)
+  for (const t of targets) await collectFiles(t, files, { includeM4a })
 
   const items = []
   for (const file of files) {
+    if (/\.m4a$/i.test(file)) {
+      const tags = await readTrackTags(file)
+      let upc = normalizeUpc(tags.upc)
+      if (!upc) upc = normalizeUpc((await readAudioIdentityTags(file)).upc)
+      if (!upc) {
+        onFile({ file, result: 'noMatch' })
+        continue
+      }
+      items.push({ file, format: 'm4a', tags, isrc: '', upc })
+      continue
+    }
     const current = await readFlacComments(file)
     if (!current) {
       onFile({ file, result: 'failed' })
@@ -118,10 +204,20 @@ export async function creditArtists(
     const isrc = normalizeIsrc(current.ISRC?.[0])
     const upc = withAlbumArtists ? normalizeUpc(current.BARCODE?.[0] || current.UPC?.[0]) : ''
     if (!isrc && !upc) {
-      onFile({ file, result: 'noMatch' })
+      const localAlbumArtists = withAlbumArtists ? splitList(current.ALBUMARTISTS) : undefined
+      const localFields = creditFields(current, {
+        albumArtists: localAlbumArtists,
+        primaryAlbumArtist: usePrimary,
+      })
+      if (Object.keys(localFields).length > 0) {
+        const ok = await writeFlacComments(file, localFields)
+        onFile({ file, result: ok ? 'updated' : 'failed' })
+      } else {
+        onFile({ file, result: 'noMatch' })
+      }
       continue
     }
-    items.push({ file, current, isrc, upc })
+    items.push({ file, format: 'flac', current, isrc, upc })
   }
 
   for (let i = 0; i < items.length && !shouldStop(); i += BATCH) {
@@ -137,13 +233,48 @@ export async function creditArtists(
       continue
     }
     for (const item of batch) {
-      const song = found.songs.get(item.isrc)
-      const albumArtists = found.albums.get(item.upc)
-      if (!song && !albumArtists) {
-        onFile({ file: item.file, result: 'noMatch' })
+      const album = found.albums.get(item.upc)
+      if (item.format === 'm4a') {
+        if (!album) {
+          onFile({ file: item.file, result: 'noMatch' })
+          continue
+        }
+        if (item.tags.compilation || album.isCompilation || album.albumArtists.length < 2) {
+          onFile({ file: item.file, result: 'unchanged' })
+          continue
+        }
+        const primary = album.albumArtists[0]
+        if (item.tags.albumArtist && item.tags.albumArtist.toLowerCase() === primary.toLowerCase()) {
+          onFile({ file: item.file, result: 'unchanged' })
+          continue
+        }
+        const ok = await writeAlbumArtistTag(item.file, primary)
+        onFile({ file: item.file, result: ok ? 'updated' : 'failed' })
         continue
       }
-      const fields = creditFields(item.current, { ...(song || {}), albumArtists })
+      const song = found.songs.get(item.isrc)
+      const existingAlbumArtists = withAlbumArtists ? splitList(item.current.ALBUMARTISTS) : undefined
+      const albumArtists = album?.albumArtists?.length ? album.albumArtists : existingAlbumArtists
+      if (!song && !album) {
+        const localFields = creditFields(item.current, {
+          albumArtists: existingAlbumArtists,
+          primaryAlbumArtist: usePrimary,
+        })
+        if (Object.keys(localFields).length > 0) {
+          const ok = await writeFlacComments(item.file, localFields)
+          onFile({ file: item.file, result: ok ? 'updated' : 'failed' })
+        } else {
+          onFile({ file: item.file, result: 'noMatch' })
+        }
+        continue
+      }
+      const fields = creditFields(item.current, {
+        ...(song || {}),
+        albumArtists,
+        albumArtistName: album?.albumArtistName || null,
+        isCompilation: album?.isCompilation || false,
+        primaryAlbumArtist: usePrimary,
+      })
       if (Object.keys(fields).length === 0) {
         onFile({ file: item.file, result: 'unchanged' })
         continue
@@ -156,9 +287,9 @@ export async function creditArtists(
 }
 
 // Download hook: fail-soft, a credit lookup must never fail a finished job.
-export async function creditImportedFiles(targets) {
+export async function creditImportedFiles(targets, opts = {}) {
   try {
-    await creditArtists(targets.filter(Boolean))
+    await creditArtists(targets.filter(Boolean), opts)
   } catch (err) {
     console.error('artist credits failed:', err.message)
   }
@@ -230,8 +361,9 @@ export async function startArtistBackfill({ deps = defaultDeps } = {}) {
   const counters = { updated: 'updated', unchanged: 'skipped', noMatch: 'noMatch', failed: 'failed' }
   ;(async () => {
     try {
+      const settings = await deps.readSettings()
       const all = []
-      await collectFlacs(MUSIC_ROOT, all)
+      await collectFiles(MUSIC_ROOT, all, { includeM4a: Boolean(settings.primaryAlbumArtist) })
       state.total = all.length
       emit(true)
       await creditArtists([MUSIC_ROOT], {
